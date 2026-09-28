@@ -1,0 +1,7 @@
+﻿targetKey,targetColumn,validRows,missingRows,missingPercent
+copd_gold,COPD GOLD(1 a 4) (Target),96,360,78.94736842105263
+history_of_heart_failure,History of Heart Failure(Si ó no)(Target),79,377,82.67543859649122
+bodex,BODEX (0 a 10 puntos) (Target),360,96,21.052631578947366
+escala_disnea,ESCALA DISNEA (0 a 10 puntos) (Target),360,96,21.052631578947366
+clasifisui,"CLASIFISUI (1 a 5, clasificacion urgencias) (Target)",360,96,21.052631578947366
+ALL_TARGETS,,0,456,100.0

@@ -1,0 +1,3 @@
+﻿column,normalizedColumn,matchedKeywords,reason
+RIESGO CARDIOVASCULAR,riesgo_cardiovascular,riesgo,Revisión manual requerida: el nombre de la variable puede indicar relación directa o derivada con uno o más targets.
+EPOCCONFIRMADO(Si ó no) (Target),epocconfirmadosi_o_no_target,"target, confirm",Revisión manual requerida: el nombre de la variable puede indicar relación directa o derivada con uno o más targets.

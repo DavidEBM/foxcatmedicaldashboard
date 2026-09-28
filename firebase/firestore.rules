@@ -1,0 +1,404 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+
+    function authenticated() {
+      return request.auth != null;
+    }
+
+    function userDocument() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      );
+    }
+
+    function isAdmin() {
+      return authenticated()
+        && userDocument().data.role == "admin"
+        && userDocument().data.status == "active";
+    }
+
+    function isDoctor() {
+      return authenticated()
+        && userDocument().data.role == "doctor"
+        && userDocument().data.status == "active";
+    }
+
+    function isPatient() {
+      return authenticated()
+        && userDocument().data.role == "patient"
+        && userDocument().data.status == "active";
+    }
+
+    function isAssignedDoctor(patientId) {
+      return isDoctor()
+        && exists(
+          /databases/$(database)/documents/patients/$(patientId)
+        )
+        && get(
+          /databases/$(database)/documents/patients/$(patientId)
+        ).data.assignedDoctorIds is list
+        && request.auth.uid in get(
+          /databases/$(database)/documents/patients/$(patientId)
+        ).data.assignedDoctorIds;
+    }
+
+
+    // =========================================================
+    // USERS
+    // =========================================================
+
+    match /users/{uid} {
+
+      allow read: if authenticated()
+        && (
+          request.auth.uid == uid
+          || isDoctor()
+          || isAdmin()
+        );
+
+      // Registro de pacientes
+      allow create: if authenticated()
+        && request.auth.uid == uid
+        && request.resource.data.role == "patient"
+        && request.resource.data.status == "active"
+        && request.resource.data.keys().hasOnly([
+          "role",
+          "status",
+          "displayName",
+          "createdAt"
+        ]);
+
+      // Administrador puede gestionar usuarios.
+      // Usuario normal solamente puede modificar su displayName.
+      allow update: if isAdmin()
+        ||
+        (
+          authenticated()
+          && request.auth.uid == uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "displayName"
+            ])
+        );
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // PATIENTS
+    // =========================================================
+
+    match /patients/{patientId} {
+
+      // El médico solo consulta fichas que tienen su UID en la
+      // lista mantenida por la asignación administrativa.
+      allow read: if isAdmin()
+        || (isDoctor()
+          && resource.data.assignedDoctorIds is list
+          && request.auth.uid in resource.data.assignedDoctorIds)
+        || (isPatient()
+          && resource.data.ownerUid == request.auth.uid);
+
+      // El médico crea la ficha solo si se asigna a sí mismo.
+      allow create: if isAdmin()
+        || (isDoctor()
+          && request.resource.data.assignedDoctorIds is list
+          && request.auth.uid in request.resource.data.assignedDoctorIds);
+
+      // Solo el médico asignado o un administrador puede actualizarla.
+      allow update: if isAdmin()
+        || (isDoctor()
+          && resource.data.assignedDoctorIds is list
+          && request.auth.uid in resource.data.assignedDoctorIds
+          && request.resource.data.assignedDoctorIds == resource.data.assignedDoctorIds);
+
+      // Solo administradores pueden eliminar pacientes.
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // USER LAYOUTS
+    // =========================================================
+
+    match /userLayouts/{uid} {
+
+      allow read: if authenticated()
+        && request.auth.uid == uid;
+
+      allow create: if authenticated()
+        && request.auth.uid == uid;
+
+      allow update: if authenticated()
+        && request.auth.uid == uid;
+
+      allow delete: if authenticated()
+        && request.auth.uid == uid;
+    }
+
+
+    // =========================================================
+    // INVITATIONS
+    // =========================================================
+
+    match /patientInvitations/{invitationId} {
+
+      allow create: if isAdmin()
+        || (
+          isDoctor()
+          && request.resource.data.doctorUid
+             == request.auth.uid
+        );
+
+      allow read: if authenticated();
+
+      allow update: if isAdmin()
+        ||
+        (
+          isPatient()
+          && resource.data.status == "pending"
+          && request.resource.data.status == "claimed"
+          && request.resource.data.claimedBy == request.auth.uid
+          && request.resource.data.doctorUid
+             == resource.data.doctorUid
+          && request.resource.data.patientId
+             == resource.data.patientId
+        );
+
+      allow delete: if isAdmin()
+        || (
+          isDoctor()
+          && resource.data.doctorUid == request.auth.uid
+        );
+    }
+
+
+    // =========================================================
+    // MODELOS DE IA
+    // =========================================================
+
+    match /models/{modelId} {
+
+      allow read: if isAdmin();
+
+      allow create: if isAdmin();
+
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // ASIGNACIÓN DE PACIENTES
+    // =========================================================
+
+    match /patientAssignments/{assignmentId} {
+
+      // Administrador puede consultar todas.
+      // Médico solamente sus propias asignaciones.
+      allow read: if isAdmin()
+        || (
+          isDoctor()
+          && resource.data.doctorUid == request.auth.uid
+        );
+
+      // Las asignaciones las administra el personal autorizado;
+      // el médico solo puede leer sus propias relaciones.
+      allow create: if isAdmin();
+
+      // Solo administrador puede modificar asignaciones.
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // REVISIONES INDIVIDUALES DE CADA MÉDICO
+    // =========================================================
+
+    match /patientDoctorReviews/{reviewId} {
+
+      // Admin puede consultar todas.
+      // Médico solamente sus propias revisiones.
+      allow read: if isAdmin()
+        || (
+          isDoctor()
+          && resource.data.doctorUid == request.auth.uid
+        );
+
+      // Médico solamente puede crear una revisión:
+      // 1. Para sí mismo.
+      // 2. Usando una asignación existente.
+      // 3. La asignación debe pertenecerle.
+      // 4. La asignación debe corresponder al paciente.
+      allow create: if isDoctor()
+        && request.resource.data.doctorUid
+           == request.auth.uid
+
+        && exists(
+          /databases/$(database)/documents/patientAssignments/$(request.resource.data.assignmentId)
+        )
+
+        && get(
+          /databases/$(database)/documents/patientAssignments/$(request.resource.data.assignmentId)
+        ).data.doctorUid
+           == request.auth.uid
+
+        && get(
+          /databases/$(database)/documents/patientAssignments/$(request.resource.data.assignmentId)
+        ).data.patientId
+           == request.resource.data.patientId;
+
+      // Admin puede modificar cualquier revisión.
+      // Médico solamente puede modificar su propia revisión.
+      //
+      // Además:
+      // - No puede cambiar el paciente.
+      // - No puede cambiar la asignación.
+      // - No puede cambiar el doctor propietario.
+      allow update: if isAdmin()
+        || (
+          isDoctor()
+          && resource.data.doctorUid
+             == request.auth.uid
+
+          && request.resource.data.doctorUid
+             == request.auth.uid
+
+          && request.resource.data.patientId
+             == resource.data.patientId
+
+          && request.resource.data.assignmentId
+             == resource.data.assignmentId
+        );
+
+      // Admin puede eliminar cualquiera.
+      // Médico solamente su propia revisión.
+      allow delete: if isAdmin()
+        || (
+          isDoctor()
+          && resource.data.doctorUid == request.auth.uid
+        );
+    }
+
+
+    // =========================================================
+    // VALIDACIONES MÉDICAS DE PREDICCIONES IA
+    // =========================================================
+
+    match /ValidacionPredicciones/{validationId} {
+      function validPredictionValues(values) {
+        return values is map
+          && values.keys().hasOnly([
+            "risk",
+            "horizonHours",
+            "timeline",
+            "source",
+            "modelName",
+            "artifact",
+            "target"
+          ])
+          && values.keys().hasAll([
+            "risk",
+            "horizonHours",
+            "timeline",
+            "source",
+            "modelName",
+            "artifact",
+            "target"
+          ])
+          && values.risk is number
+          && values.risk >= 0
+          && values.risk <= 100
+          && values.horizonHours is number
+          && values.horizonHours >= 0
+          && values.timeline is list
+          && values.timeline.size() > 0
+          && values.timeline.size() <= 10
+          && values.source is string
+          && values.source.size() <= 40
+          && values.modelName is string
+          && values.modelName.size() <= 160
+          && values.artifact is string
+          && values.artifact.size() <= 240
+          && values.target is string;
+      }
+
+      // El médico solo lee sus validaciones; el administrador puede auditar.
+      allow read: if isAdmin()
+        || (isDoctor() && resource.data.doctorUid == request.auth.uid);
+
+      // ID de documento autogenerado desde addDoc(). El cliente no puede
+      // falsificar al médico, paciente, asignación ni la marca temporal.
+      allow create: if isDoctor()
+        && request.resource.data.keys().hasOnly([
+          "assignedAt",
+          "assignedBy",
+          "doctorUid",
+          "patientId",
+          "status",
+          "predictionName",
+          "predictionKey",
+          "predictionValues",
+          "createdAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "assignedAt",
+          "assignedBy",
+          "doctorUid",
+          "patientId",
+          "status",
+          "predictionName",
+          "predictionKey",
+          "predictionValues",
+          "createdAt"
+        ])
+        && request.resource.data.assignedBy == request.auth.uid
+        && request.resource.data.doctorUid == request.auth.uid
+        && request.resource.data.patientId is string
+        && isAssignedDoctor(request.resource.data.patientId)
+        && request.resource.data.status in ["validado", "no_validado"]
+        && request.resource.data.predictionName is string
+        && request.resource.data.predictionName.size() > 0
+        && request.resource.data.predictionName.size() <= 160
+        && request.resource.data.predictionKey is string
+        && request.resource.data.predictionKey.size() <= 180
+        && validPredictionValues(request.resource.data.predictionValues)
+        && request.resource.data.assignedAt == request.time
+        && request.resource.data.createdAt == request.time;
+
+      // Una validación es evidencia inmutable. Las correcciones generan un
+      // nuevo registro; no se permite sobrescribir ni borrar el historial.
+      allow update, delete: if false;
+    }
+
+
+    // =========================================================
+    // REGISTRO DE IMPORTACIONES
+    // =========================================================
+
+    match /uploadLogs/{logId} {
+
+      allow read: if isAdmin();
+
+      allow create: if isAdmin();
+
+      allow update: if isAdmin();
+
+      // El historial no se elimina.
+      allow delete: if false;
+    }
+  }
+}

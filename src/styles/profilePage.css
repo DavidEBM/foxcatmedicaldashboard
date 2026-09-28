@@ -1,0 +1,169 @@
+/* ============================================================
+   FOXCAT MEDICAL — PROFILE PAGE
+User/doctor profile presentation.
+   ============================================================ */
+
+/* ==========================================================
+   14. PROFILE
+   ========================================================== */
+
+.doctor-profile {
+  width: 100%;
+  min-width: 0;
+
+  animation:
+    doctor-fade-in
+    220ms
+    ease
+    both;
+}
+
+.doctor-profile-header {
+  display: flex;
+  align-items: center;
+
+  gap: 18px;
+
+  padding: 20px;
+
+  border: 1px solid var(--doctor-border);
+
+  border-radius: var(--doctor-radius-lg);
+
+  background: var(--doctor-surface);
+
+  box-shadow: var(--doctor-shadow);
+}
+
+.doctor-profile-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 72px;
+  height: 72px;
+
+  flex: 0 0 72px;
+
+  border-radius: var(--doctor-radius-xl);
+
+  background: var(--doctor-gradient-primary);
+
+  color: var(--doctor-primary-dark);
+
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.doctor-profile-heading {
+  min-width: 0;
+
+  flex: 1;
+}
+
+.doctor-profile-heading h2 {
+  margin: 0 0 4px;
+
+  color: var(--doctor-text);
+
+  font-size: 21px;
+}
+
+.doctor-profile-heading p {
+  margin: 0;
+
+  color: var(--doctor-muted);
+
+  font-size: 13px;
+}
+
+.doctor-profile-status {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 6px 10px;
+
+  border-radius: var(--doctor-radius-pill);
+
+  background: var(--doctor-green-soft);
+
+  color: var(--doctor-green-dark);
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.doctor-profile-status::before {
+  content: "";
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: currentColor;
+}
+
+.doctor-profile-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-top: 16px;
+}
+
+.doctor-profile-card {
+  min-width: 0;
+
+  padding: 18px;
+
+  border: 1px solid var(--doctor-border);
+
+  border-radius: var(--doctor-radius-lg);
+
+  background: var(--doctor-surface);
+
+  box-shadow: var(--doctor-shadow);
+}
+
+.doctor-profile-card h3 {
+  margin: 0 0 14px;
+
+  color: var(--doctor-text);
+
+  font-size: 14px;
+}
+
+.doctor-profile-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+
+  margin-bottom: 13px;
+}
+
+.doctor-profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.doctor-profile-field label {
+  color: var(--doctor-muted);
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.doctor-profile-field span {
+  color: var(--doctor-text-soft);
+
+  font-size: 13px;
+
+  overflow-wrap: anywhere;
+}
+

@@ -1,0 +1,1752 @@
+.admin-page {
+  --admin-purple: #8b7ab8;
+  --admin-purple-dark: #71619d;
+  --admin-purple-soft: #eeeaf7;
+  --admin-purple-pale: #f7f4fc;
+
+  --admin-green: #78b89a;
+  --admin-green-dark: #5d9d80;
+  --admin-green-soft: #e8f5ee;
+
+  --admin-blue: #78a9c8;
+  --admin-blue-dark: #5d8fab;
+  --admin-blue-soft: #eaf3f8;
+
+  --admin-background: #f7f6fa;
+  --admin-surface: #ffffff;
+  --admin-surface-soft: #fbfafc;
+
+  --admin-border: #e7e3ed;
+  --admin-border-dark: #d7d1df;
+
+  --admin-text: #3f4050;
+  --admin-text-soft: #77778a;
+  --admin-text-muted: #a0a0af;
+
+  --admin-danger: #c98591;
+  --admin-danger-soft: #faeef1;
+
+  min-height: 100vh;
+  width: 100%;
+
+  background:
+    radial-gradient(
+      circle at 90% 0%,
+      rgba(139, 122, 184, 0.12),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 5% 90%,
+      rgba(120, 184, 154, 0.08),
+      transparent 24rem
+    ),
+    var(--admin-background);
+
+  color: var(--admin-text);
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+
+.admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  min-height: 72px;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 30px;
+
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--admin-border);
+
+  backdrop-filter: blur(16px);
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-brand-logo {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 13px;
+
+  background: var(--admin-purple-soft);
+
+  border: 1px solid rgba(139, 122, 184, 0.16);
+
+  overflow: hidden;
+}
+
+.admin-brand-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.admin-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-brand-text strong {
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.admin-brand-text span {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--admin-text-muted);
+}
+
+.admin-topbar-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-account-role {
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background: var(--admin-purple-soft);
+  color: var(--admin-purple-dark);
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-account-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-soft);
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+
+.admin-layout {
+  min-height: calc(100vh - 72px);
+
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.admin-sidebar {
+  position: sticky;
+  top: 72px;
+
+  height: calc(100vh - 72px);
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 28px 16px 18px;
+
+  background: rgba(255, 255, 255, 0.88);
+
+  border-right: 1px solid var(--admin-border);
+}
+
+.admin-sidebar-header {
+  padding: 0 10px 22px;
+}
+
+.admin-sidebar-label,
+.admin-eyebrow {
+  display: inline-block;
+
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: var(--admin-purple);
+}
+
+.admin-sidebar-header h2 {
+  margin: 8px 0 0;
+
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 700;
+
+  color: var(--admin-text);
+}
+
+.admin-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-nav-button {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  padding: 11px 12px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  background: transparent;
+  color: var(--admin-text-soft);
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.admin-nav-button:hover {
+  background: var(--admin-purple-pale);
+  color: var(--admin-text);
+}
+
+.admin-nav-button:active {
+  transform: translateY(1px);
+}
+
+.admin-nav-button.active {
+  background: var(--admin-purple-soft);
+
+  border-color: rgba(139, 122, 184, 0.14);
+
+  color: var(--admin-purple-dark);
+}
+
+.admin-nav-icon {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 28px;
+
+  border-radius: 8px;
+
+  background: #f4f2f7;
+
+  color: var(--admin-text-muted);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-nav-button.active .admin-nav-icon {
+  background: #ffffff;
+  color: var(--admin-purple);
+}
+
+.admin-sidebar-footer {
+  margin-top: auto;
+
+  padding: 16px 10px 4px;
+
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-status-indicator > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-status-indicator strong {
+  font-size: 11px;
+  color: var(--admin-text);
+}
+
+.admin-status-indicator span:not(.admin-status-dot) {
+  font-size: 10px;
+  color: var(--admin-text-muted);
+}
+
+.admin-status-dot {
+  width: 8px;
+  height: 8px;
+
+  flex: 0 0 8px;
+
+  border-radius: 50%;
+
+  background: var(--admin-green);
+
+  box-shadow:
+    0 0 0 3px var(--admin-green-soft);
+}
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.admin-main {
+  min-width: 0;
+  min-height: calc(100vh - 72px);
+}
+
+.admin-content {
+  width: min(100%, 1440px);
+
+  margin: 0 auto;
+
+  padding: 38px 42px 60px;
+}
+
+/* =========================================================
+   INTRO
+   ========================================================= */
+
+.admin-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 30px;
+
+  margin-bottom: 30px;
+  padding-bottom: 26px;
+
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-intro h1 {
+  margin: 7px 0 8px;
+
+  font-size: clamp(25px, 3vw, 34px);
+  line-height: 1.12;
+
+  letter-spacing: -0.025em;
+
+  font-weight: 750;
+
+  color: var(--admin-text);
+}
+
+.admin-intro p {
+  max-width: 720px;
+
+  margin: 0;
+
+  font-size: 14px;
+  line-height: 1.65;
+
+  color: var(--admin-text-soft);
+}
+
+.admin-intro-badge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  flex-shrink: 0;
+
+  margin-top: 7px;
+
+  padding: 8px 12px;
+
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+
+  background: var(--admin-surface);
+
+  color: var(--admin-text-soft);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   MODULES
+   ========================================================= */
+
+.admin-module {
+  min-width: 0;
+
+  padding: 26px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border: 1px solid var(--admin-border);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 2px 4px rgba(63, 64, 80, 0.025),
+    0 12px 35px rgba(63, 64, 80, 0.035);
+}
+
+.admin-module-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 22px;
+}
+
+.admin-module-header h2 {
+  margin: 6px 0 5px;
+
+  font-size: 21px;
+  line-height: 1.25;
+
+  font-weight: 700;
+
+  color: var(--admin-text);
+}
+
+.admin-module-header p {
+  margin: 0;
+
+  font-size: 13px;
+  line-height: 1.55;
+
+  color: var(--admin-text-soft);
+}
+
+/* =========================================================
+   WELCOME
+   ========================================================= */
+
+.admin-welcome {
+  min-height: 210px;
+
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  padding: 34px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(238, 234, 247, 0.7),
+      rgba(234, 243, 248, 0.55)
+    );
+
+  border: 1px solid var(--admin-border);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 8px 30px rgba(63, 64, 80, 0.035);
+}
+
+.admin-welcome-icon,
+.admin-empty-icon {
+  width: 54px;
+  height: 54px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 54px;
+
+  border-radius: 15px;
+
+  background: var(--admin-purple-soft);
+
+  color: var(--admin-purple);
+
+  font-size: 25px;
+}
+
+.admin-welcome h2 {
+  margin: 5px 0 7px;
+
+  font-size: 21px;
+  line-height: 1.25;
+
+  color: var(--admin-text);
+}
+
+.admin-welcome p {
+  max-width: 650px;
+
+  margin: 0;
+
+  font-size: 13px;
+  line-height: 1.6;
+
+  color: var(--admin-text-soft);
+}
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.admin-empty-state {
+  min-height: 230px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+
+  text-align: center;
+
+  border: 1px dashed var(--admin-border-dark);
+
+  border-radius: 12px;
+
+  background: var(--admin-surface-soft);
+}
+
+.admin-empty-state .admin-empty-icon {
+  margin-bottom: 14px;
+}
+
+.admin-empty-state h3 {
+  margin: 0 0 6px;
+
+  font-size: 16px;
+
+  color: var(--admin-text);
+}
+
+.admin-empty-state p {
+  max-width: 500px;
+
+  margin: 0;
+
+  font-size: 13px;
+  line-height: 1.55;
+
+  color: var(--admin-text-soft);
+}
+
+/* =========================================================
+   PANELS
+   ========================================================= */
+
+.admin-page .panel {
+  background: var(--admin-surface);
+
+  border: 1px solid var(--admin-border);
+
+  border-radius: 14px;
+}
+
+.admin-page .panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 18px;
+}
+
+.admin-page .panel-title {
+  margin: 0;
+
+  font-size: 20px;
+  line-height: 1.3;
+
+  font-weight: 700;
+
+  color: var(--admin-text);
+}
+
+.admin-page .panel-subtitle {
+  margin: 5px 0 0;
+
+  font-size: 13px;
+  line-height: 1.55;
+
+  color: var(--admin-text-soft);
+}
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.admin-page input,
+.admin-page select,
+.admin-page textarea {
+  box-sizing: border-box;
+
+  width: 100%;
+
+  min-height: 40px;
+
+  padding: 8px 11px;
+
+  border: 1px solid var(--admin-border-dark);
+
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #ffffff;
+
+  color: var(--admin-text);
+
+  font: inherit;
+  font-size: 13px;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.admin-page input::placeholder,
+.admin-page textarea::placeholder {
+  color: #b0adb9;
+}
+
+.admin-page input:focus,
+.admin-page select:focus,
+.admin-page textarea:focus {
+  border-color: var(--admin-purple);
+
+  box-shadow:
+    0 0 0 3px rgba(139, 122, 184, 0.12);
+}
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
+
+.admin-page .admin-filters {
+  display: grid;
+
+  grid-template-columns:
+    minmax(220px, 1.7fr)
+    minmax(140px, 1fr)
+    minmax(160px, 1fr)
+    minmax(160px, 1fr)
+    auto;
+
+  align-items: end;
+
+  gap: 12px;
+
+  margin-bottom: 20px;
+}
+
+.admin-page .form-group {
+  min-width: 0;
+}
+
+.admin-page .form-group label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  color: var(--admin-text-soft);
+}
+
+.admin-page .admin-filters-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.admin-page .btn,
+.admin-page .ghost-button {
+  min-height: 38px;
+
+  padding: 8px 13px;
+
+  border-radius: 9px;
+
+  font-size: 12px;
+  font-weight: 650;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.admin-page .btn:active,
+.admin-page .ghost-button:active {
+  transform: translateY(1px);
+}
+
+.admin-page .btn-secondary,
+.admin-page .ghost-button {
+  background: #ffffff;
+
+  border: 1px solid var(--admin-border-dark);
+
+  color: var(--admin-text-soft);
+}
+
+.admin-page .btn-secondary:hover,
+.admin-page .ghost-button:hover {
+  background: var(--admin-purple-pale);
+
+  border-color: var(--admin-purple);
+
+  color: var(--admin-purple-dark);
+}
+
+.admin-page button:disabled,
+.admin-page select:disabled,
+.admin-page input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+
+.admin-page .users-table-container,
+.admin-page .admin-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+
+  background: var(--admin-surface);
+
+  border: 1px solid var(--admin-border);
+
+  border-radius: 12px;
+}
+
+.admin-page .users-table,
+.admin-page .admin-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 13px;
+}
+
+.admin-page .users-table th,
+.admin-page .users-table td,
+.admin-page .admin-table th,
+.admin-page .admin-table td {
+  padding: 13px 14px;
+
+  border-bottom: 1px solid var(--admin-border);
+
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-page .users-table th,
+.admin-page .admin-table th {
+  background: #faf9fc;
+
+  color: var(--admin-text-soft);
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-page .users-table tbody tr:last-child td,
+.admin-page .admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-page .users-table tbody tr:hover,
+.admin-page .admin-table tbody tr:hover {
+  background: #fcfbfd;
+}
+
+.admin-page .users-table strong,
+.admin-page .admin-table strong {
+  display: block;
+
+  margin-bottom: 2px;
+
+  color: var(--admin-text);
+
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-page .users-table small {
+  display: block;
+
+  max-width: 180px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--admin-text-muted);
+
+  font-size: 10px;
+}
+
+.admin-page .users-table select,
+.admin-page .admin-table select {
+  min-width: 125px;
+  min-height: 34px;
+
+  padding: 6px 9px;
+
+  font-size: 12px;
+}
+
+.admin-page .empty-users {
+  padding: 40px 20px !important;
+
+  text-align: center !important;
+
+  color: var(--admin-text-muted);
+}
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.admin-page .soft-badge {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: var(--admin-blue-soft);
+
+  color: var(--admin-blue-dark);
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-page .admin-status {
+  margin-bottom: 16px;
+
+  padding: 10px 12px;
+
+  border: 1px solid var(--admin-border);
+
+  border-radius: 9px;
+
+  background: var(--admin-surface-soft);
+
+  color: var(--admin-text-soft);
+
+  font-size: 12px;
+}
+
+.admin-page .admin-status[data-state="success"] {
+  background: var(--admin-green-soft);
+
+  border-color: rgba(120, 184, 154, 0.25);
+
+  color: var(--admin-green-dark);
+}
+
+.admin-page .alert {
+  margin-bottom: 16px;
+
+  padding: 11px 13px;
+
+  border-radius: 9px;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-page .alert-error {
+  background: var(--admin-danger-soft);
+
+  border: 1px solid rgba(201, 133, 145, 0.2);
+
+  color: var(--admin-danger);
+}
+
+.admin-page .admin-patients-count {
+  flex-shrink: 0;
+
+  padding: 7px 10px;
+
+  border: 1px solid rgba(120, 169, 200, 0.25);
+
+  border-radius: 999px;
+
+  background: var(--admin-blue-soft);
+
+  color: var(--admin-blue-dark);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-page .admin-patients-footer {
+  margin-top: 14px;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.admin-loading-page {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+}
+
+.admin-loading-card {
+  width: min(100%, 360px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 32px;
+
+  background: #ffffff;
+
+  border: 1px solid var(--admin-border);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 12px 35px rgba(63, 64, 80, 0.06);
+
+  text-align: center;
+}
+
+.admin-loading-card p {
+  margin: 15px 0 0;
+
+  color: var(--admin-text-soft);
+
+  font-size: 13px;
+}
+
+.admin-loading-spinner {
+  width: 28px;
+  height: 28px;
+
+  border: 3px solid var(--admin-purple-soft);
+
+  border-top-color: var(--admin-purple);
+
+  border-radius: 50%;
+
+  animation:
+    admin-spin 0.8s linear infinite;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .admin-page .admin-filters {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-page .admin-filters-actions {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 850px) {
+  .admin-topbar {
+    min-height: 64px;
+
+    padding: 0 18px;
+  }
+
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+
+    height: auto;
+
+    padding: 12px;
+
+    border-right: 0;
+
+    border-bottom: 1px solid var(--admin-border);
+  }
+
+  .admin-sidebar-header {
+    display: none;
+  }
+
+  .admin-navigation {
+    display: grid;
+
+    grid-template-columns:
+      repeat(5, minmax(0, 1fr));
+
+    gap: 5px;
+  }
+
+  .admin-nav-button {
+    justify-content: center;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+    padding: 8px 5px;
+
+    text-align: center;
+
+    font-size: 10px;
+  }
+
+  .admin-nav-icon {
+    width: 24px;
+    height: 24px;
+
+    flex-basis: 24px;
+  }
+
+  .admin-sidebar-footer {
+    display: none;
+  }
+
+  .admin-content {
+    padding: 28px 20px 45px;
+  }
+
+  .admin-intro {
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-topbar {
+    padding: 0 14px;
+  }
+
+  .admin-brand-text span,
+  .admin-account-role {
+    display: none;
+  }
+
+  .admin-account-name {
+    max-width: 150px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 11px;
+  }
+
+  .admin-content {
+    padding: 22px 14px 35px;
+  }
+
+  .admin-intro {
+    flex-direction: column;
+
+    gap: 15px;
+
+    padding-bottom: 20px;
+  }
+
+  .admin-intro h1 {
+    font-size: 25px;
+  }
+
+  .admin-intro-badge {
+    margin-top: 0;
+  }
+
+  .admin-module {
+    padding: 18px;
+  }
+
+  .admin-page .admin-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-filters-actions {
+    width: 100%;
+  }
+
+  .admin-page .admin-filters-actions button {
+    width: 100%;
+  }
+
+  .admin-welcome {
+    min-height: auto;
+
+    align-items: flex-start;
+
+    padding: 24px;
+
+    flex-direction: column;
+  }
+
+  .admin-navigation {
+    grid-template-columns:
+      repeat(5, minmax(65px, 1fr));
+
+    overflow-x: auto;
+  }
+
+  .admin-nav-button {
+    min-width: 65px;
+  }
+
+  .admin-page .panel-header {
+    flex-direction: column;
+  }
+}
+
+/* =========================================================
+   WORKSPACE DE ASIGNACIONES
+   ========================================================= */
+
+.admin-page .admin-patients-module {
+  padding: 28px;
+}
+
+.admin-page .assignment-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 14px;
+  margin: 18px 0 22px;
+}
+
+.admin-page .assignment-workspace .panel {
+  min-width: 0;
+  padding: 18px;
+}
+
+.admin-page .assignment-selection-panel {
+  grid-column: 1;
+}
+
+.admin-page .assignment-doctors-panel {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.admin-page .assignment-action-panel {
+  grid-column: 1 / -1;
+}
+
+.admin-page .assignment-selection-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.admin-page .assignment-selection-controls .form-group {
+  flex: 1 1 auto;
+}
+
+.admin-page .assignment-selection-controls .btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+}
+
+.admin-page .assignment-selection-count {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid rgba(120, 169, 200, 0.25);
+  border-radius: 999px;
+  background: var(--admin-blue-soft);
+  color: var(--admin-blue-dark);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-page .admin-doctor-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 145px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-page .admin-doctor-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--admin-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-page .admin-doctor-option:hover {
+  border-color: var(--admin-purple);
+  background: var(--admin-purple-pale);
+}
+
+.admin-page .admin-doctor-option input {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  accent-color: var(--admin-purple);
+}
+
+.admin-page .admin-doctor-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .admin-doctor-option-all {
+  grid-column: 1 / -1;
+  border-style: dashed;
+  background: var(--admin-surface-soft);
+  font-weight: 700;
+}
+
+.admin-page .assignment-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-page .assignment-action-choice {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.admin-page .assignment-action-choice button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid var(--admin-border-dark);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--admin-text-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-page .assignment-action-choice button.active {
+  border-color: var(--admin-purple);
+  background: var(--admin-purple-soft);
+  color: var(--admin-purple-dark);
+}
+
+.admin-page .assignment-action-choice button.danger.active {
+  border-color: rgba(201, 133, 145, 0.65);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.admin-page .assignment-action-choice button:hover {
+  border-color: var(--admin-purple);
+}
+
+.admin-page .assignment-submit {
+  min-width: 210px;
+  min-height: 42px;
+  border: 1px solid var(--admin-purple);
+  background: var(--admin-purple);
+  color: #fff;
+}
+
+.admin-page .assignment-submit:hover {
+  background: var(--admin-purple-dark);
+  color: #fff;
+}
+
+.admin-page .assignment-submit-danger {
+  border-color: var(--admin-danger);
+  background: var(--admin-danger);
+}
+
+.admin-page .assignment-submit-danger:hover {
+  background: #a96a79;
+}
+
+.admin-page .assignment-feedback {
+  margin: 0 0 18px;
+}
+
+.admin-page .assignment-feedback.success {
+  border-color: rgba(120, 184, 154, 0.25);
+  background: var(--admin-green-soft);
+  color: var(--admin-green-dark);
+}
+
+.admin-page .assignment-feedback.error {
+  border-color: rgba(201, 133, 145, 0.2);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.admin-page .assignment-table-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 12px;
+}
+
+.admin-page .assignment-table-heading .panel-title {
+  font-size: 17px;
+}
+
+.admin-page .assignment-table-heading .panel-subtitle {
+  margin-top: 3px;
+}
+
+.admin-page .assignment-table-container {
+  border-radius: 12px;
+}
+
+.admin-page .assignment-table {
+  min-width: 760px;
+}
+
+.admin-page .assignment-table tbody tr.is-selected {
+  background: #f4f0fb;
+}
+
+.admin-page .assignment-table td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.admin-page .assignment-table td:nth-child(2) {
+  min-width: 200px;
+}
+
+.admin-page .assignment-table td:nth-child(6) {
+  min-width: 240px;
+  white-space: normal;
+}
+
+.admin-page .assignment-table td small {
+  color: var(--admin-text-muted);
+  font-size: 10px;
+}
+
+.admin-page .assignment-doctor-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.admin-page .assignment-unassigned-badge {
+  background: #f7f3f5;
+  color: var(--admin-text-muted);
+}
+
+.admin-page .assignment-empty-state {
+  padding: 30px 18px;
+  text-align: center;
+}
+
+@media (max-width: 850px) {
+  .admin-page .admin-patients-module {
+    padding: 20px;
+  }
+
+  .admin-page .assignment-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .assignment-selection-panel,
+  .admin-page .assignment-doctors-panel,
+  .admin-page .assignment-action-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-page .admin-patients-module {
+    padding: 16px;
+  }
+
+  .admin-page .assignment-selection-controls,
+  .admin-page .assignment-action-row,
+  .admin-page .assignment-table-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-page .assignment-selection-controls .btn,
+  .admin-page .assignment-submit {
+    width: 100%;
+  }
+
+  .admin-page .admin-doctor-picker {
+    grid-template-columns: 1fr;
+    max-height: 220px;
+  }
+
+  .admin-page .admin-doctor-option-all {
+    grid-column: auto;
+  }
+
+  .admin-page .assignment-action-choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-page .assignment-action-choice button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 450px) {
+  .admin-brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .admin-brand-logo img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .admin-brand-text strong {
+    font-size: 13px;
+  }
+
+  .admin-account-name {
+    display: none;
+  }
+
+  .admin-content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .admin-module {
+    padding: 14px;
+
+    border-radius: 11px;
+  }
+}
+
+/* =========================================================
+   PACIENTES - SELECCIÓN Y ASIGNACIÓN
+   ========================================================= */
+
+.admin-page .patient-select-column {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.admin-page input.patient-checkbox {
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+
+  display: inline-block !important;
+
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: initial !important;
+  border-radius: 3px !important;
+
+  background: initial !important;
+  box-shadow: none !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  cursor: pointer;
+
+  accent-color: var(--admin-purple);
+}
+
+/* =========================================================
+   EVITAR DESBORDAMIENTO DE CONTROLES
+   ========================================================= */
+
+.admin-page .panel {
+  min-width: 0;
+}
+
+.admin-page .panel-header {
+  min-width: 0;
+}
+
+.admin-page .panel-header > div {
+  min-width: 0;
+}
+
+.admin-page .panel-title,
+.admin-page .panel-subtitle {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.admin-page .admin-filters {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-page .form-group {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-page .form-group input,
+.admin-page .form-group select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Los botones nunca deben empujar el panel */
+.admin-page .admin-filters-actions {
+  min-width: 0;
+  max-width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-page .admin-filters-actions .btn {
+  max-width: 100%;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   ASIGNACIÓN POR PACIENTE
+   ========================================================= */
+
+.admin-page .admin-patient-assignment {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-page .admin-patient-assignment select {
+  width: 150px;
+  min-width: 100px;
+  max-width: 150px;
+
+  flex: 1 1 auto;
+}
+
+.admin-page .admin-patient-assignment button {
+  flex: 0 0 auto;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   TABLA DE PACIENTES
+   ========================================================= */
+
+.admin-page .users-table-container {
+  width: 100%;
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.admin-page .users-table {
+  min-width: 1500px;
+}
+
+.admin-page .users-table th,
+.admin-page .users-table td {
+  white-space: nowrap;
+}
+
+/* La columna de selección sí puede ser pequeña */
+.admin-page .users-table
+  th.patient-select-column,
+.admin-page .users-table
+  td.patient-select-column {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+
+  white-space: normal;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .admin-page .admin-filters {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr);
+  }
+
+  .admin-page .admin-filters-actions {
+    grid-column: 1 / -1;
+
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-page .admin-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-filters-actions {
+    grid-column: auto;
+
+    width: 100%;
+
+    justify-content: stretch;
+  }
+
+  .admin-page .admin-filters-actions .btn {
+    width: 100%;
+  }
+
+  .admin-page .admin-patient-assignment {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-page .admin-patient-assignment select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .admin-page .admin-patient-assignment button {
+    width: 100%;
+  }
+}
+
+/* La tabla de asignaciones usa pocas columnas y no necesita el ancho de la
+   tabla clínica histórica. Este override va después de las reglas heredadas. */
+.admin-page .assignment-table {
+  min-width: 760px;
+}
+
+.admin-page .assignment-table th,
+.admin-page .assignment-table td {
+  white-space: normal;
+}

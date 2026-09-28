@@ -1,0 +1,1139 @@
+/* ============================================================
+   FOXCAT MEDICAL — DOCTOR WORKSPACE / WIDGETS
+   Base visual y estructural del sistema de widgets.
+   ============================================================ */
+
+
+/* ============================================================
+   WORKSPACE
+============================================================ */
+
+.doctor-workspace {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  isolation: isolate;
+}
+
+
+/* ============================================================
+   WORKSPACE CANVAS
+============================================================ */
+
+.workspace-canvas {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  overflow: visible;
+
+  isolation: isolate;
+}
+
+
+/* ============================================================
+   INTERACTIVE CANVAS
+============================================================ */
+
+.workspace-canvas-interactive {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  overflow: visible;
+
+  isolation: isolate;
+}
+
+
+/*
+ * Mientras se redimensiona un widget:
+ *
+ * - el canvas mantiene el cursor de resize;
+ * - los elementos internos no seleccionan texto;
+ * - el widget activo permanece por encima.
+ */
+
+.workspace-canvas.is-resizing {
+  cursor: nwse-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.workspace-canvas.is-resizing * {
+  cursor: nwse-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+
+/* ============================================================
+   STATIC CANVAS
+============================================================ */
+
+.workspace-canvas-static {
+  display: grid;
+
+  width: 100%;
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  align-items: start;
+
+  overflow: visible;
+}
+
+
+/* ============================================================
+   WIDGET CONTAINER
+============================================================ */
+
+.doctor-widget-container {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  overflow: visible;
+}
+
+
+/* ============================================================
+   WIDGET GRID
+============================================================ */
+
+.doctor-widget-grid {
+  display: grid;
+
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  gap: 0;
+}
+
+
+/* ============================================================
+   CANVAS WIDGET
+============================================================ */
+
+.workspace-canvas-widget {
+  box-sizing: border-box;
+
+  min-width: 0;
+  min-height: 0;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+}
+
+
+/*
+ * MUY IMPORTANTE:
+ *
+ * En modo interactivo WorkspaceCanvas controla:
+ *
+ *   position
+ *   left
+ *   top
+ *   width
+ *   height
+ *
+ * mediante estilos inline.
+ *
+ * No sobrescribir esas propiedades aquí.
+ */
+
+.workspace-canvas-widget.is-interactive {
+  position: absolute;
+
+  box-sizing: border-box;
+
+  min-width: 0;
+  min-height: 0;
+
+  max-width: none;
+  max-height: none;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   ACTIVE WIDGET
+============================================================ */
+
+.workspace-canvas-widget.is-active {
+  z-index: 20;
+}
+
+
+/* ============================================================
+   RESIZING WIDGET
+============================================================ */
+
+.workspace-canvas-widget.is-resizing {
+  z-index: 100 !important;
+
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+
+/* ============================================================
+   WIDGET CONTENT
+============================================================ */
+
+.workspace-canvas-widget-content {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   WIDGET
+============================================================ */
+
+.doctor-widget {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  max-width: none;
+  max-height: none;
+
+  margin: 0;
+  padding: 0;
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+
+  border: 1px solid var(--doctor-border);
+
+  border-radius: var(--doctor-radius-md);
+
+  background: var(--doctor-surface);
+
+  box-shadow: var(--doctor-shadow);
+
+  isolation: isolate;
+
+  transition:
+    box-shadow var(--doctor-transition),
+    border-color var(--doctor-transition),
+    transform var(--doctor-transition);
+}
+
+
+/* ============================================================
+   FOCUSED WIDGET
+============================================================ */
+
+.doctor-widget.is-focused {
+  border-color: var(--doctor-primary);
+
+  box-shadow:
+    0 0 0 2px
+      color-mix(
+        in srgb,
+        var(--doctor-primary) 18%,
+        transparent
+      ),
+    var(--doctor-shadow);
+}
+
+
+/* ============================================================
+   MINIMIZED WIDGET
+============================================================ */
+
+.doctor-widget.is-minimized {
+  height: auto;
+
+  min-height: 56px;
+
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   WIDGET ACCENTS
+============================================================ */
+
+.doctor-widget-purple {
+  border-top: 3px solid var(--doctor-purple-500);
+}
+
+.doctor-widget-blue {
+  border-top: 3px solid var(--doctor-blue-500);
+}
+
+.doctor-widget-green {
+  border-top: 3px solid var(--doctor-green-500);
+}
+
+.doctor-widget-red {
+  border-top: 3px solid var(--doctor-red-500);
+}
+
+
+/* ============================================================
+   WIDGET HEADER
+============================================================ */
+
+.doctor-widget-header {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  flex: 0 0 auto;
+
+  width: 100%;
+  min-width: 0;
+
+  min-height: 56px;
+
+  box-sizing: border-box;
+
+  gap: 10px;
+
+  padding: 9px 12px 9px 14px;
+
+  border-bottom: 1px solid var(--doctor-border-soft);
+
+  background: var(--doctor-surface);
+
+  z-index: 2;
+}
+
+
+/* ============================================================
+   WIDGET HEADING
+============================================================ */
+
+.doctor-widget-heading {
+  display: flex;
+  align-items: center;
+
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  gap: 10px;
+
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   WIDGET ICON
+============================================================ */
+
+.doctor-widget-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 32px;
+
+  width: 32px;
+  height: 32px;
+
+  border-radius: var(--doctor-radius-sm);
+
+  background: var(--doctor-surface-soft);
+
+  color: var(--doctor-primary);
+
+  font-size: 14px;
+
+  line-height: 1;
+
+  user-select: none;
+}
+
+
+/* ============================================================
+   TITLE GROUP
+============================================================ */
+
+.doctor-widget-title-group {
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  overflow: hidden;
+}
+
+.doctor-widget-title-group h3 {
+  margin: 0;
+
+  overflow: hidden;
+
+  color: var(--doctor-text);
+
+  font-size: 13px;
+  font-weight: 800;
+
+  line-height: 1.25;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+.doctor-widget-title-group span {
+  display: block;
+
+  margin-top: 3px;
+
+  overflow: hidden;
+
+  color: var(--doctor-muted);
+
+  font-size: 10px;
+
+  line-height: 1.25;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+/* ============================================================
+   WIDGET BODY
+============================================================ */
+
+.doctor-widget-body {
+  flex: 1 1 auto;
+
+  width: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  padding: 14px;
+
+  overflow: auto;
+
+  overscroll-behavior: contain;
+
+  scrollbar-width: thin;
+
+  animation:
+    doctor-fade-in
+    180ms
+    ease
+    both;
+}
+
+
+.doctor-widget-body > * {
+  min-width: 0;
+
+  max-width: 100%;
+
+  box-sizing: border-box;
+}
+
+
+/* ============================================================
+   MINIMIZED LABEL
+============================================================ */
+
+.doctor-widget-minimized-label {
+  flex: 0 0 auto;
+
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 8px 14px;
+
+  color: var(--doctor-muted);
+
+  font-size: 10px;
+
+  line-height: 1.4;
+}
+
+
+/* ============================================================
+   LISTS
+============================================================ */
+
+.doctor-widget-list {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+
+  min-width: 0;
+
+  gap: 7px;
+}
+
+.doctor-widget-list-item {
+  display: flex;
+  align-items: flex-start;
+
+  width: 100%;
+
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  gap: 9px;
+
+  padding: 9px;
+
+  border-radius: var(--doctor-radius-sm);
+
+  background: var(--doctor-surface-soft);
+
+  overflow: hidden;
+
+  transition:
+    background var(--doctor-transition-fast),
+    transform var(--doctor-transition-fast);
+}
+
+.doctor-widget-list-item:hover {
+  background: var(--doctor-surface-muted);
+
+  transform: translateX(2px);
+}
+
+.doctor-widget-list-item > div {
+  min-width: 0;
+
+  width: 100%;
+}
+
+.doctor-widget-list-item strong {
+  display: block;
+
+  margin-bottom: 2px;
+
+  overflow: hidden;
+
+  color: var(--doctor-text);
+
+  font-size: 11px;
+
+  line-height: 1.3;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+.doctor-widget-list-item span {
+  display: block;
+
+  max-width: 100%;
+
+  color: var(--doctor-muted);
+
+  font-size: 10px;
+
+  line-height: 1.45;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+   EMPTY
+============================================================ */
+
+.doctor-widget-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+
+  min-width: 0;
+
+  min-height: 100px;
+
+  box-sizing: border-box;
+
+  padding: 16px;
+
+  color: var(--doctor-muted);
+
+  font-size: 12px;
+
+  text-align: center;
+}
+
+
+/* ============================================================
+   METRIC
+============================================================ */
+
+.doctor-widget-metric {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  width: 100%;
+
+  min-width: 0;
+
+  gap: 12px;
+}
+
+.doctor-widget-metric > div {
+  min-width: 0;
+}
+
+.doctor-widget-metric-label {
+  color: var(--doctor-muted);
+
+  font-size: 11px;
+}
+
+.doctor-widget-metric-value {
+  margin-top: 4px;
+
+  color: var(--doctor-text);
+
+  font-size: 25px;
+  font-weight: 800;
+
+  line-height: 1.1;
+}
+
+.doctor-widget-metric-unit {
+  margin-left: 4px;
+
+  color: var(--doctor-muted);
+
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.doctor-widget-status {
+  display: inline-flex;
+  align-items: center;
+
+  flex: 0 0 auto;
+
+  gap: 6px;
+
+  padding: 4px 7px;
+
+  border-radius: var(--doctor-radius-pill);
+
+  font-size: 9px;
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+.doctor-widget-status.green {
+  background: var(--doctor-green-soft);
+  color: var(--doctor-green-dark);
+}
+
+.doctor-widget-status.blue {
+  background: var(--doctor-blue-soft);
+  color: var(--doctor-blue-dark);
+}
+
+.doctor-widget-status.red {
+  background: var(--doctor-red-soft);
+  color: var(--doctor-red-dark);
+}
+
+.doctor-widget-status.purple {
+  background: var(--doctor-primary-soft);
+  color: var(--doctor-primary-dark);
+}
+
+.doctor-widget-status.warning {
+  background: var(--doctor-warning-soft);
+  color: var(--doctor-warning-dark);
+}
+
+
+/* ============================================================
+   PROGRESS
+============================================================ */
+
+.doctor-widget-progress {
+  width: 100%;
+
+  height: 7px;
+
+  margin-top: 13px;
+
+  border-radius: var(--doctor-radius-pill);
+
+  background: var(--doctor-border-soft);
+
+  overflow: hidden;
+}
+
+.doctor-widget-progress-bar {
+  width: 0;
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: var(--doctor-primary);
+
+  transition:
+    width 500ms cubic-bezier(
+      0.2,
+      0.7,
+      0.2,
+      1
+    );
+}
+
+
+/* ============================================================
+   RESIZE HANDLE
+============================================================ */
+
+/*
+ * WorkspaceCanvas ya controla mediante inline styles:
+ *
+ *   position
+ *   right
+ *   bottom
+ *   width
+ *   height
+ *   background
+ *   z-index
+ *
+ * Por eso aquí solamente definimos el comportamiento visual
+ * que no debe entrar en conflicto con el componente.
+ */
+
+.workspace-widget-resize-handle {
+  box-sizing: border-box;
+
+  margin: 0;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 0;
+
+  background: transparent;
+
+  color: var(--doctor-primary);
+
+  cursor: nwse-resize;
+
+  touch-action: none;
+
+  user-select: none;
+
+  -webkit-user-select: none;
+
+  pointer-events: auto;
+
+  appearance: none;
+
+  -webkit-appearance: none;
+
+  outline: none;
+
+  transition: none;
+}
+
+
+/*
+ * El grip interno sí es visual.
+ */
+
+.workspace-widget-resize-handle > span {
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   RESIZE HANDLE HOVER
+============================================================ */
+
+.workspace-widget-resize-handle:hover {
+  background: rgba(
+    117,
+    91,
+    167,
+    0.08
+  );
+
+  color: var(--doctor-primary-dark);
+
+  cursor: nwse-resize;
+}
+
+
+/* ============================================================
+   RESIZE HANDLE ACTIVE
+============================================================ */
+
+.workspace-widget-resize-handle.is-active {
+  background: rgba(
+    117,
+    91,
+    167,
+    0.12
+  );
+
+  color: var(--doctor-primary);
+
+  cursor: nwse-resize;
+
+  user-select: none;
+
+  -webkit-user-select: none;
+}
+
+
+/* ============================================================
+   RESIZE HANDLE FOCUS
+============================================================ */
+
+.workspace-widget-resize-handle:focus {
+  outline: none;
+}
+
+.workspace-widget-resize-handle:focus-visible {
+  outline:
+    2px solid
+    var(--doctor-primary);
+
+  outline-offset: -2px;
+}
+
+
+/* ============================================================
+   CANVAS EMPTY STATE
+============================================================ */
+
+.workspace-canvas-empty {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-direction: column;
+
+  gap: 6px;
+
+  width: 100%;
+
+  min-height: 220px;
+
+  box-sizing: border-box;
+
+  padding: 32px;
+
+  border: 1px dashed
+    var(--doctor-border);
+
+  border-radius:
+    var(--doctor-radius-md);
+
+  color: var(--doctor-muted);
+
+  text-align: center;
+}
+
+.workspace-canvas-empty strong {
+  color: var(--doctor-text);
+
+  font-size: 13px;
+}
+
+.workspace-canvas-empty span {
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+/*
+ * NO modificar position/left/top/width/height del widget
+ * interactivo aquí.
+ *
+ * WorkspaceCanvas y useWorkspaceLayout controlan esas
+ * dimensiones dinámicamente.
+ */
+
+@media (max-width: 768px) {
+  .doctor-widget-header {
+    min-height: 52px;
+
+    padding:
+      8px 10px;
+  }
+
+  .doctor-widget-body {
+    padding: 12px;
+  }
+
+  .doctor-widget-metric {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .workspace-widget-resize-handle {
+    width: 32px;
+    height: 32px;
+
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .doctor-widget,
+  .doctor-widget-list-item,
+  .doctor-widget-progress-bar {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   AI VALIDATION
+============================================================ */
+
+.ai-validation-widget { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ai-validation-header, .ai-validation-card-head, .ai-validation-current, .ai-validation-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ai-validation-header p { margin: 4px 0 0; color: var(--doctor-muted); font-size: 11px; }
+.ai-validation-badge, .ai-validation-source { color: var(--doctor-primary); font-size: 10px; font-weight: 700; }
+.ai-validation-disclaimer { padding: 9px 10px; border-radius: var(--doctor-radius-sm); background: var(--doctor-surface-soft); color: var(--doctor-muted); font-size: 10px; line-height: 1.4; }
+.ai-validation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.ai-validation-card { display: flex; flex-direction: column; gap: 9px; min-width: 0; padding: 11px; border: 1px solid var(--doctor-border-soft); border-radius: var(--doctor-radius-sm); background: var(--doctor-surface); }
+.ai-validation-card-head strong, .ai-validation-current strong { color: var(--doctor-text); font-size: 11px; }
+.ai-validation-risk { display: flex; flex-direction: column; align-items: flex-end; font-size: 10px; }
+.ai-validation-risk strong { font-size: 18px; }
+.ai-validation-risk.high { color: var(--doctor-red-dark); }
+.ai-validation-risk.medium { color: var(--doctor-warning-dark); }
+.ai-validation-risk.low { color: var(--doctor-green-dark); }
+.ai-validation-current { color: var(--doctor-muted); font-size: 10px; }
+.ai-validation-current strong { font-size: 10px; }
+.ai-validation-actions { align-items: stretch; }
+.ai-validation-button { flex: 1; min-height: 32px; border: 1px solid var(--doctor-border); border-radius: var(--doctor-radius-sm); background: var(--doctor-surface); color: var(--doctor-text); cursor: pointer; font-size: 10px; font-weight: 800; }
+.ai-validation-button:hover, .ai-validation-button.selected { border-color: var(--doctor-primary); }
+.ai-validation-button-valid.selected { background: var(--doctor-green-soft); color: var(--doctor-green-dark); }
+.ai-validation-button-incorrect.selected { background: var(--doctor-red-soft); color: var(--doctor-red-dark); }
+.ai-validation-result { font-size: 10px; font-weight: 700; }
+.ai-validation-result.success { color: var(--doctor-green-dark); }
+.ai-validation-result.incorrect { color: var(--doctor-red-dark); }
+
+/* AI sections and high-contrast charts */
+.ai-validation-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--doctor-border-soft);
+  border-radius: var(--doctor-radius-md);
+  background: var(--doctor-surface-soft);
+}
+
+.ai-validation-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid transparent;
+  border-radius: var(--doctor-radius-sm);
+  background: transparent;
+  color: var(--doctor-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ai-validation-tabs button:hover,
+.ai-validation-tabs button.is-active {
+  border-color: var(--doctor-border);
+  background: var(--doctor-surface);
+  color: var(--doctor-primary-dark);
+  box-shadow: 0 2px 7px rgba(35, 47, 52, 0.06);
+}
+
+.ai-validation-tabs button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--doctor-radius-pill);
+  background: var(--doctor-primary-soft);
+  color: var(--doctor-primary-dark);
+  font-size: 9px;
+}
+
+.ai-validation-summary-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+}
+
+.ai-validation-summary-hero,
+.ai-validation-summary-metrics,
+.ai-validation-summary-note {
+  border: 1px solid var(--doctor-border-soft);
+  border-radius: var(--doctor-radius-md);
+  background: var(--doctor-surface);
+}
+
+.ai-validation-summary-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--doctor-primary-soft), var(--doctor-surface));
+}
+
+.ai-validation-summary-kicker,
+.ai-validation-summary-hero > span:last-child {
+  color: var(--doctor-muted);
+  font-size: 10px;
+}
+
+.ai-validation-summary-hero strong { color: var(--doctor-text); font-size: 17px; }
+.ai-validation-summary-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
+.ai-validation-summary-metrics div { display: flex; flex-direction: column; justify-content: center; gap: 5px; min-width: 0; padding: 10px; border-radius: var(--doctor-radius-sm); background: var(--doctor-surface-soft); }
+.ai-validation-summary-metrics span { color: var(--doctor-muted); font-size: 9px; }
+.ai-validation-summary-metrics strong { overflow: hidden; color: var(--doctor-text); font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.ai-validation-summary-note { grid-column: 1 / -1; margin: 0; padding: 11px 13px; color: var(--doctor-muted); font-size: 10px; line-height: 1.5; }
+
+.ai-validation-charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.ai-validation-chart-card { min-width: 0; padding: 13px; border: 1px solid var(--doctor-border-soft); border-radius: var(--doctor-radius-md); background: linear-gradient(180deg, var(--doctor-surface), var(--doctor-surface-soft)); }
+.ai-validation-chart-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.ai-validation-chart-card header div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ai-validation-chart-card header strong { overflow: hidden; color: var(--doctor-text); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.ai-validation-chart-card header span { color: var(--doctor-muted); font-size: 9px; }
+.ai-validation-chart-card header b { color: var(--doctor-primary-dark); font-size: 22px; line-height: 1; }
+
+.ai-validation-chart { width: 100%; min-width: 0; padding: 8px 4px 2px; border: 1px solid color-mix(in srgb, var(--doctor-primary) 22%, var(--doctor-border-soft)); border-radius: var(--doctor-radius-sm); background: color-mix(in srgb, var(--doctor-primary-soft) 38%, var(--doctor-surface)); }
+.ai-validation-chart-svg { display: block; width: 100%; height: auto; min-height: 142px; overflow: visible; }
+.ai-validation-grid-line { stroke: var(--doctor-border); stroke-dasharray: 4 5; stroke-width: 1; opacity: 0.7; }
+.ai-validation-axis { stroke: var(--doctor-muted); stroke-width: 1.2; opacity: 0.65; }
+.ai-validation-axis-label { fill: var(--doctor-muted); font-size: 10px; font-weight: 700; }
+.ai-validation-risk-line { fill: none; stroke: var(--doctor-primary); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 2px rgba(117, 91, 167, 0.25)); }
+.ai-validation-risk-point { fill: var(--doctor-surface); stroke: var(--doctor-primary); stroke-width: 3; }
+.ai-validation-chart-caption { margin-top: 8px; color: var(--doctor-muted); font-size: 9px; font-weight: 700; text-align: right; }
+.ai-validation-empty-chart { padding: 22px 8px; color: var(--doctor-muted); font-size: 10px; text-align: center; }
+
+@media (max-width: 520px) {
+  .ai-validation-summary-panel { grid-template-columns: 1fr; }
+  .ai-validation-summary-metrics { grid-template-columns: 1fr 1fr; }
+  .ai-validation-summary-metrics div:last-child { grid-column: 1 / -1; }
+  .ai-validation-charts-grid { grid-template-columns: 1fr; }
+}
+
+/* Individual AI workspace widgets */
+.ai-single-prediction-widget,
+.ai-status-summary-widget { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ai-single-prediction-heading,
+.ai-status-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ai-single-prediction-heading > div,
+.ai-status-summary-head > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ai-single-prediction-heading span:first-child,
+.ai-status-summary-head span { color: var(--doctor-muted); font-size: 9px; }
+.ai-single-prediction-heading strong,
+.ai-status-summary-head strong { overflow: hidden; color: var(--doctor-text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.ai-model-chip { flex: 0 0 auto; padding: 4px 7px; border-radius: var(--doctor-radius-pill); background: var(--doctor-primary-soft); color: var(--doctor-primary-dark); font-size: 9px; font-weight: 800; }
+.ai-single-prediction-widget > .ai-validation-card { padding: 0; border: 0; background: transparent; }
+.ai-single-prediction-widget > .ai-validation-card .ai-validation-card-head { padding-bottom: 7px; border-bottom: 1px solid var(--doctor-border-soft); }
+.ai-single-prediction-widget > .ai-validation-card .ai-validation-current { padding-top: 2px; }
+.ai-status-summary-head > b { color: var(--doctor-primary-dark); font-size: 25px; line-height: 1; }
+.ai-status-summary-text { margin: 0; color: var(--doctor-muted); font-size: 10px; line-height: 1.45; }
+.ai-status-summary-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ai-status-summary-metrics div { display: flex; flex-direction: column; gap: 3px; padding: 8px; border-radius: var(--doctor-radius-sm); background: var(--doctor-surface-soft); }
+.ai-status-summary-metrics span { color: var(--doctor-muted); font-size: 9px; }
+.ai-status-summary-metrics strong { color: var(--doctor-text); font-size: 15px; }
+.ai-status-summary-widget .ai-validation-chart { min-height: 0; }
+.ai-status-summary-disclaimer { color: var(--doctor-placeholder); font-size: 9px; line-height: 1.35; }
+.ai-widget-loading { display: flex; align-items: center; justify-content: center; min-height: 150px; color: var(--doctor-muted); font-size: 11px; text-align: center; }
+
+@media (max-width: 520px) {
+  .ai-status-summary-metrics { gap: 4px; }
+  .ai-status-summary-metrics div { padding: 7px 5px; }
+}

@@ -1,0 +1,98 @@
+{
+  "dataset": "ml/datasets/dataset_final_armonizado.csv",
+  "rows": 456,
+  "columns": 47,
+  "targetsDetected": 5,
+  "targetsTrainable": 2,
+  "targetsLimited": 2,
+  "targetsNotTrainable": 1,
+  "trainableTargets": [
+    "copd_gold",
+    "history_of_heart_failure"
+  ],
+  "limitedTargets": [
+    "escala_disnea",
+    "clasifisui"
+  ],
+  "nonTrainableTargets": [
+    "bodex"
+  ],
+  "cvFolds": 3,
+  "minSamplesPerClass": 5,
+  "minValidRows": 30,
+  "minDomainCoverageForTraining": 1.0,
+  "targetDomains": {
+    "copd_gold": {
+      "type": "ordinal",
+      "expectedValues": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "history_of_heart_failure": {
+      "type": "binary",
+      "expectedValues": [
+        "SI",
+        "NO"
+      ]
+    },
+    "bodex": {
+      "type": "ordinal",
+      "expectedValues": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    "escala_disnea": {
+      "type": "ordinal",
+      "expectedValues": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    "epocconfirmado": {
+      "type": "binary",
+      "expectedValues": [
+        "SI",
+        "NO"
+      ]
+    },
+    "clasifisui": {
+      "type": "ordinal",
+      "expectedValues": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  },
+  "methodologicalNotes": [
+    "Las clases ausentes del dominio teórico no se fabrican.",
+    "Un target ordinal solo se considera ENTRENABLE cuando existe cobertura completa de su dominio esperado.",
+    "La presencia de dos o más clases no implica que un target ordinal sea entrenable.",
+    "Las clases con muy pocos registros se reportan como representación insuficiente.",
+    "Los valores fuera del dominio esperado se reportan como problemas de calidad."
+  ]
+}

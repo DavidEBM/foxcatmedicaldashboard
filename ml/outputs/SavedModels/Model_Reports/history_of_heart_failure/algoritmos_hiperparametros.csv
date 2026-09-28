@@ -1,0 +1,2 @@
+﻿target,targetLabel,algorithm,family,hyperparameters
+history_of_heart_failure,Antecedente de insuficiencia cardiaca,LogisticRegression,ML,"{""C"": 1.0, ""class_weight"": ""balanced"", ""dual"": false, ""fit_intercept"": true, ""intercept_scaling"": 1, ""l1_ratio"": 0.0, ""max_iter"": 3000, ""n_jobs"": null, ""penalty"": ""deprecated"", ""random_state"": 42, ""solver"": ""lbfgs"", ""tol"": 0.0001, ""verbose"": 0, ""warm_start"": false}"

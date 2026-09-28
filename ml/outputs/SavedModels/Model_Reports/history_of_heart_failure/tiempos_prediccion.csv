@@ -1,0 +1,2 @@
+﻿target,targetLabel,algorithm,latencyMeanMs,latencyStdMs,latencyPerRecordMs,predictionsPerSecond,batchLatencyMeanMs,batchPredictionsPerSecond
+history_of_heart_failure,Antecedente de insuficiencia cardiaca,LogisticRegression,4.245774997798435,0.7972957468605975,4.245774997798435,235.52826056927907,5.182774999411777,2315.3619443950297
