@@ -139,6 +139,34 @@ DEFAULT_THRESHOLDS: Final[dict[str, float]] = {
 }
 
 
+# Umbral global de calidad para publicación por target. La calidad global
+# utiliza `normalized_quality`, que lleva MCC y Kappa a [0, 1] antes de
+# promediar las métricas disponibles.
+DEFAULT_MODEL_QUALITY_THRESHOLD: Final[float] = _env_float(
+    "MIN_MODEL_QUALITY",
+    0.70,
+)
+
+GOLD_MODEL_QUALITY_THRESHOLD: Final[float] = _env_float(
+    "MIN_GOLD_MODEL_QUALITY",
+    0.75,
+)
+
+
+def thresholds_for_target(
+    target_key: str,
+    base_thresholds: dict[str, float],
+) -> dict[str, float]:
+    """Añade el umbral global de calidad correspondiente al target."""
+    thresholds = dict(base_thresholds)
+    thresholds["modelQuality"] = (
+        GOLD_MODEL_QUALITY_THRESHOLD
+        if target_key == "copd_gold"
+        else DEFAULT_MODEL_QUALITY_THRESHOLD
+    )
+    return thresholds
+
+
 # ---------------------------------------------------------------------------
 # Targets
 # ---------------------------------------------------------------------------
@@ -316,6 +344,16 @@ def validate_config() -> None:
         if not 0.0 <= threshold <= 1.0:
             raise ValueError(
                 f"El umbral de {metric} debe estar entre 0 y 1; "
+                f"valor actual={threshold}."
+            )
+
+    for name, threshold in (
+        ("MIN_MODEL_QUALITY", DEFAULT_MODEL_QUALITY_THRESHOLD),
+        ("MIN_GOLD_MODEL_QUALITY", GOLD_MODEL_QUALITY_THRESHOLD),
+    ):
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError(
+                f"El umbral de {name} debe estar entre 0 y 1; "
                 f"valor actual={threshold}."
             )
 

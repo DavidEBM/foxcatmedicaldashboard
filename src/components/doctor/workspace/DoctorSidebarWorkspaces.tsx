@@ -6,6 +6,7 @@ import type { Patient } from "@/types/doctor-patients";
 import type { AiPatientValidationSummary } from "@/types/doctor-ai-validation";
 import { subscribeToDoctorValidationSummaries } from "@/services/firebase/ai-validation.service";
 import { EXPECTED_PREDICTIONS_PER_PATIENT } from "@/lib/doctor/ai-validation/constants";
+import PatientCrudModal from "@/components/doctor/patients/PatientCrudModal";
 
 interface DoctorPatientsWorkspaceProps {
   patients: Patient[];
@@ -165,6 +166,8 @@ export function DoctorPatientsWorkspace({
   const [validationSummaries, setValidationSummaries] = useState<
     Record<string, AiPatientValidationSummary>
   >({});
+  const [patientModalOpen, setPatientModalOpen] = useState(false);
+  const [patientFormStatus, setPatientFormStatus] = useState<string | null>(null);
 
   useEffect(() => {
     return subscribeToDoctorValidationSummaries(doctorUid, {
@@ -252,6 +255,18 @@ export function DoctorPatientsWorkspace({
               ? `${filteredPatients.length} de ${patients.length} pacientes`
               : `${patients.length} pacientes`}
           </span>
+          <button
+            type="button"
+            className="doctor-patient-add"
+            onClick={() => {
+              setPatientFormStatus(null);
+              setPatientModalOpen(true);
+            }}
+            disabled={!doctorUid}
+          >
+            <span aria-hidden="true">+</span>
+            Agregar paciente
+          </button>
           <button
             type="button"
             className="doctor-patient-refresh"
@@ -395,6 +410,18 @@ export function DoctorPatientsWorkspace({
           })}
         </div>
       )}
+      {patientFormStatus && (
+        <p className="doctor-patient-form-status" role="status">{patientFormStatus}</p>
+      )}
+      <PatientCrudModal
+        open={patientModalOpen}
+        mode="create"
+        cities={["Bogota", "Medellin", "Cali", "Pasto", "Ipiales", "Barcelona"]}
+        doctorId={doctorUid ?? ""}
+        onClose={() => setPatientModalOpen(false)}
+        onSaved={() => { void onRefresh(); }}
+        onStatus={(message, type) => setPatientFormStatus(type === "error" ? message : "Paciente creado correctamente.")}
+      />
     </section>
   );
 }

@@ -44,7 +44,8 @@ export function computeClinicalAssessment(
     (respiratoryRate >= 24 ? 24 : respiratoryRate >= 22 ? 14 : respiratoryRate >= 20 ? 6 : 0) +
     (pulse >= 120 ? 16 : pulse >= 100 ? 10 : 0) +
     (systolic >= 180 || (systolic > 0 && systolic < 90) ? 20 : systolic >= 150 ? 8 : 0) +
-    (patient.status === "Critico" ? 30 : patient.status === "Riesgo" ? 12 : 0);
+    (patient.status === "Critico" ? 30 : patient.status === "Riesgo" ? 12 : 0) +
+    Math.min(6, Math.max(0, Number(patient.locationRiskLevel || 0) * 2));
 
   const shortRisk = clampRisk(base);
   const weekRisk = clampRisk(Math.max(shortRisk, shortRisk + 8));

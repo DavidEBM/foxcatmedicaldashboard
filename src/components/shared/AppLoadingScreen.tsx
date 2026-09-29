@@ -15,7 +15,6 @@ export default function AppLoadingScreen({
           alt="Foxcat Medical"
           width={82}
           height={82}
-          priority
           className="loading-logo"
         />
         <span className="loading-eyebrow">Espacio clínico seguro</span>

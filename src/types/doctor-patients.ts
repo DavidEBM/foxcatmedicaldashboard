@@ -8,6 +8,7 @@ export type SmokingStatus =
   | "Exfumador"
   | "Activo"
   | "Alta carga"
+  | "No Presenta"
   | "";
 
 export type PatientStatusClass =
@@ -43,6 +44,7 @@ export interface Patient {
 
   packHistory: number;
   copdGold: number;
+  copdConfirmed: string;
   smokingStatus: SmokingStatus;
 
   heartFailureHistory: string;
@@ -91,6 +93,7 @@ export interface PatientFormValues {
   bmi: string;
   packHistory: string;
   copdGold: string;
+  copdConfirmed: string;
   smokingStatus: SmokingStatus;
   heartFailureHistory: string;
   ecg: string;

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T04:05:53.070176+00:00",
+  "generatedAt": "2026-09-29T14:44:33.491425+00:00",
   "sourceDataset": "ml/datasets/dataset_final_armonizado.csv",
   "dataSources": {
     "firebaseIncluded": true,
@@ -28,92 +28,7 @@
     "copd_gold": "COPD GOLD(1 a 4) (Target)",
     "history_of_heart_failure": "History of Heart Failure(Si ó no)(Target)"
   },
-  "skippedTargets": {
-    "escala_disnea": {
-      "column": "ESCALA DISNEA (0 a 10 puntos) (Target)",
-      "reason": "faltan clases del dominio teórico: 0, 1, 3, 5, 6, 7, 8, 9 | cobertura del dominio=27.27% < 100.00% | clases con representación insuficiente: 4=3",
-      "validRows": 269,
-      "classes": 3,
-      "classDistribution": {
-        "0": 0,
-        "1": 0,
-        "2": 8,
-        "3": 0,
-        "4": 3,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0,
-        "10": 258
-      },
-      "status": "LIMITADO",
-      "domainCoverage": 0.2727272727272727,
-      "domainComplete": false,
-      "expectedValues": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10
-      ],
-      "observedValues": [
-        10,
-        2,
-        4
-      ],
-      "missingExpectedValues": [
-        0,
-        1,
-        3,
-        5,
-        6,
-        7,
-        8,
-        9
-      ],
-      "unexpectedValues": []
-    },
-    "clasifisui": {
-      "column": "CLASIFISUI (1 a 5, clasificacion urgencias) (Target)",
-      "reason": "faltan clases del dominio teórico: 1, 2, 3 | cobertura del dominio=40.00% < 100.00%",
-      "validRows": 269,
-      "classes": 2,
-      "classDistribution": {
-        "1": 0,
-        "2": 0,
-        "3": 0,
-        "4": 47,
-        "5": 222
-      },
-      "status": "LIMITADO",
-      "domainCoverage": 0.4,
-      "domainComplete": false,
-      "expectedValues": [
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "observedValues": [
-        5,
-        4
-      ],
-      "missingExpectedValues": [
-        1,
-        2,
-        3
-      ],
-      "unexpectedValues": []
-    }
-  },
+  "skippedTargets": {},
   "featureColumnsByTarget": {
     "copd_gold": [
       "EDAD",
@@ -182,6 +97,24 @@
     "mcc": 0.4,
     "kappa": 0.4,
     "auc": 0.7
+  },
+  "minimumThresholdsByTarget": {
+    "copd_gold": {
+      "accuracy": 0.7,
+      "f1": 0.7,
+      "mcc": 0.4,
+      "kappa": 0.4,
+      "auc": 0.7,
+      "modelQuality": 0.75
+    },
+    "history_of_heart_failure": {
+      "accuracy": 0.7,
+      "f1": 0.7,
+      "mcc": 0.4,
+      "kappa": 0.4,
+      "auc": 0.7,
+      "modelQuality": 0.7
+    }
   },
   "models": {
     "copd_gold": {
@@ -559,12 +492,12 @@
             },
             "normalizedQuality": 0.7638665410465082,
             "normalizedQualityPercent": 76.38665410465082,
-            "predictionLatencyMs": 10.950874999252846,
-            "predictionLatencyStdMs": 4.235175771100897,
-            "responseTimeMsPerRecord": 10.950874999252846,
-            "predictionsPerSecond": 91.3169039066036,
-            "predictionBatchLatencyMs": 11.46917499954725,
-            "batchPredictionsPerSecond": 1307.853441994924
+            "predictionLatencyMs": 4.494762500144134,
+            "predictionLatencyStdMs": 0.05868572310281061,
+            "responseTimeMsPerRecord": 4.494762500144134,
+            "predictionsPerSecond": 222.48116557169215,
+            "predictionBatchLatencyMs": 4.819387500219818,
+            "batchPredictionsPerSecond": 3112.428705787993
           },
           "testCI95": {
             "precisionCI95Low": 0.44968749999999996,
@@ -1310,12 +1243,12 @@
             },
             "normalizedQuality": 0.3211309523809524,
             "normalizedQualityPercent": 32.11309523809524,
-            "predictionLatencyMs": 5.192987500777235,
-            "predictionLatencyStdMs": 0.7171778746436899,
-            "responseTimeMsPerRecord": 5.192987500777235,
-            "predictionsPerSecond": 192.56738050117198,
-            "predictionBatchLatencyMs": 6.964237499232695,
-            "batchPredictionsPerSecond": 1723.0888523434382
+            "predictionLatencyMs": 3.5326874997281266,
+            "predictionLatencyStdMs": 0.08723645094216369,
+            "responseTimeMsPerRecord": 3.5326874997281266,
+            "predictionsPerSecond": 283.07060844667393,
+            "predictionBatchLatencyMs": 3.9565375004713133,
+            "batchPredictionsPerSecond": 3032.954950779698
           },
           "testCI95": {
             "precisionCI95Low": 0.0,

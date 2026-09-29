@@ -199,7 +199,8 @@ async function downloadComparisonImage(
   const valueX = barTrackX + barTrackWidth + 24;
   const barStartY = 230;
   const barRowHeight = 42;
-  const heatmapY = barStartY + candidates.length * barRowHeight + 86;
+  const mccStartY = barStartY + candidates.length * barRowHeight + 110;
+  const heatmapY = mccStartY + candidates.length * barRowHeight + 86;
   const modelColumnWidth = 250;
   const metricColumnWidth = (width - margin * 2 - modelColumnWidth) / COMPARISON_METRICS.length;
   const heatmapHeaderHeight = 42;
@@ -216,6 +217,17 @@ async function downloadComparisonImage(
       <rect x="${barTrackX}" y="${y + 8}" width="${barTrackWidth}" height="16" rx="8" fill="#eeeafa" />
       <rect x="${barTrackX}" y="${y + 8}" width="${Math.max(3, quality * barTrackWidth)}" height="16" rx="8" fill="#7867b7" />
       <text x="${valueX}" y="${y + 22}" class="value">${(quality * 100).toFixed(1)}%</text>`;
+  }).join("");
+
+  const mccRows = candidates.map((candidate, index) => {
+    const mcc = candidateMetric(candidate, "mcc");
+    const y = mccStartY + index * barRowHeight;
+    const modelLabel = index === 0 ? `${candidate.model} [MEJOR]` : candidate.model;
+    return `
+      <text x="${margin}" y="${y + 22}" class="label">${escapeXml(truncateLabel(modelLabel, 28))}</text>
+      <rect x="${barTrackX}" y="${y + 8}" width="${barTrackWidth}" height="16" rx="8" fill="#e4f0f2" />
+      <rect x="${barTrackX}" y="${y + 8}" width="${Math.max(3, mcc * barTrackWidth)}" height="16" rx="8" fill="#4f96a6" />
+      <text x="${valueX}" y="${y + 22}" class="value">${(mcc * 100).toFixed(1)}%</text>`;
   }).join("");
 
   const heatmapHeader = COMPARISON_METRICS.map((item, index) => {
@@ -264,7 +276,9 @@ async function downloadComparisonImage(
     <text x="${margin}" y="88" class="subtitle">Objetivo clinico: ${escapeXml(label)} - ${candidates.length} modelos con datos reales</text>
     <text x="${margin}" y="154" class="section">Grafica 1 - Calidad normalizada en validacion</text>
     ${barRows}
-    <text x="${margin}" y="${heatmapY - 28}" class="section">Grafica 2 - Heatmap de metricas en validacion</text>
+    <text x="${margin}" y="${mccStartY - 28}" class="section">Grafica 2 - Matthews Correlation Coefficient (MCC)</text>
+    ${mccRows}
+    <text x="${margin}" y="${heatmapY - 28}" class="section">Grafica 3 - Heatmap de metricas en validacion</text>
     <text x="${margin}" y="${heatmapY + 27}" class="header">Modelo</text>
     ${heatmapHeader}
     ${heatmapRows}
@@ -710,7 +724,32 @@ export default function AdminTraining() {
 
                   <div className="admin-training-chart-block">
                     <div className="admin-training-chart-title">
-                      <strong>Gráfica 2 · Heatmap de métricas</strong>
+                      <strong>Gráfica 2 · Matthews Correlation Coefficient (MCC)</strong>
+                      <span>Validación · 0–100% normalizado</span>
+                    </div>
+                    <div
+                      className="admin-training-bar-chart admin-training-mcc-chart"
+                      role="img"
+                      aria-label={`Comparativa MCC de los modelos para ${targetLabel(target)}`}
+                    >
+                      {candidates.map((candidate) => {
+                        const mcc = candidateMetric(candidate, "mcc");
+                        return (
+                          <div className="admin-training-bar-row" key={`${target}-mcc-${candidate.model}`}>
+                            <span className="admin-training-bar-label">{candidate.model}</span>
+                            <div className="admin-training-bar-track admin-training-mcc-bar-track">
+                              <span style={{ width: `${mcc * 100}%` }} />
+                            </div>
+                            <strong>{(mcc * 100).toFixed(1)}%</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="admin-training-chart-block">
+                    <div className="admin-training-chart-title">
+                      <strong>Gráfica 3 · Heatmap de métricas</strong>
                       <span>Validación · escala 0–100%</span>
                     </div>
                     <div className="admin-training-heatmap" role="table" aria-label={`Heatmap de métricas para ${targetLabel(target)}`}>

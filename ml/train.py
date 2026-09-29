@@ -15,6 +15,7 @@ from .config import (
     DEFAULT_THRESHOLDS,
     RANDOM_STATE,
     TARGET_LABELS,
+    thresholds_for_target,
     validate_config,
 )
 from .data_preparation import (
@@ -644,9 +645,20 @@ def main() -> int:
         "test": 0,
     }
 
+    thresholds_by_target = {
+        key: thresholds_for_target(key, thresholds)
+        for key in targets
+    }
+
     for key, column in targets.items():
         print(
             f"\n=== {TARGET_LABELS.get(key, column)} ==="
+        )
+
+        target_thresholds = thresholds_by_target[key]
+        print(
+            "  Umbral de calidad del modelo: "
+            f"{target_thresholds['modelQuality']:.0%}"
         )
 
         target_start = time.perf_counter()
@@ -743,7 +755,7 @@ def main() -> int:
                 va,
                 te,
                 output_dir,
-                thresholds,
+                target_thresholds,
                 groups=groups_target.iloc[tr]
                 if groups_target is not None
                 else None,
@@ -805,7 +817,7 @@ def main() -> int:
             output_dir,
             split_totals,
             results,
-            thresholds,
+            thresholds_by_target,
             skipped_targets,
         )
 
@@ -858,6 +870,7 @@ def main() -> int:
             thresholds,
             skipped_targets,
             data_sources=data_sources,
+            thresholds_by_target=thresholds_by_target,
         )
 
         print(

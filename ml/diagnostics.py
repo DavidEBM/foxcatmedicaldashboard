@@ -25,6 +25,8 @@ from sklearn.metrics import (
     roc_curve,
 )
 
+from .model_common import evaluate as evaluate_pipeline
+
 
 # ============================================================
 # SHAP OPCIONAL
@@ -54,6 +56,17 @@ BOOTSTRAP_DEFAULTS = {
     "n_boot": 200,
     "seed": 42,
 }
+
+BIAS_CURVE_METRICS = [
+    ("accuracy", "Accuracy"),
+    ("f1", "F1"),
+    ("mcc", "MCC"),
+    ("kappa", "Kappa"),
+    ("precision", "Precision"),
+    ("recallSensitivity", "Sensibilidad"),
+    ("auc", "AUC"),
+    ("balancedAccuracy", "Balanced Accuracy"),
+]
 
 CSV_ENCODING = "utf-8-sig"
 
@@ -1093,6 +1106,31 @@ def _save_figure(
     plt.close(fig)
 
 
+def _clear_generated_diagnostic_images(base: Path) -> None:
+    """Remove only the image artifacts managed by this diagnostics module."""
+    patterns = (
+        "roc_comparativa.png",
+        "confusion_*.png",
+        "prediccion_vs_real_*.png",
+        "metricas_barras.png",
+        "metricas_heatmap.png",
+        "metricas_normalizadas.png",
+        "metricas_ic95.png",
+        "mcc_real_comparativa.png",
+        "metricas_sesgo_*.png",
+        "distribucion_clases_test.png",
+        "boxplot_tiempos_prediccion.png",
+        "learning_curve_*.png",
+    )
+
+    for pattern in patterns:
+        for image_path in base.glob(pattern):
+            try:
+                image_path.unlink()
+            except OSError:
+                continue
+
+
 # ============================================================
 # TABLAS DE DIAGNÓSTICO
 # ============================================================
@@ -1304,6 +1342,9 @@ def _plot_roc_comparison(
     y_test: pd.Series,
 ) -> None:
     """Genera ROC comparativa."""
+    if not test_payloads:
+        return
+
     fig, ax = plt.subplots(
         figsize=(10, 7)
     )
@@ -1768,6 +1809,219 @@ def _plot_binary_prediction_vs_real(
 # ============================================================
 # COMPARACIÓN DE MÉTRICAS
 # ============================================================
+
+def _safe_model_filename(value: Any) -> str:
+    text = str(value or "modelo")
+    safe = "".join(
+        character if character.isalnum() or character in "-_" else "_"
+        for character in text
+    )
+    return safe.strip("_") or "modelo"
+
+
+def _candidate_passes_threshold(candidate: Mapping[str, Any]) -> bool:
+    if candidate.get("available") is False:
+        return False
+    return bool(
+        candidate.get(
+            "thresholdMet",
+            candidate.get("validationThresholdMet", False),
+        )
+    )
+
+
+def _build_majority_bias_resamples(
+    y_validation: Any,
+    points: int = 11,
+    sample_size: int | None = None,
+) -> list[tuple[float, np.ndarray]]:
+    """Build the same majority-class bias resamples for every model."""
+    labels = np.asarray(y_validation)
+    unique, counts = np.unique(labels, return_counts=True)
+
+    if len(unique) < 2:
+        return []
+
+    majority = unique[int(np.argmax(counts))]
+    majority_indices = np.flatnonzero(labels == majority)
+    other_indices = np.flatnonzero(labels != majority)
+
+    if majority_indices.size == 0 or other_indices.size == 0:
+        return []
+
+    total = max(int(sample_size or 0), len(labels), 200)
+    rng = np.random.default_rng(ROC_RANDOM_STATE)
+    resamples: list[tuple[float, np.ndarray]] = []
+
+    for share in np.linspace(0.0, 1.0, max(points, 2)):
+        majority_count = int(round(total * float(share)))
+        other_count = total - majority_count
+        selected_parts: list[np.ndarray] = []
+
+        if majority_count:
+            selected_parts.append(
+                rng.choice(majority_indices, size=majority_count, replace=True)
+            )
+
+        if other_count:
+            selected_parts.append(
+                rng.choice(other_indices, size=other_count, replace=True)
+            )
+
+        selected = np.concatenate(selected_parts)
+        rng.shuffle(selected)
+        resamples.append((float(share * 100.0), selected))
+
+    return resamples
+
+
+def _subset_rows(frame: Any, indices: np.ndarray) -> Any:
+    if hasattr(frame, "iloc"):
+        return frame.iloc[indices]
+    return np.asarray(frame)[indices]
+
+
+def _plot_real_mcc_comparison(
+    base: Path,
+    target_label: str,
+    candidates: Sequence[Mapping[str, Any]],
+) -> None:
+    """Generate raw validation MCC for every available candidate."""
+    rows: list[tuple[str, float]] = []
+
+    for candidate in candidates:
+        if not _candidate_passes_threshold(candidate):
+            continue
+        metrics = (
+            candidate.get("validationMetrics")
+            or candidate.get("validation")
+            or {}
+        )
+        value = _safe(metrics.get("mcc"))
+        if np.isfinite(value):
+            rows.append((str(candidate.get("model", "Modelo")), value))
+
+    if not rows:
+        return
+
+    labels = [row[0] for row in rows]
+    values = np.asarray([row[1] for row in rows], dtype=float)
+    colors = ["#39747f" if value >= 0 else "#c96b62" for value in values]
+
+    fig, ax = plt.subplots(figsize=(13, 7))
+    bars = ax.bar(np.arange(len(values)), values, color=colors, alpha=0.9)
+    ax.axhline(0.0, color="#34313f", linewidth=0.9)
+    ax.set_ylim(-1.0, 1.0)
+    ax.set_ylabel("MCC real (-1 a 1)")
+    ax.set_xlabel("Modelo")
+    ax.set_title(f"Matthews Correlation Coefficient (MCC) real - {target_label}")
+    ax.set_xticks(np.arange(len(labels)), labels)
+    ax.grid(axis="y", alpha=0.25)
+    plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+
+    for bar, value in zip(bars, values):
+        offset = 0.035 if value >= 0 else -0.06
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + offset,
+            f"{value:.3f}",
+            ha="center",
+            va="bottom" if value >= 0 else "top",
+            fontsize=9,
+        )
+
+    fig.text(
+        0.01,
+        0.01,
+        "Validation: valor MCC sin normalizacion; 1 es concordancia perfecta y -1 inversion perfecta.",
+        fontsize=9,
+        color="#555555",
+    )
+    _save_figure(fig, base / "mcc_real_comparativa.png", dpi=180)
+
+
+def _plot_model_bias_curve(
+    base: Path,
+    target_label: str,
+    candidate: Mapping[str, Any],
+    X_validation: Any,
+    y_validation: Any,
+    resamples: Sequence[tuple[float, np.ndarray]],
+) -> None:
+    """Plot raw metrics while increasing majority-class bias."""
+    pipeline = candidate.get("trainedPipeline")
+    model_name = str(candidate.get("model", "Modelo"))
+
+    if pipeline is None or not resamples:
+        return
+
+    x_values = np.asarray([item[0] for item in resamples], dtype=float)
+    metric_values = {metric: [] for metric, _label in BIAS_CURVE_METRICS}
+    y_array = np.asarray(y_validation)
+
+    for _share, indices in resamples:
+        sampled_y = y_array[indices]
+        if len(np.unique(sampled_y)) < 2:
+            metrics = {}
+        else:
+            try:
+                metrics = evaluate_pipeline(
+                    pipeline,
+                    _subset_rows(X_validation, indices),
+                    sampled_y,
+                )
+            except Exception:
+                metrics = {}
+
+        for metric, _label in BIAS_CURVE_METRICS:
+            metric_values[metric].append(_safe(metrics.get(metric)))
+
+    fig, ax = plt.subplots(figsize=(15, 8))
+    colors = plt.get_cmap("tab10").colors
+    plotted = False
+
+    for index, (metric, label) in enumerate(BIAS_CURVE_METRICS):
+        values = np.asarray(metric_values[metric], dtype=float)
+        if not np.isfinite(values).any():
+            continue
+        ax.plot(
+            x_values,
+            values,
+            marker="o",
+            linewidth=2,
+            markersize=4,
+            label=label,
+            color=colors[index % len(colors)],
+        )
+        plotted = True
+
+    if not plotted:
+        plt.close(fig)
+        return
+
+    ax.axhline(0.0, color="#34313f", linewidth=0.9, alpha=0.8)
+    ax.set_xlim(0.0, 100.0)
+    ax.set_ylim(-1.0, 1.0)
+    ax.set_xticks(np.arange(0.0, 101.0, 10.0))
+    ax.set_yticks(np.linspace(-1.0, 1.0, 9))
+    ax.set_xlabel("Sesgo hacia la clase mayoritaria (%)")
+    ax.set_ylabel("Valor de la metrica (-1 a 1)")
+    ax.set_title(f"Metricas frente al desbalance - {target_label} - {model_name}")
+    ax.grid(alpha=0.25)
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.01), ncol=4)
+    fig.text(
+        0.01,
+        0.01,
+        "Remuestreo estratificado controlado sobre VALIDATION; valores reales, sin normalizacion.",
+        fontsize=9,
+        color="#555555",
+    )
+    _save_figure(
+        fig,
+        base / f"metricas_sesgo_{_safe_model_filename(model_name)}.png",
+        dpi=180,
+    )
+
 
 def _plot_metric_comparison(
     base: Path,
@@ -2624,6 +2878,8 @@ def export_target_diagnostics(
     X_test: pd.DataFrame,
     y_test: pd.Series,
     split_info: Mapping[str, int],
+    X_validation: pd.DataFrame | None = None,
+    y_validation: pd.Series | None = None,
 ) -> Path:
     """
     Exporta los diagnósticos finales de un target.
@@ -2635,8 +2891,6 @@ def export_target_diagnostics(
     publicador, aunque los diagnósticos TEST se generan únicamente a
     partir de `test_payloads`.
     """
-    del candidates
-
     base = (
         Path(output_dir)
         / "Model_Reports"
@@ -2648,6 +2902,18 @@ def export_target_diagnostics(
         exist_ok=True,
     )
 
+    _clear_generated_diagnostic_images(base)
+
+    eligible_candidates = [
+        candidate
+        for candidate in candidates
+        if _candidate_passes_threshold(candidate)
+    ]
+    eligible_models = {
+        str(candidate.get("model"))
+        for candidate in eligible_candidates
+    }
+
     # ---------------------------------------------------------
     # TEST permitido únicamente para payloads explícitamente
     # disponibles.
@@ -2658,7 +2924,7 @@ def export_target_diagnostics(
         if payload.get(
             "available",
             True,
-        )
+        ) and str(payload.get("model")) in eligible_models
     ]
 
     (
@@ -2902,6 +3168,24 @@ def export_target_diagnostics(
     # ---------------------------------------------------------
     # 10. Distribución de clases
     # ---------------------------------------------------------
+    _plot_real_mcc_comparison(
+        base,
+        target_label,
+        eligible_candidates,
+    )
+
+    if X_validation is not None and y_validation is not None:
+        bias_resamples = _build_majority_bias_resamples(y_validation)
+        for candidate in eligible_candidates:
+            _plot_model_bias_curve(
+                base,
+                target_label,
+                candidate,
+                X_validation,
+                y_validation,
+                bias_resamples,
+            )
+
     _plot_class_distribution(
         base,
         target_label,

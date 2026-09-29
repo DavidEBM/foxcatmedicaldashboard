@@ -59,6 +59,7 @@ export function normalizePatient(
 		bmi: number(data, "bmi"),
 		packHistory: number(data, "packHistory", "packYears"),
 		copdGold: number(data, "copdGold"),
+		copdConfirmed: text(data, "copdConfirmed", "epocConfirmed") || "No Presenta",
 		smokingStatus: smoking,
 		heartFailureHistory: normalizeBooleanText(data.heartFailureHistory),
 		coronaryHistory: normalizeBooleanText(data.coronaryHistory),

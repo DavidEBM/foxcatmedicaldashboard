@@ -1,2 +1,1 @@
 ﻿feature,importance,importanceStd,method,model,target,algorithm
-No disponible,,,error: Pipeline should either be a classifier to be used with response_method=predict_proba or the response_method should be 'predict'. Got a regressor with response_method=predict_proba instead.,CatBoost,history_of_heart_failure,CatBoost

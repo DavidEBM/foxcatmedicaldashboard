@@ -1,2 +1,1 @@
 ﻿target,targetLabel,algorithm,family,hyperparameters
-history_of_heart_failure,Antecedente de insuficiencia cardiaca,CatBoost,ML,"{""iterations"": 200, ""depth"": 6, ""learning_rate"": 0.05, ""l2_leaf_reg"": 3.0, ""random_strength"": 1.0, ""cat_features"": null}"

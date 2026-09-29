@@ -1426,6 +1426,8 @@ def publish_best_model(
             X_test,
             y_test,
             split_info,
+            X_validation,
+            y_validation,
         )
 
     except Exception as exc:
@@ -1527,6 +1529,7 @@ def export_manifest(
     thresholds,
     skipped_targets=None,
     data_sources=None,
+    thresholds_by_target=None,
 ):
     """
     Exporta el manifiesto reproducible del entrenamiento.
@@ -1618,6 +1621,11 @@ def export_manifest(
         "minimumThresholds": dict(
             thresholds
         ),
+
+        "minimumThresholdsByTarget": {
+            key: dict(value)
+            for key, value in (thresholds_by_target or {}).items()
+        },
 
         "models": {},
     }

@@ -25,34 +25,34 @@ Base visual system, reset, tokens, authentication, welcome/menu and shared UI.
      PALETA PRINCIPAL
      ========================================================== */
 
-  --bg-main:#f7f1f3;
-  --bg-soft:#fffaf7;
-  --bg-card:#fff9fc;
-  --bg-card-strong:#ffffff;
+  --bg-main:#f0d0e0;
+  --bg-soft:#f8edf4;
+  --bg-card:#fdf8fa;
+  --bg-card-strong:#fffafd;
 
-  --text-main:#5d6578;
-  --text-soft:#8a90a3;
+  --text-main:#5a5f7a;
+  --text-soft:#9691aa;
 
-  --line:#ead9e4;
-  --line-strong:#d7bfd1;
+  --line:#ead8e5;
+  --line-strong:#d9bfd4;
 
-  --shadow:0 20px 50px rgba(154,142,171,0.18);
+  --shadow:0 12px 30px rgba(88,68,104,0.10);
 
   /* IDENTIDAD */
-  --primary:#9b82c4;
-  --primary-hover:#896daf;
-  --primary-light:#eee6fa;
+  --primary:#b391c5;
+  --primary-hover:#9375a9;
+  --primary-light:#f6eafa;
 
-  --accent:#b49acf;
-  --accent-soft:#f3edfb;
+  --accent:#9aafcb;
+  --accent-soft:#e9edfb;
 
-  --pink:#f4cbd8;
-  --pink-strong:#d87da0;
+  --pink:#f0c8de;
+  --pink-strong:#c98bb0;
 
-  --blue:#d8e6ff;
-  --green:#d9f0df;
-  --yellow:#f6ebc4;
-  --lavender:#e8dcf9;
+  --blue:#dceafa;
+  --green:#e5f4ea;
+  --yellow:#f8f1df;
+  --lavender:#e6ddf5;
 
   /* ==========================================================
      ESTADOS CLÍNICOS
@@ -60,9 +60,9 @@ Base visual system, reset, tokens, authentication, welcome/menu and shared UI.
 
   --critical:#f6ccd3;
   --warning:#f9e8c7;
-  --stable:#daf0e0;
+  --stable:#e5f4ea;
 
-  --success:#6f9f7d;
+  --success:#6a9477;
   --error:#b66f80;
   --info:#7b7890;
 
@@ -91,15 +91,15 @@ Base visual system, reset, tokens, authentication, welcome/menu and shared UI.
   --danger-surface:#fff0f2;
   --danger-text:#a26275;
 
-  --input-surface:#fffdfd;
+  --input-surface:#fffafd;
 
   /* ==========================================================
      LOGIN / HERO
      ========================================================== */
 
-  --hero-start:#d8c6eb;
-  --hero-middle:#c8b3e1;
-  --hero-end:#ead4df;
+  --hero-start:#f0d0e0;
+  --hero-middle:#e6ddf5;
+  --hero-end:#dceafa;
 
   --button-text:#ffffff;
 
@@ -118,11 +118,7 @@ Base visual system, reset, tokens, authentication, welcome/menu and shared UI.
      ACCIONES
      ========================================================== */
 
-  --action-gradient:linear-gradient(
-    135deg,
-    #f7d1dc,
-    #d8e4ff
-  );
+  --action-gradient:linear-gradient(135deg,#f0c8de,#e6ddf5 58%,#dceafa);
 
   --confirm-bg:#8fc99a;
   --cancel-bg:#e4919f;
@@ -131,11 +127,7 @@ Base visual system, reset, tokens, authentication, welcome/menu and shared UI.
      MENÚ
      ========================================================== */
 
-  --menu-icon-bg:linear-gradient(
-    145deg,
-    #ffdbe7,
-    #dbe8ff
-  );
+  --menu-icon-bg:linear-gradient(145deg,#f5d6e7,#e4dcf5 58%,#dceafa);
 
   --menu-icon-line:#5f617b;
 
@@ -182,43 +174,43 @@ Base visual system, reset, tokens, authentication, welcome/menu and shared UI.
    ============================================================ */
 
 body.dark-mode{
-  --bg-main:#1d1b24;
-  --bg-soft:#262330;
-  --bg-card:#2b2735;
-  --bg-card-strong:#322d3f;
+  --bg-main:#51425a;
+  --bg-soft:#302b3b;
+  --bg-card:#352f41;
+  --bg-card-strong:#3b3448;
 
-  --text-main:#f1e7f0;
-  --text-soft:#b7aec0;
+  --text-main:#f1eaf2;
+  --text-soft:#d0c6d5;
 
-  --line:#4f475e;
-  --line-strong:#766d87;
+  --line:#51495f;
+  --line-strong:#62586b;
 
-  --shadow:0 22px 60px rgba(0,0,0,0.35);
+  --shadow:0 12px 30px rgba(15,12,22,0.25);
 
   /* IDENTIDAD */
 
-  --primary:#b9a1d7;
-  --primary-hover:#c8b2e2;
-  --primary-light:#453b55;
+  --primary:#746986;
+  --primary-hover:#8f84a0;
+  --primary-light:#40384d;
 
-  --accent:#a994c6;
-  --accent-soft:#3d354b;
+  --accent:#aab7cb;
+  --accent-soft:#39414f;
 
   --pink:#7a5a72;
   --pink-strong:#edbdd3;
 
-  --blue:#576c92;
-  --green:#547867;
-  --yellow:#8d7d57;
-  --lavender:#685b8f;
+  --blue:#aab7cb;
+  --green:#294a38;
+  --yellow:#a99c76;
+  --lavender:#51495f;
 
   /* ESTADOS */
 
   --critical:#6f4655;
   --warning:#756545;
-  --stable:#4c6b5a;
+  --stable:#294a38;
 
-  --success:#a6cbb0;
+  --success:#7ca58a;
   --error:#dda4b4;
   --info:#b9b0c5;
 
@@ -245,13 +237,13 @@ body.dark-mode{
   --danger-surface:#553541;
   --danger-text:#f0c1cf;
 
-  --input-surface:#3a3447;
+  --input-surface:#3b3548;
 
   /* LOGIN */
 
-  --hero-start:#594968;
-  --hero-middle:#685477;
-  --hero-end:#604c5d;
+  --hero-start:#4a3c52;
+  --hero-middle:#51425a;
+  --hero-end:#53435c;
 
   --button-text:#ffffff;
 
@@ -266,22 +258,14 @@ body.dark-mode{
 
   /* ACCIONES */
 
-  --action-gradient:linear-gradient(
-    135deg,
-    #6f5877,
-    #546887
-  );
+  --action-gradient:linear-gradient(135deg,#51465e,#746986);
 
   --confirm-bg:#5f9a72;
   --cancel-bg:#a15e70;
 
   /* MENÚ */
 
-  --menu-icon-bg:linear-gradient(
-    145deg,
-    #584665,
-    #41506d
-  );
+  --menu-icon-bg:linear-gradient(145deg,#51465e,#39414f);
 
   --menu-icon-line:#f5edf7;
 
@@ -3784,31 +3768,31 @@ body {
      Base palette
      -------------------------------------------------------- */
 
-  --doctor-bg: #faf9fc;
-  --doctor-surface: #fffefe;
-  --doctor-surface-soft: #fdfcff;
-  --doctor-surface-muted: #f7f5fa;
+  --doctor-bg: #f0d0e0;
+  --doctor-surface: #fdf8fa;
+  --doctor-surface-soft: #fbf1f6;
+  --doctor-surface-muted: #f7edf3;
 
-  --doctor-border: #ebe8f0;
-  --doctor-border-soft: #f3f0f6;
+  --doctor-border: #ead8e5;
+  --doctor-border-soft: #f1e4ed;
 
-  --doctor-text: #34313d;
-  --doctor-text-soft: #5c5868;
-  --doctor-muted: #817d8d;
-  --doctor-placeholder: #aba7b5;
+  --doctor-text: #5a5f7a;
+  --doctor-text-soft: #74758e;
+  --doctor-muted: #9691aa;
+  --doctor-placeholder: #b5adbf;
 
   /* --------------------------------------------------------
      Purple / primary
      -------------------------------------------------------- */
 
-  --doctor-purple-50: #fcf9ff;
-  --doctor-purple-100: #f7f1fc;
-  --doctor-purple-200: #ede3f6;
-  --doctor-purple-300: #ddcdee;
-  --doctor-purple-400: #cdb7e1;
-  --doctor-purple-500: #a38dbd;
-  --doctor-purple-600: #866da3;
-  --doctor-purple-700: #705a89;
+  --doctor-purple-50: #fffafd;
+  --doctor-purple-100: #f6eafa;
+  --doctor-purple-200: #ead9f1;
+  --doctor-purple-300: #ddc6e6;
+  --doctor-purple-400: #ceb2d9;
+  --doctor-purple-500: #b391c5;
+  --doctor-purple-600: #9375a9;
+  --doctor-purple-700: #765d8f;
 
   --doctor-primary: var(--doctor-purple-500);
   --doctor-primary-dark: var(--doctor-purple-700);
@@ -3817,23 +3801,23 @@ body {
   --doctor-purple-gradient:
     linear-gradient(
       135deg,
-      #fcf9fe 0%,
-      #f4ecfa 52%,
-      #e9dff3 100%
+      #fffafd 0%,
+      #f6eafa 52%,
+      #e3d5f1 100%
     );
 
   /* --------------------------------------------------------
      Blue
      -------------------------------------------------------- */
 
-  --doctor-blue-50: #f6fbfe;
-  --doctor-blue-100: #f0f7fb;
-  --doctor-blue-200: #e4eef5;
-  --doctor-blue-300: #cfe0eb;
-  --doctor-blue-400: #b9cfde;
-  --doctor-blue-500: #8eaac0;
-  --doctor-blue-600: #7592a9;
-  --doctor-blue-700: #617d93;
+  --doctor-blue-50: #f5f7ff;
+  --doctor-blue-100: #e9edfb;
+  --doctor-blue-200: #dce4f5;
+  --doctor-blue-300: #c9d7ec;
+  --doctor-blue-400: #b1c6e0;
+  --doctor-blue-500: #9aafcb;
+  --doctor-blue-600: #7d94b3;
+  --doctor-blue-700: #63748e;
 
   --doctor-blue: var(--doctor-blue-500);
   --doctor-blue-dark: var(--doctor-blue-700);
@@ -3851,14 +3835,14 @@ body {
      Green
      -------------------------------------------------------- */
 
-  --doctor-green-50: #f7fbf7;
-  --doctor-green-100: #f0f8f1;
-  --doctor-green-200: #e1efe3;
-  --doctor-green-300: #c5dec9;
-  --doctor-green-400: #a9c8b0;
-  --doctor-green-500: #88ad92;
-  --doctor-green-600: #709579;
-  --doctor-green-700: #5d7f66;
+  --doctor-green-50: #f5fbf7;
+  --doctor-green-100: #e5f4ea;
+  --doctor-green-200: #d2ead9;
+  --doctor-green-300: #b5d8bf;
+  --doctor-green-400: #97c2a3;
+  --doctor-green-500: #7eaa8b;
+  --doctor-green-600: #6a9477;
+  --doctor-green-700: #4f765e;
 
   --doctor-green: var(--doctor-green-500);
   --doctor-green-dark: var(--doctor-green-700);
@@ -3901,11 +3885,11 @@ body {
      Warning
      -------------------------------------------------------- */
 
-  --doctor-warning-50: #fffdf8;
-  --doctor-warning-100: #fbf5ea;
-  --doctor-warning-200: #f2e5cd;
-  --doctor-warning-500: #c3a06b;
-  --doctor-warning-700: #8f7049;
+  --doctor-warning-50: #fffdf7;
+  --doctor-warning-100: #f8f1df;
+  --doctor-warning-200: #efe3c7;
+  --doctor-warning-500: #bca879;
+  --doctor-warning-700: #8b7952;
 
   --doctor-warning: var(--doctor-warning-500);
   --doctor-warning-dark: var(--doctor-warning-700);
@@ -3929,23 +3913,23 @@ body {
   --doctor-gradient-primary:
     linear-gradient(
       135deg,
-      #fcf9fe 0%,
-      #f4ecfa 50%,
-      #e9dff3 100%
+      #fffafd 0%,
+      #f5e8fa 50%,
+      #dae8fb 100%
     );
 
   --doctor-gradient-calm:
     linear-gradient(
       135deg,
-      #f9fbfd 0%,
-      #edf4f8 100%
+      #fffdf8 0%,
+      #f3eef8 100%
     );
 
   --doctor-gradient-success:
     linear-gradient(
       135deg,
-      #f8fcf8 0%,
-      #eaf4ed 100%
+      #f6fcf7 0%,
+      #e1f1e7 100%
     );
 
   --doctor-gradient-danger:
@@ -3963,23 +3947,23 @@ body {
     0 1px 3px rgba(35, 47, 52, 0.04);
 
   --doctor-shadow:
-    0 4px 16px rgba(35, 47, 52, 0.06);
+    0 12px 30px rgba(88, 68, 104, 0.10);
 
   --doctor-shadow-hover:
-    0 10px 28px rgba(35, 47, 52, 0.10);
+    0 16px 36px rgba(88, 68, 104, 0.14);
 
   --doctor-shadow-modal:
-    0 20px 60px rgba(24, 35, 42, 0.18);
+    0 22px 60px rgba(88, 68, 104, 0.16);
 
   /* --------------------------------------------------------
      Radius
      -------------------------------------------------------- */
 
   --doctor-radius-xs: 6px;
-  --doctor-radius-sm: 8px;
-  --doctor-radius-md: 10px;
-  --doctor-radius-lg: 12px;
-  --doctor-radius-xl: 16px;
+  --doctor-radius-sm: 12px;
+  --doctor-radius-md: 16px;
+  --doctor-radius-lg: 28px;
+  --doctor-radius-xl: 32px;
   --doctor-radius-pill: 999px;
 
   /* --------------------------------------------------------

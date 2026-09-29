@@ -1466,6 +1466,14 @@
   transition: width 180ms ease;
 }
 
+.admin-training-mcc-bar-track {
+  background: #e4f0f2;
+}
+
+.admin-training-mcc-bar-track span {
+  background: linear-gradient(90deg, #4f96a6, #39747f);
+}
+
 .admin-training-bar-row strong {
   color: var(--admin-text);
   font-size: 10px;
