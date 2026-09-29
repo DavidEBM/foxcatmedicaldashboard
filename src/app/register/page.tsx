@@ -2,6 +2,7 @@
 
 import {
   FormEvent,
+  useEffect,
   useState,
 } from "react";
 
@@ -11,13 +12,10 @@ import {
 } from "next/navigation";
 
 import {
+  completeGoogleRegistration,
   register,
   registerWithGoogle,
 } from "@/services/firebase/auth";
-
-import {
-  createPatientUser,
-} from "@/services/firebase/users";
 
 type StatusState =
   | "info"
@@ -58,6 +56,27 @@ export default function RegisterPage() {
 
   const [loading, setLoading] =
     useState(false);
+
+  const [registrationAllowed, setRegistrationAllowed] =
+    useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void fetch("/api/auth/registration-status", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<{ allowRegistration?: boolean }> : null)
+      .then((payload) => {
+        if (!mounted || !payload || payload.allowRegistration !== false) return;
+        setRegistrationAllowed(false);
+        setStatus("El registro de nuevos usuarios estÃ¡ temporalmente desactivado por un administrador.");
+        setStatusState("error");
+      })
+      .catch(() => undefined);
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   /*
    * ==========================================================
@@ -133,6 +152,12 @@ export default function RegisterPage() {
     event.preventDefault();
 
     if (loading) {
+      return;
+    }
+
+    if (!registrationAllowed) {
+      setStatus("El registro de nuevos usuarios estÃ¡ temporalmente desactivado por un administrador.");
+      setStatusState("error");
       return;
     }
 
@@ -251,26 +276,10 @@ export default function RegisterPage() {
 
       setStatusState("info");
 
-      const user = await register(
+      await register(
         normalizedEmail,
         password,
         "temporary"
-      );
-
-      /*
-       * Crear users/{uid}.
-       *
-       * createPatientUser verifica
-       * si el documento ya existe.
-       */
-
-      await createPatientUser(
-        user.uid,
-        user.displayName ||
-          normalizedEmail
-            .split("@")[0]
-            .trim() ||
-          "Paciente"
       );
 
       /*
@@ -326,6 +335,12 @@ export default function RegisterPage() {
         return;
       }
 
+      if (!registrationAllowed) {
+        setStatus("El registro de nuevos usuarios estÃ¡ temporalmente desactivado por un administrador.");
+        setStatusState("error");
+        return;
+      }
+
       if (!acceptedTerms) {
         setStatus(
           "Debes aceptar los términos y condiciones para continuar."
@@ -349,19 +364,7 @@ export default function RegisterPage() {
             "temporary"
           );
 
-        /*
-         * Crear users/{uid} solamente
-         * si todavía no existe.
-         */
-
-        await createPatientUser(
-          user.uid,
-          user.displayName ||
-            user.email
-              ?.split("@")[0]
-              .trim() ||
-            "Paciente"
-        );
+        await completeGoogleRegistration(user);
 
         /*
          * INVITACIÓN
@@ -566,7 +569,7 @@ export default function RegisterPage() {
                     event.target.value
                   )
                 }
-                disabled={loading}
+                disabled={loading || !registrationAllowed}
                 required
               />
 
@@ -592,7 +595,7 @@ export default function RegisterPage() {
                     event.target.value
                   )
                 }
-                disabled={loading}
+                disabled={loading || !registrationAllowed}
                 required
               />
 
@@ -618,7 +621,7 @@ export default function RegisterPage() {
                     event.target.value
                   )
                 }
-                disabled={loading}
+                disabled={loading || !registrationAllowed}
                 required
               />
 
@@ -643,7 +646,7 @@ export default function RegisterPage() {
                       event.target.checked
                     )
                   }
-                  disabled={loading}
+                  disabled={loading || !registrationAllowed}
                   required
                 />
 
@@ -687,7 +690,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 className="login-btn"
-                disabled={loading}
+                disabled={loading || !registrationAllowed}
               >
                 {loading
                   ? "Creando..."
@@ -700,7 +703,7 @@ export default function RegisterPage() {
                 onClick={
                   handleGoogleRegister
                 }
-                disabled={loading}
+                disabled={loading || !registrationAllowed}
               >
                 <span
                   className="google-icon"
@@ -798,6 +801,9 @@ function getFirebaseErrorMessage(
 
     case "auth/operation-not-allowed":
       return "El registro con este método no está habilitado en Firebase.";
+
+    case "auth/registration-disabled":
+      return "El registro de nuevos usuarios estÃ¡ temporalmente desactivado por un administrador.";
 
     case "auth/user-disabled":
       return "Esta cuenta está deshabilitada.";

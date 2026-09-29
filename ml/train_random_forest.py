@@ -35,6 +35,7 @@ def train_random_forest(
     X_validation: Any,
     y_validation: Any,
     thresholds: dict[str, float],
+    groups: Any | None = None,
 ) -> dict[str, Any]:
     """
     Entrena y evalúa Random Forest mediante el flujo común.
@@ -53,4 +54,5 @@ def train_random_forest(
         thresholds=thresholds,
         cv_folds=CV_FOLDS,
         random_state=RANDOM_STATE,
+        groups=groups,
     )

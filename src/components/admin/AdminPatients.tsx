@@ -7,8 +7,7 @@ import {
   type AdminUser,
 } from "@/services/firebase/admin-users";
 import {
-  assignPatientToDoctor,
-  removePatientFromDoctor,
+  bulkUpdatePatientAssignments,
   subscribeToAdminPatients,
   type AdminPatient,
 } from "@/services/firebase/admin-patients";
@@ -163,49 +162,6 @@ function getGroupPatients(
     default:
       return [];
   }
-}
-
-function updateLocalAssignment(
-  patient: AdminPatient,
-  doctorUid: string,
-  action: AssignmentAction
-): AdminPatient {
-  const currentIds = getAssignedDoctorIds(patient);
-  const currentDoctors = Array.isArray(patient.assignedDoctors)
-    ? patient.assignedDoctors
-    : [];
-
-  if (action === "assign") {
-    return {
-      ...patient,
-      assignedDoctorIds: currentIds.includes(doctorUid)
-        ? currentIds
-        : [...currentIds, doctorUid],
-      assignedDoctors: currentDoctors.some((doctor) => {
-        if (doctor !== null && typeof doctor === "object") {
-          const record = doctor as { id?: unknown; uid?: unknown };
-          return String(record.id ?? record.uid ?? "").trim() === doctorUid;
-        }
-
-        return String(doctor ?? "").trim() === doctorUid;
-      })
-        ? currentDoctors
-        : [...currentDoctors, { uid: doctorUid }],
-    };
-  }
-
-  return {
-    ...patient,
-    assignedDoctorIds: currentIds.filter((id) => id !== doctorUid),
-    assignedDoctors: currentDoctors.filter((doctor) => {
-      if (doctor !== null && typeof doctor === "object") {
-        const record = doctor as { id?: unknown; uid?: unknown };
-        return String(record.id ?? record.uid ?? "").trim() !== doctorUid;
-      }
-
-      return String(doctor ?? "").trim() !== doctorUid;
-    }),
-  };
 }
 
 export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
@@ -468,50 +424,18 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
     setProcessing(true);
     setFeedback(null);
 
-    let updatedCount = 0;
-    let failedCount = 0;
+    try {
+      const { updatedCount, failedCount } =
+        await bulkUpdatePatientAssignments({
+          patients: patientsToProcess,
+          doctorIds: selectedDoctorIds,
+          adminUid: currentAdmin.uid,
+          action: assignmentAction,
+        });
 
-    for (const patient of patientsToProcess) {
-      let workingPatient = patient;
-
-      for (const doctorId of selectedDoctorIds) {
-        const alreadyAssigned = getAssignedDoctorIds(workingPatient).includes(
-          doctorId
-        );
-        const shouldUpdate =
-          assignmentAction === "assign" ? !alreadyAssigned : alreadyAssigned;
-
-        if (!shouldUpdate) {
-          continue;
-        }
-
-        try {
-          if (assignmentAction === "assign") {
-            await assignPatientToDoctor(workingPatient, doctorId, currentAdmin.uid);
-          } else {
-            await removePatientFromDoctor(workingPatient, doctorId, currentAdmin.uid);
-          }
-
-          workingPatient = updateLocalAssignment(
-            workingPatient,
-            doctorId,
-            assignmentAction
-          );
-          updatedCount++;
-        } catch (assignmentError) {
-          failedCount++;
-          console.error(
-            `Error actualizando la asignación de ${patient.id}:`,
-            assignmentError
-          );
-        }
-      }
-    }
-
-    setProcessing(false);
-    setSelectedPatientIds([]);
-    setSelectedDoctorIds([]);
-    setPatientGroup("");
+      setSelectedPatientIds([]);
+      setSelectedDoctorIds([]);
+      setPatientGroup("");
     setFeedback({
       type: failedCount > 0 ? "error" : "success",
       message:
@@ -521,6 +445,15 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
               assignmentAction === "assign" ? "asignadas" : "retiradas"
             } correctamente.`,
     });
+    } catch (assignmentError) {
+      console.error("Error actualizando asignaciones en lote:", assignmentError);
+      setFeedback({
+        type: "error",
+        message: "No se pudieron actualizar las asignaciones. Intenta nuevamente.",
+      });
+    } finally {
+      setProcessing(false);
+    }
   }
 
   return (

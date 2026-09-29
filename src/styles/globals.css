@@ -2511,6 +2511,25 @@ body.dark-mode .dev-notice-card{
   text-decoration:underline;
 }
 
+.remember-profile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 2px 0 14px;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.remember-profile input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 /* ============================================================
    LOGIN — BOTONES
    ============================================================ */
@@ -3765,31 +3784,31 @@ body {
      Base palette
      -------------------------------------------------------- */
 
-  --doctor-bg: #f5f7fa;
-  --doctor-surface: #ffffff;
-  --doctor-surface-soft: #f9fafc;
-  --doctor-surface-muted: #f2f5f7;
+  --doctor-bg: #faf9fc;
+  --doctor-surface: #fffefe;
+  --doctor-surface-soft: #fdfcff;
+  --doctor-surface-muted: #f7f5fa;
 
-  --doctor-border: #dfe6eb;
-  --doctor-border-soft: #e9eef2;
+  --doctor-border: #ebe8f0;
+  --doctor-border-soft: #f3f0f6;
 
-  --doctor-text: #243139;
-  --doctor-text-soft: #46545d;
-  --doctor-muted: #71808a;
-  --doctor-placeholder: #9aa7af;
+  --doctor-text: #34313d;
+  --doctor-text-soft: #5c5868;
+  --doctor-muted: #817d8d;
+  --doctor-placeholder: #aba7b5;
 
   /* --------------------------------------------------------
      Purple / primary
      -------------------------------------------------------- */
 
-  --doctor-purple-50: #f7f3fc;
-  --doctor-purple-100: #eee7f8;
-  --doctor-purple-200: #dfd3f0;
-  --doctor-purple-300: #cdb9e5;
-  --doctor-purple-400: #b39bd5;
-  --doctor-purple-500: #9277c0;
-  --doctor-purple-600: #755ba7;
-  --doctor-purple-700: #604991;
+  --doctor-purple-50: #fcf9ff;
+  --doctor-purple-100: #f7f1fc;
+  --doctor-purple-200: #ede3f6;
+  --doctor-purple-300: #ddcdee;
+  --doctor-purple-400: #cdb7e1;
+  --doctor-purple-500: #a38dbd;
+  --doctor-purple-600: #866da3;
+  --doctor-purple-700: #705a89;
 
   --doctor-primary: var(--doctor-purple-500);
   --doctor-primary-dark: var(--doctor-purple-700);
@@ -3798,23 +3817,23 @@ body {
   --doctor-purple-gradient:
     linear-gradient(
       135deg,
-      #f4effb 0%,
-      #dfd3f0 52%,
-      #cdb9e5 100%
+      #fcf9fe 0%,
+      #f4ecfa 52%,
+      #e9dff3 100%
     );
 
   /* --------------------------------------------------------
      Blue
      -------------------------------------------------------- */
 
-  --doctor-blue-50: #f2f7fc;
-  --doctor-blue-100: #e5eff8;
-  --doctor-blue-200: #d2e3f1;
-  --doctor-blue-300: #b9d1e5;
-  --doctor-blue-400: #9bbbd5;
-  --doctor-blue-500: #789dbc;
-  --doctor-blue-600: #5d83a6;
-  --doctor-blue-700: #496d8e;
+  --doctor-blue-50: #f6fbfe;
+  --doctor-blue-100: #f0f7fb;
+  --doctor-blue-200: #e4eef5;
+  --doctor-blue-300: #cfe0eb;
+  --doctor-blue-400: #b9cfde;
+  --doctor-blue-500: #8eaac0;
+  --doctor-blue-600: #7592a9;
+  --doctor-blue-700: #617d93;
 
   --doctor-blue: var(--doctor-blue-500);
   --doctor-blue-dark: var(--doctor-blue-700);
@@ -3823,23 +3842,23 @@ body {
   --doctor-blue-gradient:
     linear-gradient(
       135deg,
-      #f2f7fc 0%,
-      #dceaf5 52%,
-      #bfd7e9 100%
+      #f8fbfd 0%,
+      #edf5f9 52%,
+      #dcebf3 100%
     );
 
   /* --------------------------------------------------------
      Green
      -------------------------------------------------------- */
 
-  --doctor-green-50: #f2f8f3;
-  --doctor-green-100: #e5f1e7;
-  --doctor-green-200: #d0e6d4;
-  --doctor-green-300: #b5d6bc;
-  --doctor-green-400: #96bea0;
-  --doctor-green-500: #78a683;
-  --doctor-green-600: #5f8d69;
-  --doctor-green-700: #4d7657;
+  --doctor-green-50: #f7fbf7;
+  --doctor-green-100: #f0f8f1;
+  --doctor-green-200: #e1efe3;
+  --doctor-green-300: #c5dec9;
+  --doctor-green-400: #a9c8b0;
+  --doctor-green-500: #88ad92;
+  --doctor-green-600: #709579;
+  --doctor-green-700: #5d7f66;
 
   --doctor-green: var(--doctor-green-500);
   --doctor-green-dark: var(--doctor-green-700);
@@ -3848,23 +3867,23 @@ body {
   --doctor-green-gradient:
     linear-gradient(
       135deg,
-      #f2f8f3 0%,
-      #deeedf 52%,
-      #c2ddc8 100%
+      #f8fcf8 0%,
+      #edf6ef 52%,
+      #dbece0 100%
     );
 
   /* --------------------------------------------------------
      Red
      -------------------------------------------------------- */
 
-  --doctor-red-50: #fcf4f4;
-  --doctor-red-100: #f8e7e7;
-  --doctor-red-200: #f0d1d1;
-  --doctor-red-300: #e7b7b7;
-  --doctor-red-400: #d99797;
-  --doctor-red-500: #c87878;
-  --doctor-red-600: #b55f5f;
-  --doctor-red-700: #984d4d;
+  --doctor-red-50: #fff9f9;
+  --doctor-red-100: #fceff0;
+  --doctor-red-200: #f5dfdf;
+  --doctor-red-300: #eac6c8;
+  --doctor-red-400: #dda9ad;
+  --doctor-red-500: #ce8d96;
+  --doctor-red-600: #b8737c;
+  --doctor-red-700: #9c6069;
 
   --doctor-red: var(--doctor-red-500);
   --doctor-red-dark: var(--doctor-red-700);
@@ -3873,20 +3892,20 @@ body {
   --doctor-red-gradient:
     linear-gradient(
       135deg,
-      #fcf4f4 0%,
-      #f4dede 52%,
-      #e8c1c1 100%
+      #fffafa 0%,
+      #faeeee 52%,
+      #f1dfe1 100%
     );
 
   /* --------------------------------------------------------
      Warning
      -------------------------------------------------------- */
 
-  --doctor-warning-50: #fcf8f1;
-  --doctor-warning-100: #f7efdf;
-  --doctor-warning-200: #eedfbd;
-  --doctor-warning-500: #bc9258;
-  --doctor-warning-700: #936f3e;
+  --doctor-warning-50: #fffdf8;
+  --doctor-warning-100: #fbf5ea;
+  --doctor-warning-200: #f2e5cd;
+  --doctor-warning-500: #c3a06b;
+  --doctor-warning-700: #8f7049;
 
   --doctor-warning: var(--doctor-warning-500);
   --doctor-warning-dark: var(--doctor-warning-700);
@@ -3895,8 +3914,8 @@ body {
   --doctor-warning-gradient:
     linear-gradient(
       135deg,
-      #fcf8f1 0%,
-      #f5ead5 100%
+      #fffdf9 0%,
+      #f8efdf 100%
     );
 
   /* Alias legacy */
@@ -3910,30 +3929,30 @@ body {
   --doctor-gradient-primary:
     linear-gradient(
       135deg,
-      #f4effb 0%,
-      #ddd1ee 50%,
-      #c5b4df 100%
+      #fcf9fe 0%,
+      #f4ecfa 50%,
+      #e9dff3 100%
     );
 
   --doctor-gradient-calm:
     linear-gradient(
       135deg,
-      #f5f8fb 0%,
-      #e7eff5 100%
+      #f9fbfd 0%,
+      #edf4f8 100%
     );
 
   --doctor-gradient-success:
     linear-gradient(
       135deg,
-      #f3f9f4 0%,
-      #dfefe2 100%
+      #f8fcf8 0%,
+      #eaf4ed 100%
     );
 
   --doctor-gradient-danger:
     linear-gradient(
       135deg,
-      #fdf5f5 0%,
-      #f2dede 100%
+      #fffafa 0%,
+      #f8e9eb 100%
     );
 
   /* --------------------------------------------------------
@@ -4129,4 +4148,3 @@ body {
     box-shadow: 0 0 0 5px rgba(200, 120, 120, 0.14);
   }
 }
-

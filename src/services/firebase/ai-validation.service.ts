@@ -18,6 +18,12 @@ import {
 } from "@/lib/doctor/ai-validation/constants";
 
 import type {
+  AdminPatientValidationSummary,
+  AdminPredictionValidationSummary,
+  AdminValidationAnalytics,
+  AdminValidationPredictionReview,
+} from "@/types/admin-validation";
+import type {
   AiPatientValidationStatus,
   AiPatientValidationSummary,
   AiPredictionValidation,
@@ -89,6 +95,9 @@ export function canonicalizePredictionKey(
 
 interface LatestValidation {
   verdict: AiValidationVerdict;
+  label: string;
+  modelName: string;
+  target: string;
   updatedAt?: unknown;
   millis: number;
 }
@@ -116,6 +125,9 @@ function getLatestValidations(
     if (!current || millis >= current.millis) {
       patientValidations.set(predictionKey, {
         verdict,
+        label: String(data.predictionLabel ?? data.predictionName ?? "Predicción IA"),
+        modelName: String(data.predictionValues?.modelName ?? data.modelName ?? "Modelo IA"),
+        target: String(data.predictionValues?.target ?? data.target ?? predictionKey),
         updatedAt,
         millis,
       });
@@ -183,6 +195,94 @@ export function subscribeToDoctorValidationSummaries(
       });
 
       options.onData(summaries);
+    },
+    (error) => options.onError?.(error),
+  );
+}
+
+export function subscribeToAdminValidationAnalytics(
+  options: ValidationSubscriptionOptions<AdminValidationAnalytics>,
+): Unsubscribe {
+  const validationsQuery = query(
+    collection(db, AI_VALIDATIONS_COLLECTION),
+  );
+
+  return onSnapshot(
+    validationsQuery,
+    (snapshot) => {
+      const latestByPatient = getLatestValidations(snapshot.docs);
+      const patientSummaries: Record<string, AdminPatientValidationSummary> = {};
+      const predictionSummaries: Record<string, AdminPredictionValidationSummary> = {};
+
+      latestByPatient.forEach((validations, patientId) => {
+        const reviews: Record<string, AdminValidationPredictionReview> = {};
+        let validCount = 0;
+        let incorrectCount = 0;
+
+        validations.forEach((validation, predictionKey) => {
+          reviews[predictionKey] = {
+            verdict: validation.verdict,
+            label: validation.label,
+            modelName: validation.modelName,
+            target: validation.target,
+            updatedAt: validation.updatedAt,
+          };
+
+          if (validation.verdict === "valid") {
+            validCount += 1;
+          } else {
+            incorrectCount += 1;
+          }
+
+          const current = predictionSummaries[predictionKey] ?? {
+            predictionKey,
+            label: validation.label,
+            modelName: validation.modelName,
+            target: validation.target,
+            reviewedCount: 0,
+            validCount: 0,
+            incorrectCount: 0,
+          };
+
+          current.reviewedCount += 1;
+          if (validation.verdict === "valid") {
+            current.validCount += 1;
+          } else {
+            current.incorrectCount += 1;
+          }
+          predictionSummaries[predictionKey] = current;
+        });
+
+        const reviewedCount = Math.min(
+          validations.size,
+          EXPECTED_PREDICTIONS_PER_PATIENT,
+        );
+        const totalPredictions = EXPECTED_PREDICTIONS_PER_PATIENT;
+        const pendingCount = Math.max(totalPredictions - reviewedCount, 0);
+        const latest = Array.from(validations.values()).sort(
+          (left, right) => right.millis - left.millis,
+        )[0];
+
+        patientSummaries[patientId] = {
+          patientId,
+          reviewedCount,
+          validCount,
+          incorrectCount,
+          totalPredictions,
+          pendingCount,
+          status: incorrectCount > 0
+            ? "not-validated"
+            : reviewedCount === 0
+              ? "missing"
+              : reviewedCount >= totalPredictions
+                ? "validated"
+                : "partial",
+          predictions: reviews,
+          latestUpdatedAt: latest?.updatedAt,
+        };
+      });
+
+      options.onData({ patientSummaries, predictionSummaries });
     },
     (error) => options.onError?.(error),
   );

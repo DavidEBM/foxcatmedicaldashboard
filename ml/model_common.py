@@ -21,9 +21,9 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
 from .config import CV_FOLDS, RANDOM_STATE
 
@@ -139,6 +139,23 @@ def _make_one_hot_encoder() -> OneHotEncoder:
         )
 
 
+def _categorical_to_strings(data: Any) -> Any:
+    """Homogeneiza categorías mixtas procedentes de CSV y Firestore."""
+    frame = pd.DataFrame(data).copy()
+
+    def normalize(value: Any) -> Any:
+        if value is None:
+            return np.nan
+        try:
+            if bool(pd.isna(value)):
+                return np.nan
+        except (TypeError, ValueError):
+            pass
+        return str(value).strip()
+
+    return frame.apply(lambda column: column.map(normalize))
+
+
 def preprocessor(
     X: Any,
 ) -> ColumnTransformer:
@@ -174,6 +191,10 @@ def preprocessor(
 
     categorical_pipeline = Pipeline(
         steps=[
+            (
+                "strings",
+                FunctionTransformer(_categorical_to_strings),
+            ),
             (
                 "imputer",
                 SafeMostFrequentImputer(),
@@ -1339,6 +1360,7 @@ def cross_validate(
     ],
     X: Any,
     y: Any,
+    groups: Any | None = None,
 ) -> tuple[
     float,
     float,
@@ -1368,19 +1390,44 @@ def cross_validate(
             "X e y tienen diferente número de observaciones."
         )
 
+    if groups is not None and len(groups) != len(y):
+        raise ValueError(
+            "X, y y groups tienen diferente número de observaciones."
+        )
+
     folds = _effective_cv_folds(
         y
-    )
-
-    splitter = StratifiedKFold(
-        n_splits=folds,
-        shuffle=True,
-        random_state=RANDOM_STATE,
     )
 
     y_array = np.asarray(
         y
     )
+
+    if groups is not None:
+        groups_array = np.asarray(groups)
+        group_counts = [
+            np.unique(groups_array[y_array == label]).size
+            for label in np.unique(y_array)
+        ]
+        if not group_counts or min(group_counts) < 2:
+            raise ValueError(
+                "No hay suficientes pacientes independientes por clase "
+                "para Cross-Validation agrupada."
+            )
+        folds = min(folds, min(group_counts))
+        splitter = StratifiedGroupKFold(
+            n_splits=folds,
+            shuffle=True,
+            random_state=RANDOM_STATE,
+        )
+        split_arguments = (X, y_array, groups_array)
+    else:
+        splitter = StratifiedKFold(
+            n_splits=folds,
+            shuffle=True,
+            random_state=RANDOM_STATE,
+        )
+        split_arguments = (X, y_array)
 
     fold_scores: list[
         float
@@ -1397,10 +1444,7 @@ def cross_validate(
             validation_indices,
         ),
     ) in enumerate(
-        splitter.split(
-            X,
-            y_array,
-        ),
+        splitter.split(*split_arguments),
         start=1,
     ):
 

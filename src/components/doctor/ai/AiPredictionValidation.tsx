@@ -17,12 +17,14 @@ import type { Patient } from "@/types/doctor-patients";
 
 import {
   buildPredictionCatalog,
+  getRiskClass,
 } from "@/lib/doctor/ai-validation/predictions";
 import {
   canonicalizePredictionKey,
   subscribeToPatientValidationVerdicts,
   type PatientValidationVerdicts,
 } from "@/services/firebase/ai-validation.service";
+import { formatHorizon } from "@/lib/doctor/ai-validation/timeline";
 
 import {
   useAiPredictionValidation,
@@ -190,10 +192,9 @@ export default function AiPredictionValidation({
   return (
     <section className="ai-validation-widget">
       <div className="ai-validation-header">
-        <div>
-          <strong>
-            Validación de predicciones IA
-          </strong>
+        <div className="ai-validation-header-copy">
+          <span className="ai-validation-eyebrow">Apoyo a la decisión clínica</span>
+          <h3>Validación de predicciones IA</h3>
 
           <p>
             Revisa las predicciones mostradas
@@ -203,26 +204,26 @@ export default function AiPredictionValidation({
           </p>
         </div>
 
-        <span className="ai-validation-badge">
-          Validación clínica
-        </span>
+        <span className="ai-validation-badge">Revisión clínica</span>
       </div>
 
       <div className="ai-validation-disclaimer">
-        La validación registra la evaluación
-        del médico sobre la predicción mostrada.
-        No modifica el modelo automáticamente.
+        <span aria-hidden="true">●</span>
+        <p>
+          Marca cada resultado como válido o incorrecto. Esta acción registra
+          la revisión del médico y no modifica el modelo automáticamente.
+        </p>
       </div>
 
       <div className="ai-validation-tabs" role="tablist" aria-label="Secciones del asistente IA">
         <button type="button" className={activePanel === "summary" ? "is-active" : ""} onClick={() => setActivePanel("summary")} role="tab" aria-selected={activePanel === "summary"}>
-          Resumen
+          <span>Resumen</span>
         </button>
         <button type="button" className={activePanel === "validation" ? "is-active" : ""} onClick={() => setActivePanel("validation")} role="tab" aria-selected={activePanel === "validation"}>
-          Validar predicciones <span>{predictions.length}</span>
+          <span>Validar</span><span>{predictions.length}</span>
         </button>
         <button type="button" className={activePanel === "charts" ? "is-active" : ""} onClick={() => setActivePanel("charts")} role="tab" aria-selected={activePanel === "charts"}>
-          Gráficos
+          <span>Riesgo vs. tiempo</span>
         </button>
       </div>
 
@@ -271,9 +272,25 @@ export default function AiPredictionValidation({
         <div className="ai-validation-charts-grid">
           {predictions.map((prediction) => (
             <article className="ai-validation-chart-card" key={`${prediction.key}-chart`}>
-              <header><div><strong>{prediction.label}</strong><span>{prediction.modelName}</span></div><b>{prediction.risk}%</b></header>
+              <header>
+                <div>
+                  <strong>{prediction.label}</strong>
+                  <span>{prediction.modelName || "Modelo no especificado"}</span>
+                </div>
+                <div
+                  className={`ai-validation-chart-risk ${getRiskClass(prediction.risk)}`}
+                  aria-label={`Riesgo estimado de ${prediction.risk}% en ${formatHorizon(prediction.horizonHours)}`}
+                >
+                  <span>Riesgo estimado</span>
+                  <strong>{prediction.risk}%</strong>
+                  <small>en {formatHorizon(prediction.horizonHours)}</small>
+                </div>
+              </header>
               <PredictionChart timeline={prediction.timeline} />
-              <div className="ai-validation-chart-caption">Riesgo estimado a 24 horas</div>
+              <div className="ai-validation-chart-caption">
+                El porcentaje indica la probabilidad estimada de este evento
+                dentro de la ventana temporal indicada.
+              </div>
             </article>
           ))}
         </div>

@@ -20,6 +20,7 @@ import {
 import {
   type AdminUser,
 } from "@/services/firebase/admin-users";
+import { writeActiveSession } from "@/lib/doctor/cookie-preferences";
 
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
@@ -46,6 +47,8 @@ export default function AdminPage() {
 
             return;
           }
+
+          writeActiveSession(user.uid, user.email || "");
 
           try {
             const userDocument =
@@ -105,6 +108,21 @@ export default function AdminPage() {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentAdmin) return;
+
+    const refreshActiveSession = () => {
+      const user = auth.currentUser;
+      if (user?.uid === currentAdmin.uid) {
+        writeActiveSession(currentAdmin.uid, user.email || "");
+      }
+    };
+
+    refreshActiveSession();
+    const interval = window.setInterval(refreshActiveSession, 5 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [currentAdmin]);
 
   if (loading) {
     return (

@@ -8,12 +8,18 @@ import AdminProfile from "@/components/admin/AdminProfile";
 import AdminUsers from "@/components/admin/AdminUsers";
 import AdminPatients from "@/components/admin/AdminPatients";
 import AdminImport from "@/components/admin/AdminImport";
+import AdminTraining from "@/components/admin/AdminTraining";
+import AdminValidations from "@/components/admin/AdminValidations";
+import AdminRegistrationControl from "@/components/admin/AdminRegistrationControl";
 
 type AdminSection =
   | "profile"
   | "users"
+  | "registration"
   | "patients"
+  | "validations"
   | "models"
+  | "training"
   | "import"
   | null;
 
@@ -51,11 +57,31 @@ const navigationItems: NavigationItem[] = [
       "Pacientes y asignaciones médicas",
   },
   {
+    id: "registration",
+    label: "Registro",
+    icon: "âš™",
+    description: "Habilitar o desactivar nuevos registros",
+  },
+  {
+    id: "validations",
+    label: "Validaciones",
+    icon: "✓",
+    description:
+      "Comparativa entre predicciones IA y criterio médico",
+  },
+  {
     id: "models",
     label: "Modelos de IA",
     icon: "◇",
     description:
       "Modelos de inteligencia artificial",
+  },
+  {
+    id: "training",
+    label: "Entrenar IAs",
+    icon: "⚙",
+    description:
+      "Entrenamiento, validación y diagnósticos de modelos",
   },
   {
     id: "import",
@@ -106,6 +132,12 @@ export default function AdminDashboard({
           />
         );
 
+      case "registration":
+        return <AdminRegistrationControl currentAdmin={currentAdmin} />;
+
+      case "validations":
+        return <AdminValidations />;
+
       case "models":
         return (
           <section className="admin-module">
@@ -143,6 +175,9 @@ export default function AdminDashboard({
             </div>
           </section>
         );
+
+      case "training":
+        return <AdminTraining />;
 
       case "import":
         return (

@@ -1,15 +1,16 @@
 import {
   collection,
-  doc,
   onSnapshot,
   query,
-  updateDoc,
   where,
   type DocumentData,
   type Unsubscribe,
 } from "firebase/firestore";
 
-import { db } from "@/services/firebase/firebase-config";
+import {
+  auth,
+  db,
+} from "@/services/firebase/firebase-config";
 
 export type AdminUserRole = "admin" | "doctor" | "patient";
 export type AdminUserStatus = "active" | "inactive";
@@ -147,18 +148,14 @@ export async function updateUserStatus(
   uid: string,
   status: AdminUserStatus
 ): Promise<void> {
-  await updateDoc(doc(db, "users", uid), {
-    status,
-  });
+  await updateUser(uid, { status });
 }
 
 export async function updateUserRole(
   uid: string,
   role: AdminUserRole
 ): Promise<void> {
-  await updateDoc(doc(db, "users", uid), {
-    role,
-  });
+  await updateUser(uid, { role });
 }
 
 export async function updateUser(
@@ -167,5 +164,50 @@ export async function updateUser(
     Pick<AdminUser, "displayName" | "email" | "role" | "status">
   >
 ): Promise<void> {
-  await updateDoc(doc(db, "users", uid), data);
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("No hay una sesiÃ³n administrativa activa.");
+  }
+
+  const token = await currentUser.getIdToken();
+  const response = await fetch(`/api/admin/users/${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+    cache: "no-store",
+  });
+  const payload = await response.json() as { error?: string };
+
+  if (!response.ok) {
+    throw new Error(payload.error || "No se pudo actualizar el usuario.");
+  }
+}
+
+export async function fetchAdminUsersFromAuth(): Promise<AdminUser[]> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("No hay una sesiÃ³n administrativa activa.");
+  }
+
+  const token = await currentUser.getIdToken();
+  const response = await fetch("/api/admin/users", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as {
+    users?: AdminUser[];
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error || "No se pudieron consultar los correos.");
+  }
+
+  return Array.isArray(payload.users) ? payload.users : [];
 }

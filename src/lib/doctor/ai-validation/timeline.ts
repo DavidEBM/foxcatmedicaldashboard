@@ -28,6 +28,10 @@ export function normalizeHours(value: unknown): number {
 export function formatHorizon(hours: unknown): string {
   const value = normalizeHours(hours);
 
+  if (value < 24) {
+    return `${value} horas`;
+  }
+
   if (value <= 24) {
     return "24 horas";
   }

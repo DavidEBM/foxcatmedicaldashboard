@@ -46,6 +46,45 @@ TRAINERS = (
 )
 
 
+def get_trainers(
+    requested: list[str] | tuple[str, ...] | None = None,
+) -> tuple[tuple[str, object], ...]:
+    """Devuelve el registro de algoritmos solicitado de forma segura.
+
+    El entrenamiento no acepta nombres arbitrarios desde la interfaz web:
+    únicamente puede ejecutar algoritmos registrados aquí.
+    """
+    if not requested:
+        return TRAINERS
+
+    by_name = {
+        name.casefold(): (name, trainer)
+        for name, trainer in TRAINERS
+    }
+    selected: list[tuple[str, object]] = []
+    seen: set[str] = set()
+
+    for value in requested:
+        key = str(value).strip().casefold()
+        if not key:
+            continue
+        if key not in by_name:
+            available = ", ".join(name for name, _ in TRAINERS)
+            raise ValueError(
+                f"Algoritmo no permitido: {value!r}. "
+                f"Disponibles: {available}."
+            )
+        if key not in seen:
+            selected.append(by_name[key])
+            seen.add(key)
+
+    if not selected:
+        raise ValueError("Debe seleccionarse al menos un algoritmo.")
+
+    return tuple(selected)
+
+
 __all__ = [
     "TRAINERS",
+    "get_trainers",
 ]

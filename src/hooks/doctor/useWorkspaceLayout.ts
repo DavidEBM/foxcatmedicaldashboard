@@ -983,6 +983,46 @@ export function useWorkspaceLayout({
     );
 
   /* =======================================================
+     RESTORE VISIBILITY
+  ======================================================= */
+
+  const setWidgetVisibility =
+    useCallback(
+      (visibility: Record<string, boolean>) => {
+        setLayouts((current) => {
+          const restored = current.map((layout) =>
+            Object.prototype.hasOwnProperty.call(visibility, layout.id)
+              ? {
+                  ...layout,
+                  visible: visibility[layout.id],
+                }
+              : layout,
+          );
+
+          if (!restored.some((layout) => layout.visible)) {
+            const first = restored[0];
+            return calculateReflowedLayouts(
+              restored.map((layout) =>
+                layout.id === first?.id
+                  ? { ...layout, visible: true }
+                  : layout,
+              ),
+              style,
+              containerWidth,
+            );
+          }
+
+          return calculateReflowedLayouts(
+            restored,
+            style,
+            containerWidth,
+          );
+        });
+      },
+      [style, containerWidth],
+    );
+
+  /* =======================================================
      MOVE FIRST
   ======================================================= */
 
@@ -1369,6 +1409,8 @@ export function useWorkspaceLayout({
     showWidget,
 
     hideWidget,
+
+    setWidgetVisibility,
 
     moveWidgetToFirst,
 

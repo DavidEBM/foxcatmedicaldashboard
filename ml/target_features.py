@@ -76,7 +76,6 @@ TARGET_FEATURES: Dict[str, List[str]] = {
         "Oxygen Saturation",
         "Sputum",
         "Asma",
-        "NOMBRE_DIAG",
         "PESO",
         "TALLA(altura ó Height/m)",
         "DISCAPACIDAD",
@@ -84,6 +83,14 @@ TARGET_FEATURES: Dict[str, List[str]] = {
         "OCUPACION",
         "Altura_MSNM",
         "Location",
+        # Señales cardiopulmonares disponibles antes de la predicción.
+        "Glucose",
+        "Creatinine",
+        "BNP",
+        "ECG",
+        "Coronary History",
+        "Arrhythmias",
+        "RIESGO CARDIOVASCULAR",
     ],
     "escala_disnea": [
         "EDAD",

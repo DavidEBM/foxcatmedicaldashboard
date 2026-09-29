@@ -48,7 +48,7 @@ export default function PredictionCard({
   return (
     <article className="ai-validation-card">
       <div className="ai-validation-card-head">
-        <div>
+        <div className="ai-validation-card-title">
           <strong>{prediction.label}</strong>
 
           <span className="ai-validation-source">
@@ -59,7 +59,8 @@ export default function PredictionCard({
         <div
           className={`ai-validation-risk ${riskClass}`}
         >
-          <strong>{prediction.risk}%</strong>
+          <span>Riesgo actual</span>
+          <strong>{prediction.risk}<small>%</small></strong>
           <span>{riskLabel}</span>
         </div>
       </div>
@@ -68,7 +69,7 @@ export default function PredictionCard({
         <span>Predicción inicial</span>
 
         <strong>
-          {prediction.risk}% en{" "}
+          {prediction.risk}% ·{" "}
           {formatHorizon(
             prediction.horizonHours,
           )}
@@ -81,7 +82,7 @@ export default function PredictionCard({
         />
       )}
 
-      <div className="ai-validation-timeline">
+      <div className="ai-validation-timeline" aria-label="Valores de riesgo por ventana temporal">
         {prediction.timeline.map(
           (point) => (
             <div
@@ -105,6 +106,7 @@ export default function PredictionCard({
               ? "selected"
               : ""
           }`}
+          aria-pressed={selectedVerdict === "valid"}
           disabled={saving}
           onClick={() =>
             onValidate(
@@ -116,7 +118,7 @@ export default function PredictionCard({
           {saving &&
           selectedVerdict === "valid"
             ? "Guardando..."
-            : "Validar"}
+            : "Validar predicción"}
         </button>
 
         <button
@@ -126,6 +128,7 @@ export default function PredictionCard({
               ? "selected"
               : ""
           }`}
+          aria-pressed={selectedVerdict === "incorrect"}
           disabled={saving}
           onClick={() =>
             onValidate(
@@ -137,7 +140,7 @@ export default function PredictionCard({
           {saving &&
           selectedVerdict === "incorrect"
             ? "Guardando..."
-            : "No validar"}
+            : "Marcar incorrecta"}
         </button>
       </div>
 

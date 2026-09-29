@@ -8,8 +8,10 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type Unsubscribe,
+  type WriteBatch,
 } from "firebase/firestore";
 
 import { db } from "@/services/firebase/firebase-config";
@@ -166,6 +168,13 @@ export interface PatientDoctorAssignment {
   status?: string;
 }
 
+export type BulkAssignmentAction = "assign" | "remove";
+
+export interface BulkPatientAssignmentResult {
+  updatedCount: number;
+  failedCount: number;
+}
+
 export function subscribeToAdminPatients(
   options: SubscribePatientsOptions
 ): Unsubscribe {
@@ -184,6 +193,268 @@ export function subscribeToAdminPatients(
       options.onError?.(error);
     }
   );
+}
+
+type BulkWriteInstruction = {
+  apply: (batch: WriteBatch) => void;
+  relationCount: number;
+};
+
+type ExistingAssignment = {
+  ref: ReturnType<typeof doc>;
+  status: string;
+};
+
+const FIRESTORE_BATCH_LIMIT = 450;
+const FIRESTORE_IN_LIMIT = 30;
+
+function splitIntoChunks<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function getDoctorIdFromValue(value: unknown): string {
+  if (value !== null && typeof value === "object") {
+    const record = value as { id?: unknown; uid?: unknown };
+    return String(record.id ?? record.uid ?? "").trim();
+  }
+
+  return String(value ?? "").trim();
+}
+
+async function getExistingAssignments(
+  patientIds: string[],
+  doctorIds: string[],
+): Promise<Map<string, ExistingAssignment[]>> {
+  const patientIdSet = new Set(patientIds);
+  const doctorChunks = splitIntoChunks(doctorIds, FIRESTORE_IN_LIMIT);
+
+  const snapshots = await Promise.all(
+    doctorChunks.map((doctorChunk) =>
+      getDocs(
+        query(
+          collection(db, "patientAssignments"),
+          where("doctorUid", "in", doctorChunk),
+        ),
+      ),
+    ),
+  );
+
+  const existing = new Map<string, ExistingAssignment[]>();
+  snapshots.flatMap((snapshot) => snapshot.docs).forEach((assignment) => {
+    const data = assignment.data();
+    const patientId = String(data.patientId ?? "").trim();
+    const doctorUid = String(data.doctorUid ?? "").trim();
+
+    if (!patientIdSet.has(patientId) || !doctorIds.includes(doctorUid)) {
+      return;
+    }
+
+    const key = `${patientId}::${doctorUid}`;
+    const current = existing.get(key) ?? [];
+    current.push({
+      ref: assignment.ref,
+      status: String(data.status ?? "active"),
+    });
+    existing.set(key, current);
+  });
+
+  return existing;
+}
+
+/**
+ * Actualiza muchas relaciones paciente-médico con una lectura agrupada y
+ * escrituras por lotes. Evita una consulta y dos escrituras secuenciales por
+ * cada relación individual.
+ */
+export async function bulkUpdatePatientAssignments(params: {
+  patients: AdminPatient[];
+  doctorIds: string[];
+  adminUid: string;
+  action: BulkAssignmentAction;
+}): Promise<BulkPatientAssignmentResult> {
+  const normalizedAdminUid = params.adminUid.trim();
+  const doctorIds = [...new Set(
+    params.doctorIds.map((doctorId) => doctorId.trim()).filter(Boolean),
+  )];
+  const patients = params.patients.filter((patient) => Boolean(patient.id));
+
+  if (!normalizedAdminUid) {
+    throw new Error("No se pudo identificar al administrador actual.");
+  }
+
+  if (!doctorIds.length) {
+    throw new Error("Debes seleccionar al menos un médico.");
+  }
+
+  if (!patients.length) {
+    throw new Error("Debes seleccionar al menos un paciente.");
+  }
+
+  const existingAssignments = await getExistingAssignments(
+    patients.map((patient) => patient.id),
+    doctorIds,
+  );
+
+  // Se agrupan las escrituras de cada paciente para que sus campos de
+  // asignación y sus relaciones se mantengan juntos siempre que sea posible.
+  const instructionGroups: BulkWriteInstruction[][] = [];
+
+  patients.forEach((patient) => {
+    const currentDoctorIds = getAssignedDoctorIds(patient);
+    const currentAssignedDoctors = Array.isArray(patient.assignedDoctors)
+      ? [...patient.assignedDoctors]
+      : currentDoctorIds.map((uid) => ({ uid }));
+    const nextDoctorIds = [...currentDoctorIds];
+    const nextAssignedDoctors = [...currentAssignedDoctors];
+    const changedDoctorIds: string[] = [];
+    const patientInstructions: BulkWriteInstruction[] = [];
+
+    doctorIds.forEach((doctorUid) => {
+      const currentAssignmentRecords = existingAssignments.get(
+        `${patient.id}::${doctorUid}`,
+      ) ?? [];
+
+      if (params.action === "assign") {
+        const patientAlreadyAssigned = nextDoctorIds.includes(doctorUid);
+        const activeAssignment = currentAssignmentRecords.find(
+          (assignment) => assignment.status !== "inactive",
+        );
+        const inactiveAssignment = currentAssignmentRecords.find(
+          (assignment) => assignment.status === "inactive",
+        );
+
+        // Es una operación no-op solamente si ambos documentos ya están
+        // sincronizados. Si existe una relación inactiva, se reactiva.
+        if (patientAlreadyAssigned && activeAssignment) return;
+
+        if (!patientAlreadyAssigned) {
+          nextDoctorIds.push(doctorUid);
+          if (!nextAssignedDoctors.some(
+            (doctor) => getDoctorIdFromValue(doctor) === doctorUid,
+          )) {
+            nextAssignedDoctors.push({ uid: doctorUid });
+          }
+        }
+        changedDoctorIds.push(doctorUid);
+
+        if (activeAssignment) return;
+
+        if (inactiveAssignment) {
+          patientInstructions.push({
+            relationCount: 0,
+            apply: (batch) => batch.update(inactiveAssignment.ref, {
+              status: "active",
+              reassignedBy: normalizedAdminUid,
+              reassignedAt: serverTimestamp(),
+            }),
+          });
+          return;
+        }
+
+        const assignmentRef = doc(collection(db, "patientAssignments"));
+        patientInstructions.push({
+          relationCount: 0,
+          apply: (batch) => batch.set(assignmentRef, {
+            patientId: patient.id,
+            doctorUid,
+            assignedBy: normalizedAdminUid,
+            assignedAt: serverTimestamp(),
+            status: "active",
+          }),
+        });
+        return;
+      }
+
+      if (!nextDoctorIds.includes(doctorUid)) return;
+
+      nextDoctorIds.splice(
+        nextDoctorIds.indexOf(doctorUid),
+        1,
+      );
+      for (let index = nextAssignedDoctors.length - 1; index >= 0; index -= 1) {
+        if (getDoctorIdFromValue(nextAssignedDoctors[index]) === doctorUid) {
+          nextAssignedDoctors.splice(index, 1);
+        }
+      }
+      changedDoctorIds.push(doctorUid);
+
+      currentAssignmentRecords
+        .filter((assignment) => assignment.status !== "inactive")
+        .forEach((assignment) => {
+          patientInstructions.push({
+            relationCount: 0,
+            apply: (batch) => batch.update(assignment.ref, {
+              status: "inactive",
+              removedAt: serverTimestamp(),
+              removedBy: normalizedAdminUid,
+            }),
+          });
+        });
+    });
+
+    if (!changedDoctorIds.length) return;
+
+    patientInstructions.push({
+      relationCount: changedDoctorIds.length,
+      apply: (batch) => batch.update(doc(db, "patients", patient.id), {
+        assignedDoctorIds: nextDoctorIds,
+        assignedDoctors: nextAssignedDoctors,
+        updatedAt: serverTimestamp(),
+        updatedBy: normalizedAdminUid,
+      }),
+    });
+
+    instructionGroups.push(patientInstructions);
+  });
+
+  if (!instructionGroups.length) {
+    return { updatedCount: 0, failedCount: 0 };
+  }
+
+  let updatedCount = 0;
+  let failedCount = 0;
+  let currentBatch = writeBatch(db);
+  let currentWrites = 0;
+  let currentRelations = 0;
+
+  const commitCurrentBatch = async () => {
+    if (!currentWrites) return;
+
+    try {
+      await currentBatch.commit();
+      updatedCount += currentRelations;
+    } catch {
+      failedCount += currentRelations;
+    }
+
+    currentBatch = writeBatch(db);
+    currentWrites = 0;
+    currentRelations = 0;
+  };
+
+  for (const group of instructionGroups) {
+    if (currentWrites && currentWrites + group.length > FIRESTORE_BATCH_LIMIT) {
+      await commitCurrentBatch();
+    }
+
+    for (const instruction of group) {
+      if (currentWrites >= FIRESTORE_BATCH_LIMIT) {
+        await commitCurrentBatch();
+      }
+
+      instruction.apply(currentBatch);
+      currentWrites += 1;
+      currentRelations += instruction.relationCount;
+    }
+  }
+
+  await commitCurrentBatch();
+
+  return { updatedCount, failedCount };
 }
 
 /**

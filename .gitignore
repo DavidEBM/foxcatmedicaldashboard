@@ -24,6 +24,7 @@
 # misc
 .DS_Store
 *.pem
+src/services/firebase/*-firebase-adminsdk-*.json
 
 # debug
 npm-debug.log*
@@ -43,6 +44,7 @@ next-env.d.ts
 
 
 ml/__pycache__/
+ml/datasets/runtime/
 node_modules
 graphify-out/
 .continue/

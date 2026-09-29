@@ -67,16 +67,23 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.role == "patient"
         && request.resource.data.status == "active"
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 120
+        && (!request.resource.data.keys().hasAny(["email"])
+          || request.resource.data.email is string)
         && request.resource.data.keys().hasOnly([
           "role",
           "status",
           "displayName",
+          "email",
           "createdAt"
         ]);
 
       // Administrador puede gestionar usuarios.
       // Usuario normal solamente puede modificar su displayName.
       allow update: if isAdmin()
+        && request.resource.data.role in ["admin", "doctor", "patient"]
+        && request.resource.data.status in ["active", "inactive"]
         ||
         (
           authenticated()
@@ -195,6 +202,14 @@ service cloud.firestore {
 
       allow update: if isAdmin();
 
+      allow delete: if isAdmin();
+    }
+
+    // Modelos publicados que utiliza el centro administrativo.
+    match /aiModels/{modelId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 

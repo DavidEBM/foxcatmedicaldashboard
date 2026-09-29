@@ -158,6 +158,7 @@ TARGET_ALIASES: Final[dict[str, tuple[str, ...]]] = {
     ),
     "epocconfirmado": (
         "EPOCCONFIRMADO(Si ó no)(Target)",
+        "EPOCCONFIRMADO(Si ó no) (Target)",
     ),
     "clasifisui": (
         "CLASIFISUI (1 a 5, clasificacion urgencias) (Target)",

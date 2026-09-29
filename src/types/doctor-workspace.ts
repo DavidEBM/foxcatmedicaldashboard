@@ -35,8 +35,17 @@ export interface WorkspacePatient {
   ward?: string;
 
   glucose?: number;
+  hemoglobin?: number;
   creatinine?: number;
+  bmi?: number;
   bnp?: number;
+  ecg?: string;
+  smokingStatus?: string;
+  packHistory?: number;
+  copdGold?: number;
+  heartFailureHistory?: string;
+  coronaryHistory?: string;
+  arrhythmias?: string;
   oxygenSaturation?: number;
   respiratoryRate?: number;
 

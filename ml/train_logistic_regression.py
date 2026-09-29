@@ -32,6 +32,7 @@ def train_logistic_regression(
     X_validation: Any,
     y_validation: Any,
     thresholds: dict[str, float],
+    groups: Any | None = None,
 ) -> dict[str, Any]:
     """
     Entrena y evalúa Logistic Regression mediante el flujo común.
@@ -50,5 +51,6 @@ def train_logistic_regression(
         thresholds=thresholds,
         cv_folds=CV_FOLDS,
         random_state=RANDOM_STATE,
+        groups=groups,
     )
 

@@ -482,10 +482,17 @@ export default function WorkspaceCanvas({
       safeInteger(style.columns, 1);
     const configuredGap =
       Math.max(0, safeNumber(style.gap, 0));
-    const minimumWidgetWidth =
-      Math.max(1, safeNumber(style.widgetMinWidth, 280));
     const availableStaticWidth =
       Math.max(1, canvasWidth - horizontalPadding * 2);
+    /*
+     * En tablet y móvil cada widget debe poder ocupar el ancho disponible.
+     * El mínimo configurado para escritorio no debe crear un canvas más ancho
+     * que la pantalla y dejar parte del módulo fuera de vista.
+     */
+    const minimumWidgetWidth = Math.min(
+      Math.max(1, safeNumber(style.widgetMinWidth, 280)),
+      availableStaticWidth,
+    );
     const columnsByMinimumWidth =
       Math.max(
         1,

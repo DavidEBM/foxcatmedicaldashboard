@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -12,6 +13,7 @@ import { useRouter } from "next/navigation";
 import DoctorTopbar from "./layout/DoctorTopbar";
 import DoctorLeftSidebar from "./layout/DoctorLeftSidebar";
 import DoctorRightSidebar from "./layout/DoctorRightSidebar";
+import DoctorCookieConsent from "./layout/DoctorCookieConsent";
 
 import DoctorWorkspace from "./workspace/DoctorWorkspace";
 import AppLoadingScreen from "@/components/shared/AppLoadingScreen";
@@ -40,6 +42,16 @@ import { getUserDocument } from "@/services/firebase/users";
 import { logout } from "@/services/firebase/auth";
 import { getWidgetSizeConfig } from "@/components/doctor/layout/widgetSizing";
 import { computeClinicalAssessment } from "@/lib/doctor/clinical/assessment";
+import {
+  acceptCookieConsent,
+  hasAcceptedCookieConsent,
+  readWidgetVisibility,
+  readThemePreference,
+  writeWidgetVisibility,
+  writeActiveSession,
+  writeLastPatientId,
+  writeThemePreference,
+} from "@/lib/doctor/cookie-preferences";
 
 import type {
   WorkspaceAction,
@@ -104,6 +116,8 @@ type NavigationItem =
   | "labs"
   | "care-plan"
   | string;
+
+type CookieConsentStatus = "pending" | "unknown" | "accepted" | "declined";
 
 interface ContextMenuState {
   x: number;
@@ -279,6 +293,9 @@ const FALLBACK_TRAINING_PROFILE: TrainingProfile = {
 
 export default function DoctorDashboard() {
   const router = useRouter();
+  const [cookieConsentStatus, setCookieConsentStatus] =
+    useState<CookieConsentStatus>("pending");
+  const cookieConsentAccepted = cookieConsentStatus === "accepted";
   /* ========================================================
      AUTHENTICATED DOCTOR AND ASSIGNED PATIENTS
   ======================================================== */
@@ -341,7 +358,37 @@ export default function DoctorDashboard() {
   } = usePatients({
     userId: doctorId,
     role: doctorId ? "doctor" : null,
+    cookieConsent: cookieConsentAccepted,
   });
+
+  useEffect(() => {
+    if (!doctorId) return;
+
+    const timer = window.setTimeout(() => {
+      setCookieConsentStatus(
+        hasAcceptedCookieConsent()
+          ? "accepted"
+          : "unknown",
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [doctorId]);
+
+  useEffect(() => {
+    if (!doctorId) return;
+
+    const refreshActiveSession = () => {
+      const user = auth.currentUser;
+      if (user?.uid === doctorId) {
+        writeActiveSession(doctorId, user.email || "");
+      }
+    };
+
+    refreshActiveSession();
+    const interval = window.setInterval(refreshActiveSession, 5 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [doctorId]);
 
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -351,7 +398,7 @@ export default function DoctorDashboard() {
 
   const [action, setAction] =
     useState<WorkspaceAction | null>(
-      null
+      "labs-overview"
     );
 
   /* ========================================================
@@ -361,12 +408,12 @@ export default function DoctorDashboard() {
   const [
     leftSidebarCollapsed,
     setLeftSidebarCollapsed,
-  ] = useState(false);
+  ] = useState(true);
 
   const [
     rightSidebarCollapsed,
     setRightSidebarCollapsed,
-  ] = useState(false);
+  ] = useState(true);
 
   /* ========================================================
      THEME
@@ -374,6 +421,44 @@ export default function DoctorDashboard() {
 
   const [darkMode, setDarkMode] =
     useState(false);
+
+  useEffect(() => {
+    if (!doctorId || !cookieConsentAccepted) return;
+
+    const timer = window.setTimeout(() => {
+      const savedTheme = readThemePreference();
+      if (savedTheme) {
+        setDarkMode(savedTheme === "dark");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [cookieConsentAccepted, doctorId]);
+
+  const handleThemeToggle = useCallback(() => {
+    setDarkMode((current) => {
+      const next = !current;
+      if (cookieConsentAccepted) {
+        writeThemePreference(next ? "dark" : "light");
+      }
+      return next;
+    });
+  }, [cookieConsentAccepted]);
+
+  const handleCookieConsentAccept = useCallback(() => {
+    acceptCookieConsent();
+    setCookieConsentStatus("accepted");
+
+    if (doctorId && selectedPatientId) {
+      writeLastPatientId(doctorId, selectedPatientId);
+    }
+
+    writeThemePreference(darkMode ? "dark" : "light");
+  }, [darkMode, doctorId, selectedPatientId]);
+
+  const handleCookieConsentDecline = useCallback(() => {
+    setCookieConsentStatus("declined");
+  }, []);
 
   /* ========================================================
      NAVIGATION
@@ -480,6 +565,7 @@ export default function DoctorDashboard() {
     layouts,
     style,
     toggleWidget,
+    setWidgetVisibility,
     showWidget,
     hideWidget,
     moveWidgetToFirst,
@@ -504,6 +590,50 @@ export default function DoctorDashboard() {
         widgetRadius: 16,
       },
     });
+
+  const widgetVisibilityHydratedFor = useRef<string | null>(null);
+  const skipWidgetVisibilitySave = useRef(false);
+
+  useEffect(() => {
+    if (!doctorId) {
+      widgetVisibilityHydratedFor.current = null;
+      return;
+    }
+
+    if (!cookieConsentAccepted || widgetVisibilityHydratedFor.current === doctorId) {
+      return;
+    }
+
+    widgetVisibilityHydratedFor.current = doctorId;
+    skipWidgetVisibilitySave.current = true;
+
+    const savedVisibility = readWidgetVisibility(doctorId);
+    if (savedVisibility) {
+      setWidgetVisibility(savedVisibility);
+    }
+  }, [cookieConsentAccepted, doctorId, setWidgetVisibility]);
+
+  useEffect(() => {
+    if (
+      !doctorId ||
+      !cookieConsentAccepted ||
+      widgetVisibilityHydratedFor.current !== doctorId
+    ) {
+      return;
+    }
+
+    if (skipWidgetVisibilitySave.current) {
+      skipWidgetVisibilitySave.current = false;
+      return;
+    }
+
+    writeWidgetVisibility(
+      doctorId,
+      Object.fromEntries(
+        layouts.map((layout) => [layout.id, layout.visible]),
+      ),
+    );
+  }, [cookieConsentAccepted, doctorId, layouts]);
 
   /* ========================================================
      REAL WORKSPACE WIDTH
@@ -679,10 +809,18 @@ export default function DoctorDashboard() {
   const handleNavigation = (
     item: NavigationItem
   ) => {
+    if (item === "laboratory") {
+      setNotice(null);
+      setActiveItem("dashboard");
+      setAction("labs-overview");
+      setWorkspaceContextMenu(null);
+      setWidgetContextMenu(null);
+      return;
+    }
+
     const unavailableSections: Record<string, string> = {
       consultations: "Consultas",
       monitoring: "Monitoreo",
-      laboratory: "Laboratorio",
       history: "Historial",
       "care-plans": "Planes de cuidado",
       tools: "Herramientas",
@@ -700,7 +838,7 @@ export default function DoctorDashboard() {
 
     setNotice(null);
     setActiveItem(item);
-    setAction(null);
+    setAction(item === "dashboard" ? "labs-overview" : null);
     setWorkspaceContextMenu(null);
     setWidgetContextMenu(null);
   };
@@ -933,70 +1071,38 @@ export default function DoctorDashboard() {
             title:
               "Signos vitales",
             subtitle:
-              "Últimos valores registrados",
+              "Datos clínicos de la consulta",
             icon: "♥",
             accent: "red",
 
             content: (
-              <div className="doctor-widget-list">
-                <div className="doctor-widget-list-item">
-                  <div>
-                    <strong>
-                      Presión arterial
-                    </strong>
-
-                    <span>
-                      {patient.bloodPressureSystolic ??
-                        "--"}
-                      /
-                      {patient.bloodPressureDiastolic ??
-                        "--"}{" "}
-                      mmHg
-                    </span>
+              <div className="doctor-clinical-data-grid">
+                {[
+                  ["Diagnóstico", patient.condition],
+                  ["Estado clínico", patient.status],
+                  ["Presión arterial", `${patient.bloodPressureSystolic ?? "--"}/${patient.bloodPressureDiastolic ?? "--"} mmHg`],
+                  ["Frecuencia cardíaca", `${patient.pulse ?? "--"} bpm`],
+                  ["Saturación O₂", `${patient.oxygenSaturation ?? "--"}%`],
+                  ["Frecuencia respiratoria", `${patient.respiratoryRate ?? "--"} rpm`],
+                  ["Glucosa", `${patient.glucose ?? "--"} mg/dL`],
+                  ["Hemoglobina", `${patient.hemoglobin ?? "--"} g/dL`],
+                  ["Creatinina", `${patient.creatinine ?? "--"} mg/dL`],
+                  ["IMC", `${patient.bmi ?? "--"} kg/m²`],
+                  ["ECG", patient.ecg],
+                  ["BNP", `${patient.bnp ?? "--"} pg/mL`],
+                  ["EPOC / GOLD", patient.copdGold ? `GOLD ${patient.copdGold}` : "No registrado"],
+                  ["Tabaquismo", patient.smokingStatus],
+                  ["Carga tabáquica", patient.packHistory !== undefined ? `${patient.packHistory} paquetes-año` : "No registrada"],
+                  ["Falla cardíaca", patient.heartFailureHistory],
+                  ["Antecedente coronario", patient.coronaryHistory],
+                  ["Arritmias", patient.arrhythmias],
+                  ["Notas clínicas", patient.notes],
+                ].map(([label, value]) => (
+                  <div className="doctor-clinical-data-card" key={label}>
+                    <strong>{label}</strong>
+                    <span>{value || "No registrado"}</span>
                   </div>
-                </div>
-
-                <div className="doctor-widget-list-item">
-                  <div>
-                    <strong>
-                      Frecuencia cardíaca
-                    </strong>
-
-                    <span>
-                      {patient.pulse ??
-                        "--"}{" "}
-                      bpm
-                    </span>
-                  </div>
-                </div>
-
-                <div className="doctor-widget-list-item">
-                  <div>
-                    <strong>
-                      Saturación O₂
-                    </strong>
-
-                    <span>
-                      {patient.oxygenSaturation ??
-                        "--"}{" "}
-                      %
-                    </span>
-                  </div>
-                </div>
-
-                <div className="doctor-widget-list-item">
-                  <div>
-                    <strong>
-                      Frecuencia respiratoria
-                    </strong>
-
-                    <span>
-                      {patient.respiratoryRate ??
-                        "--"}{" "}
-                      rpm
-                    </span>
-                  </div>
-                </div>
+                ))}
               </div>
             ),
 
@@ -1557,12 +1663,7 @@ export default function DoctorDashboard() {
                   : "Dashboard clínico"
             }
 
-            onThemeToggle={() =>
-              setDarkMode(
-                (value) =>
-                  !value
-              )
-            }
+            onThemeToggle={handleThemeToggle}
 
             darkMode={
               darkMode
@@ -1596,6 +1697,28 @@ export default function DoctorDashboard() {
             ref={workspaceRef}
             className="doctor-dashboard-main"
           >
+
+            {activeItem === "dashboard" && (
+              <aside
+                className="doctor-research-alert"
+                role="alert"
+                aria-label="Aviso de privacidad y datos clínicos"
+              >
+                <span className="doctor-research-alert-icon" aria-hidden="true">
+                  !
+                </span>
+
+                <div>
+                  <strong>Aviso de investigación y privacidad</strong>
+                  <p>
+                    Todos los pacientes expuestos en este sistema son de datasets públicos anonimizados
+                    (sin identificación por protección a su privacidad), es por eso que algunos pacientes
+                    pueden tener datos clínicos faltantes. Favor tener en cuenta esto a la hora de hacer
+                    la validación y gracias por ayudar en esta investigación.
+                  </p>
+                </div>
+              </aside>
+            )}
 
             {activeItem === "patients" ? (
               <DoctorPatientsWorkspace
@@ -2029,6 +2152,13 @@ export default function DoctorDashboard() {
             resetStyleDraft
           }
         />
+
+        {doctorId && cookieConsentStatus === "unknown" && (
+          <DoctorCookieConsent
+            onAccept={handleCookieConsentAccept}
+            onDecline={handleCookieConsentDecline}
+          />
+        )}
 
       </div>
     </main>

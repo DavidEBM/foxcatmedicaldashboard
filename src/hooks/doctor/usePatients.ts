@@ -10,47 +10,21 @@ import {
 import {
   getAssignedPatientIds,
 } from "@/services/firebase/patient-assignment.service";
+import {
+  readLastPatientId,
+  writeLastPatientId,
+} from "@/lib/doctor/cookie-preferences";
 
 interface UsePatientsOptions {
   userId: string | null;
   role: "admin" | "doctor" | null;
-}
-
-const LAST_PATIENT_COOKIE_PREFIX = "foxcat_last_patient_";
-const LAST_PATIENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-function getLastPatientCookieName(userId: string): string {
-  return `${LAST_PATIENT_COOKIE_PREFIX}${encodeURIComponent(userId)}`;
-}
-
-function readLastPatientId(userId: string): string | null {
-  if (typeof document === "undefined") return null;
-
-  const cookieName = getLastPatientCookieName(userId);
-  const cookie = document.cookie
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${cookieName}=`));
-
-  if (!cookie) return null;
-
-  try {
-    return decodeURIComponent(cookie.slice(cookieName.length + 1)) || null;
-  } catch {
-    return null;
-  }
-}
-
-function writeLastPatientId(userId: string, patientId: string): void {
-  if (typeof document === "undefined") return;
-
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${getLastPatientCookieName(userId)}=${encodeURIComponent(patientId)}; Path=/; Max-Age=${LAST_PATIENT_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+  cookieConsent?: boolean;
 }
 
 export function usePatients({
   userId,
   role,
+  cookieConsent = false,
 }: UsePatientsOptions) {
   const [patients, setPatients] =
     useState<Patient[]>([]);
@@ -98,7 +72,9 @@ export function usePatients({
 
         if (requestId !== requestIdRef.current) return;
 
-        const rememberedPatientId = readLastPatientId(userId);
+        const rememberedPatientId = cookieConsent
+          ? readLastPatientId(userId)
+          : null;
         const nextPatientId = rememberedPatientId && result.some(
           (patient) => patient.id === rememberedPatientId,
         )
@@ -123,14 +99,19 @@ export function usePatients({
           setLoading(false);
         }
       }
-    }, [userId, role]);
+    }, [cookieConsent, role, userId]);
 
   useEffect(() => {
-    void loadPatients();
+    const timer = window.setTimeout(() => {
+      void loadPatients();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [loadPatients]);
 
   useEffect(() => {
     if (
+      !cookieConsent ||
       !userId ||
       loading ||
       !selectedPatientId ||
@@ -140,7 +121,7 @@ export function usePatients({
     }
 
     writeLastPatientId(userId, selectedPatientId);
-  }, [userId, loading, selectedPatientId, patients]);
+  }, [cookieConsent, userId, loading, selectedPatientId, patients]);
 
   const selectedPatient = useMemo(
     () =>

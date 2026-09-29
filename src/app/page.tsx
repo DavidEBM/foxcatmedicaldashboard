@@ -1,9 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
 
-import { login } from "@/services/firebase/auth";
+import { auth } from "@/services/firebase/firebase-config";
+import { login, logout } from "@/services/firebase/auth";
+import {
+  clearRememberedEmail,
+  readRememberedEmail,
+  writeActiveSession,
+  writeRememberedEmail,
+} from "@/lib/doctor/cookie-preferences";
 import {
   getRoleRoute,
   getUserDocument,
@@ -26,6 +34,9 @@ export default function LoginPage() {
   const [password, setPassword] =
     useState("");
 
+  const [rememberProfile, setRememberProfile] =
+    useState(false);
+
   const [status, setStatus] = useState(
     "Ingresa tus credenciales para continuar."
   );
@@ -35,6 +46,62 @@ export default function LoginPage() {
 
   const [loading, setLoading] =
     useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const rememberedEmail = readRememberedEmail();
+      if (rememberedEmail) {
+        setEmail(rememberedEmail);
+        setRememberProfile(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user || !mounted) return;
+
+      setLoading(true);
+      setStatus("Restaurando tu perfil...");
+      setStatusState("info");
+
+      try {
+        writeActiveSession(user.uid, user.email || "");
+        const userDocument = await getUserDocument(user.uid);
+        if (!mounted) return;
+
+        const route = userDocument && userDocument.status === "active"
+          ? getRoleRoute(userDocument.role)
+          : "/";
+
+        if (route === "/") {
+          await logout();
+          setStatus("La cuenta actual no tiene un perfil activo.");
+          setStatusState("error");
+          return;
+        }
+
+        router.replace(route);
+      } catch {
+        await logout().catch(() => undefined);
+        if (mounted) {
+          setStatus("No se pudo restaurar el perfil guardado.");
+          setStatusState("error");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [router]);
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
@@ -114,8 +181,14 @@ export default function LoginPage() {
       const user = await login(
         normalizedEmail,
         password,
-        "temporary"
+        rememberProfile ? "persistent" : "temporary"
       );
+
+      if (rememberProfile) {
+        writeRememberedEmail(normalizedEmail);
+      } else {
+        clearRememberedEmail();
+      }
 
       /*
        * Buscar el documento del usuario
@@ -128,6 +201,7 @@ export default function LoginPage() {
         );
 
       if (!userDocument) {
+        await logout().catch(() => undefined);
         setStatus(
           "La cuenta existe, pero no tiene un perfil de usuario configurado."
         );
@@ -144,6 +218,7 @@ export default function LoginPage() {
         userDocument.status !==
         "active"
       ) {
+        await logout().catch(() => undefined);
         setStatus(
           "Esta cuenta se encuentra deshabilitada."
         );
@@ -161,6 +236,7 @@ export default function LoginPage() {
       );
 
       if (route === "/") {
+        await logout().catch(() => undefined);
         setStatus(
           "La cuenta tiene un rol no válido."
         );
@@ -388,6 +464,16 @@ export default function LoginPage() {
               />
             </div>
 
+            <label className="remember-profile">
+              <input
+                type="checkbox"
+                checked={rememberProfile}
+                onChange={(event) => setRememberProfile(event.target.checked)}
+                disabled={loading}
+              />
+              <span>Recordar perfil en este navegador</span>
+            </label>
+
             {/* ESTADO */}
 
             <div
@@ -487,6 +573,9 @@ function getFirebaseErrorMessage(
 
     case "auth/invalid-email":
       return "El correo electrónico no es válido.";
+
+    case "auth/account-already-signed-in":
+      return "Ya hay una cuenta activa en este navegador. Cierra esa sesiÃ³n antes de entrar con otra cuenta.";
 
     case "auth/user-disabled":
       return "Esta cuenta está deshabilitada.";

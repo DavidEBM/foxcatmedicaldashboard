@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
 
 from .clinical_features import add_clinical_features
 from .config import (
@@ -38,6 +38,11 @@ TARGET_DOMAINS: Dict[str, Dict[str, Any]] = {
         "type": "binary",
         "expected_values": ["SI", "NO"],
         "label": "Antecedente de insuficiencia cardiaca",
+    },
+    "epocconfirmado": {
+        "type": "binary",
+        "expected_values": ["SI", "NO"],
+        "label": "EPOC confirmado",
     },
     "bodex": {
         "type": "ordinal",
@@ -1352,8 +1357,10 @@ def target_dataset(
     df: pd.DataFrame,
     target_column: str,
     features: Sequence[str],
-) -> Tuple[
+    include_groups: bool = False,
+) -> Tuple[pd.DataFrame, pd.Series] | Tuple[
     pd.DataFrame,
+    pd.Series,
     pd.Series,
 ]:
     """
@@ -1401,6 +1408,9 @@ def target_dataset(
         *features,
         target_column,
     ]
+
+    if "_patient_key" in df.columns:
+        columns.append("_patient_key")
 
     subset = df.loc[
         df[target_column].notna(),
@@ -1460,9 +1470,27 @@ def target_dataset(
             "no tiene al menos dos clases después del filtrado."
         )
 
-    return (
+    result = (
         subset[features],
         y,
+    )
+
+    if not include_groups:
+        return result
+
+    if "_patient_key" in subset.columns:
+        groups = subset["_patient_key"].astype("string")
+    else:
+        groups = pd.Series(
+            [f"row:{index}" for index in subset.index],
+            index=subset.index,
+            dtype="string",
+        )
+
+    return (
+        result[0],
+        result[1],
+        groups,
     )
 
 
@@ -1549,6 +1577,7 @@ def _validate_split_sizes() -> None:
 
 def split_indices(
     y: pd.Series,
+    groups: pd.Series | None = None,
 ) -> Tuple[
     np.ndarray,
     np.ndarray,
@@ -1588,68 +1617,155 @@ def split_indices(
             "split_indices() requiere al menos dos clases."
         )
 
-    # -------------------------------------------------------------------------
-    # TRAIN / TEMP
-    # -------------------------------------------------------------------------
+    if groups is not None:
+        if len(groups) != n:
+            raise ValueError(
+                "split_indices() requiere que groups tenga la misma "
+                "cantidad de filas que y."
+            )
 
-    temp_size = (
-        VALIDATION_SIZE
-        + TEST_SIZE
-    )
+        group_series = pd.Series(groups).astype("string").fillna("unknown")
+        if group_series.nunique() < 4:
+            raise ValueError(
+                "No hay suficientes pacientes independientes para un split "
+                "por paciente."
+            )
 
-    strat = stratify_target(
-        y,
-        minimum_count=2,
-    )
+        def grouped_holdout(
+            available: np.ndarray,
+            holdout_size: float,
+            seed: int,
+        ) -> Tuple[np.ndarray, np.ndarray]:
+            available = np.asarray(available, dtype=int)
+            splitter = GroupShuffleSplit(
+                n_splits=200,
+                test_size=holdout_size,
+                random_state=seed,
+            )
+            labels = y.iloc[available]
+            proportions = labels.value_counts(normalize=True)
+            best: tuple[float, np.ndarray, np.ndarray] | None = None
 
-    try:
-        train_idx, temp_idx = train_test_split(
+            for train_relative, holdout_relative in splitter.split(
+                np.zeros(len(available)),
+                labels,
+                group_series.iloc[available],
+            ):
+                train_candidate = available[train_relative]
+                holdout_candidate = available[holdout_relative]
+                if not len(train_candidate) or not len(holdout_candidate):
+                    continue
+
+                holdout_labels = y.iloc[holdout_candidate]
+                holdout_proportions = holdout_labels.value_counts(normalize=True)
+                distribution_error = sum(
+                    abs(
+                        float(holdout_proportions.get(label, 0.0))
+                        - float(proportions.get(label, 0.0))
+                    )
+                    for label in proportions.index
+                )
+                missing_classes = sum(
+                    label not in holdout_proportions
+                    for label in proportions.index
+                )
+                size_error = abs(
+                    len(holdout_candidate) / len(available) - holdout_size
+                )
+                score = (
+                    distribution_error
+                    + (2.0 * size_error)
+                    + (2.0 * missing_classes)
+                )
+
+                candidate = (
+                    score,
+                    np.sort(train_candidate),
+                    np.sort(holdout_candidate),
+                )
+                if best is None or score < best[0]:
+                    best = candidate
+
+            if best is None:
+                raise ValueError("No se pudo crear un split por paciente.")
+
+            return best[1], best[2]
+
+        temp_size = VALIDATION_SIZE + TEST_SIZE
+        train_idx, temp_idx = grouped_holdout(
             np.arange(n),
-            test_size=temp_size,
-            random_state=RANDOM_STATE,
-            stratify=strat,
+            temp_size,
+            RANDOM_STATE,
         )
-
-    except ValueError:
-        train_idx, temp_idx = train_test_split(
-            np.arange(n),
-            test_size=temp_size,
-            random_state=RANDOM_STATE,
-            stratify=None,
-        )
-
-    # -------------------------------------------------------------------------
-    # VALIDATION / TEST
-    # -------------------------------------------------------------------------
-
-    temp_y = y.iloc[
-        temp_idx
-    ]
-
-    strat_temp = stratify_target(
-        temp_y,
-        minimum_count=2,
-    )
-
-    relative_test_size = (
-        TEST_SIZE / temp_size
-    )
-
-    try:
-        validation_idx, test_idx = train_test_split(
+        validation_idx, test_idx = grouped_holdout(
             temp_idx,
-            test_size=relative_test_size,
-            random_state=RANDOM_STATE,
-            stratify=strat_temp,
+            TEST_SIZE / temp_size,
+            RANDOM_STATE + 1,
         )
 
-    except ValueError:
-        validation_idx, test_idx = train_test_split(
-            temp_idx,
-            test_size=relative_test_size,
-            random_state=RANDOM_STATE,
-            stratify=None,
+    else:
+        # ---------------------------------------------------------------------
+        # TRAIN / TEMP
+        # ---------------------------------------------------------------------
+
+        temp_size = (
+            VALIDATION_SIZE
+            + TEST_SIZE
         )
+
+        strat = stratify_target(
+            y,
+            minimum_count=2,
+        )
+
+        try:
+            train_idx, temp_idx = train_test_split(
+                np.arange(n),
+                test_size=temp_size,
+                random_state=RANDOM_STATE,
+                stratify=strat,
+            )
+
+        except ValueError:
+            train_idx, temp_idx = train_test_split(
+                np.arange(n),
+                test_size=temp_size,
+                random_state=RANDOM_STATE,
+                stratify=None,
+            )
+
+        # ---------------------------------------------------------------------
+        # VALIDATION / TEST
+        # ---------------------------------------------------------------------
+
+        temp_y = y.iloc[
+            temp_idx
+        ]
+
+        strat_temp = stratify_target(
+            temp_y,
+            minimum_count=2,
+        )
+
+        relative_test_size = (
+            TEST_SIZE / temp_size
+        )
+
+        try:
+            validation_idx, test_idx = train_test_split(
+                temp_idx,
+                test_size=relative_test_size,
+                random_state=RANDOM_STATE,
+                stratify=strat_temp,
+            )
+
+        except ValueError:
+            validation_idx, test_idx = train_test_split(
+                temp_idx,
+                test_size=relative_test_size,
+                random_state=RANDOM_STATE,
+                stratify=None,
+            )
 
     # -------------------------------------------------------------------------
     # Orden reproducible.
@@ -1710,6 +1826,19 @@ def split_indices(
         raise RuntimeError(
             "El split produjo índices solapados entre particiones."
         )
+
+    if groups is not None:
+        train_groups = set(group_series.iloc[train_idx].tolist())
+        validation_groups = set(group_series.iloc[validation_idx].tolist())
+        test_groups = set(group_series.iloc[test_idx].tolist())
+        if (
+            train_groups & validation_groups
+            or train_groups & test_groups
+            or validation_groups & test_groups
+        ):
+            raise RuntimeError(
+                "El split separó un mismo paciente entre particiones."
+            )
 
     if (
         train_set

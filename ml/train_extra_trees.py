@@ -34,6 +34,7 @@ def train_extra_trees(
     X_validation: Any,
     y_validation: Any,
     thresholds: dict[str, float],
+    groups: Any | None = None,
 ) -> dict[str, Any]:
     """
     Entrena y evalúa Extra Trees mediante el flujo común.
@@ -52,5 +53,6 @@ def train_extra_trees(
         thresholds=thresholds,
         cv_folds=CV_FOLDS,
         random_state=RANDOM_STATE,
+        groups=groups,
     )
 

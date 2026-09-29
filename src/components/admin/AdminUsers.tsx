@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
+  fetchAdminUsersFromAuth,
   subscribeToAdminUsers,
   updateUser,
   type AdminUser,
@@ -54,11 +55,22 @@ export default function AdminUsers({
     string | null
   >(null);
 
+  const authUsersByUid = useRef(
+    new Map<string, AdminUser>()
+  );
+
   useEffect(() => {
     const unsubscribe =
       subscribeToAdminUsers({
         onData: (loadedUsers) => {
-          setUsers(loadedUsers);
+          setUsers(
+            loadedUsers.map((user) => ({
+              ...user,
+              email:
+                user.email ||
+                authUsersByUid.current.get(user.id)?.email,
+            }))
+          );
           setLoading(false);
           setStatus(
             `${loadedUsers.length} usuarios encontrados.`
@@ -76,6 +88,38 @@ export default function AdminUsers({
             getFirebaseErrorMessage(error)
           );
         },
+      });
+
+    void fetchAdminUsersFromAuth()
+      .then((authUsers) => {
+        authUsers.forEach((user) => {
+          authUsersByUid.current.set(user.id, user);
+        });
+
+        setUsers((currentUsers) => {
+          const usersByUid = new Map(
+            currentUsers.map((user) => [user.id, user])
+          );
+
+          authUsers.forEach((user) => {
+            const existingUser = usersByUid.get(user.id);
+            usersByUid.set(
+              user.id,
+              existingUser
+                ? {
+                    ...existingUser,
+                    email: existingUser.email || user.email,
+                  }
+                : user
+            );
+          });
+
+          return Array.from(usersByUid.values());
+        });
+      })
+      .catch((error) => {
+        // La suscripciÃ³n de Firestore sigue funcionando como respaldo.
+        console.warn("No se pudieron sincronizar correos de Auth:", error);
       });
 
     return () => {

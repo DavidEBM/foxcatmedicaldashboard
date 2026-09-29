@@ -1,31 +1,31 @@
-﻿feature,importance,method,model,target,algorithm
-categorical__FEV1_80% or above,0.11997560411691666,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__FEV1_<30%,0.08132804930210114,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__FEV1_>80%,0.06737419962882996,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Heart Rate_Higher,0.05675313249230385,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__CAT,0.054148945957422256,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__FEV1_50-79%,0.0507759228348732,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__FEV1_30-49%,0.041446153074502945,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Temperature_High,0.0311631727963686,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__FEV1PRED,0.029418742284178734,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__MWT1,0.025042980909347534,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__mMRC,0.02446216158568859,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__HAD,0.023497680202126503,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__FVCPRED,0.02305018901824951,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__SGRQ,0.021883077919483185,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__Respiratory Rate,0.021220561116933823,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__status of smoking_No,0.021103305742144585,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Blood pressure_Higher,0.018472939729690552,feature_importance,XGBoost,copd_gold,XGBoost
-"categorical__BMI,kg/m2 (IMC)_21<BMI<25",0.017555952072143555,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__FVC,0.01594400592148304,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Sputum_Purlent,0.015566963702440262,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__status of smoking_Nunca,0.015447018668055534,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__Altura_MSNM,0.014052744954824448,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__MWT2,0.013959376141428947,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__FEV1_29% or less,0.013819370418787003,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__MWT1Best,0.01288954820483923,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Temperature_Normal,0.012888714671134949,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Blood pressure_Elevate,0.012321730144321918,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__PackHistory,0.011786296963691711,feature_importance,XGBoost,copd_gold,XGBoost
-numeric__TALLA(altura ó Height/m),0.011329153552651405,feature_importance,XGBoost,copd_gold,XGBoost
-categorical__Temperature_Higher,0.010326930321753025,feature_importance,XGBoost,copd_gold,XGBoost
+﻿feature,importance,importanceStd,method,model,target,algorithm
+FEV1,0.4666666666666666,0.09428090415820634,permutation_importance,CatBoost,copd_gold,CatBoost
+Location,0.06666666666666665,0.05443310539518172,permutation_importance,CatBoost,copd_gold,CatBoost
+PackHistory,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+MWT1Best,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+MWT1,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+FVC,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+Genero Sexo,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+HAD,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+smoking,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+FVCPRED,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+CAT,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+Respiratory Rate,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+Heart Rate,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+mMRC,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+FEV1PRED,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+OCUPACION,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+Altura_MSNM,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+PESO,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+AtrialFib,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+DISCAPACIDAD,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+TIPODISCAPAC,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
+MWT2,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+SGRQ,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+Oxygen Saturation,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+Temperature,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+Blood pressure,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+EDAD,-0.04444444444444451,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+status of smoking,-0.04444444444444451,0.031426968052735496,permutation_importance,CatBoost,copd_gold,CatBoost
+Sputum,-0.04444444444444451,0.031426968052735496,permutation_importance,CatBoost,copd_gold,CatBoost
+"BMI,kg/m2 (IMC)",-0.04444444444444451,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost

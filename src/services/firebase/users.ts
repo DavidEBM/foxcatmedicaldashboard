@@ -20,6 +20,7 @@ export interface UserDocument {
   role: UserRole;
   status: UserStatus;
   displayName: string;
+  email?: string;
   createdAt?: unknown;
 }
 
@@ -55,7 +56,8 @@ export async function getUserDocument(
  */
 export async function createPatientUser(
   uid: string,
-  displayName: string
+  displayName: string,
+  email?: string,
 ) {
   const existingUser =
     await getDoc(userRef(uid));
@@ -64,12 +66,19 @@ export async function createPatientUser(
     return;
   }
 
-  await setDoc(userRef(uid), {
+  const userData: UserDocument = {
     role: "patient",
     status: "active",
     displayName,
     createdAt: serverTimestamp(),
-  });
+  };
+
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (normalizedEmail) {
+    userData.email = normalizedEmail;
+  }
+
+  await setDoc(userRef(uid), userData);
 }
 
 /**

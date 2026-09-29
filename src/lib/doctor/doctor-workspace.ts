@@ -40,22 +40,6 @@ export function getScheduledPatients(
     );
 }
 
-export function getLabsOverview(
-  patients: WorkspacePatient[],
-  getRiskScore: (patient: WorkspacePatient) => number
-): WorkspacePatient[] {
-  return patients
-    .filter(
-      (patient) =>
-        patient.glucose ||
-        patient.creatinine ||
-        patient.oxygenSaturation ||
-        patient.respiratoryRate
-    )
-    .sort((a, b) => getRiskScore(b) - getRiskScore(a))
-    .slice(0, 6);
-}
-
 export function getRemoteMonitoringPatients(
   patients: WorkspacePatient[],
   getRiskScore: (patient: WorkspacePatient) => number

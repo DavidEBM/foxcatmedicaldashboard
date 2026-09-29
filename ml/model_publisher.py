@@ -72,6 +72,14 @@ class TargetResult:
         default_factory=list
     )
 
+    # Modelo elegido en esta corrida, que puede ser distinto del modelo
+    # actualmente publicado si el candidato no mejora al anterior.
+    run_selected: Optional[str] = None
+    published_this_run: bool = True
+    publication_reason: str = "published"
+    current_quality: dict[str, Any] = field(default_factory=dict)
+    candidate_quality: dict[str, Any] = field(default_factory=dict)
+
 
 # ============================================================================
 # UTILIDADES DEL PIPELINE
@@ -397,6 +405,126 @@ def _candidate_selection_key(
         -cv_std,
         cv_mean,
     )
+
+
+def _quality_key(
+    candidate: Optional[dict[str, Any]],
+    threshold_met: bool,
+) -> tuple[float, float, float, float]:
+    """Orden de calidad usado para comparar publicaciones entre corridas."""
+    selection_key = _candidate_selection_key(candidate or {})
+    return (
+        1.0 if threshold_met else 0.0,
+        selection_key[0],
+        selection_key[1],
+        selection_key[2],
+    )
+
+
+def _quality_dict(
+    quality: tuple[float, float, float, float],
+) -> dict[str, Any]:
+    return {
+        "thresholdMet": bool(quality[0]),
+        "validationScore": quality[1],
+        "cvStdScore": (
+            -quality[2]
+            if np.isfinite(quality[2])
+            else None
+        ),
+        "cvMeanScore": quality[3],
+    }
+
+
+def _load_published_state(
+    output: Path,
+    key: str,
+) -> Optional[dict[str, Any]]:
+    """Carga el mejor artefacto vigente y su calidad sin modificarlo.
+
+    Además del manifiesto, inspecciona los artefactos principales existentes.
+    Esto permite recuperar el mejor modelo si una ejecución anterior escribió
+    un manifiesto nuevo antes de disponer de la política de promoción.
+    """
+    manifest_path = output / "training-manifest.json"
+    try:
+        manifest = json.loads(
+            manifest_path.read_text(encoding="utf-8")
+        )
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return None
+
+    info = (manifest.get("models") or {}).get(key)
+    if not isinstance(info, dict):
+        info = {}
+
+    artifact_paths: list[Path] = []
+    artifact_ref = info.get("artifact")
+    if artifact_ref:
+        artifact_paths.append(Path(str(artifact_ref).replace("\\", "/")))
+    artifact_paths.extend(output.glob(f"{norm(key)}-*.joblib"))
+
+    states: list[dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    for artifact_path in artifact_paths:
+        if not artifact_path.is_absolute() and not artifact_path.exists():
+            artifact_path = output / artifact_path.name
+        if not artifact_path.exists():
+            continue
+        path_key = str(artifact_path.resolve())
+        if path_key in seen_paths:
+            continue
+        seen_paths.add(path_key)
+
+        try:
+            payload = joblib.load(artifact_path)
+        except Exception:
+            continue
+        if not isinstance(payload, dict):
+            continue
+
+        selection = payload.get("selection") or {}
+        selected = (
+            payload.get("selectedModel")
+            or payload.get("model")
+        )
+        if not selected:
+            continue
+
+        candidate = {
+            "validationScore": selection.get("validationScore"),
+            "cvStdScore": selection.get("cvStdScore"),
+            "cvMeanScore": selection.get("cvMeanScore"),
+        }
+        threshold_met = bool(
+            payload.get(
+                "validationThresholdMet",
+                False,
+            )
+        )
+        if (
+            not threshold_met
+            and selected == info.get("selectedModel")
+        ):
+            threshold_met = bool(info.get("thresholdMet"))
+
+        states.append(
+            {
+                "selected": str(selected),
+                "artifact": str(artifact_path),
+                "thresholdMet": threshold_met,
+                "quality": _quality_key(candidate, threshold_met),
+                "testMetrics": payload.get("testMetrics")
+                or info.get("testMetrics")
+                or {},
+                "payload": payload,
+            }
+        )
+
+    if not states:
+        return None
+
+    return max(states, key=lambda state: state["quality"])
 
 
 def _select_candidate(
@@ -973,6 +1101,7 @@ def publish_best_model(
         if selected_candidate is not None
         else None
     )
+    run_selected = selected
 
     # ------------------------------------------------------------------
     # Directorios
@@ -985,6 +1114,24 @@ def publish_best_model(
     output.mkdir(
         parents=True,
         exist_ok=True,
+    )
+
+    current_state = _load_published_state(output, key)
+    candidate_quality_key = _quality_key(
+        selected_candidate,
+        selected_threshold_met,
+    )
+    current_quality_key = (
+        current_state["quality"]
+        if current_state is not None
+        else None
+    )
+    should_publish = bool(
+        selected_candidate is not None
+        and (
+            current_quality_key is None
+            or candidate_quality_key > current_quality_key
+        )
     )
 
     all_dir = (
@@ -1057,7 +1204,18 @@ def publish_best_model(
         ),
     }
 
-    if (
+    published_payload: dict[str, Any] = {}
+
+    if current_state is not None and not should_publish:
+        # El candidato queda disponible para diagnóstico, pero no sustituye
+        # al modelo vigente porque su calidad no es estrictamente superior.
+        selected = current_state["selected"]
+        selected_threshold_met = bool(current_state["thresholdMet"])
+        artifact = current_state["artifact"]
+        test = current_state["testMetrics"]
+        published_payload = current_state.get("payload") or {}
+
+    elif (
         selected is not None
         and selected_payload is None
     ):
@@ -1074,6 +1232,7 @@ def publish_best_model(
         test = selected_payload[
             "metrics"
         ]
+        published_payload = selected_payload
 
         # --------------------------------------------------------------
         # Artefacto principal
@@ -1194,8 +1353,8 @@ def publish_best_model(
         )
 
         if (
-            selected is None
-            or candidate_name != selected
+            run_selected is None
+            or candidate_name != run_selected
         ):
             candidate["testMetrics"] = {}
 
@@ -1285,6 +1444,19 @@ def publish_best_model(
     # Resultado
     # ------------------------------------------------------------------
 
+    published_this_run = bool(
+        should_publish
+        and selected_payload is not None
+    )
+    if published_this_run:
+        publication_reason = "candidate_strictly_better"
+    elif current_state is not None:
+        publication_reason = "existing_model_is_better_or_equal"
+    elif selected_payload is None:
+        publication_reason = "no_usable_model"
+    else:
+        publication_reason = "published_initial_model"
+
     result = TargetResult(
         key=key,
 
@@ -1315,16 +1487,26 @@ def publish_best_model(
         ),
 
         risk_pipeline=(
-            selected_payload[
-                "finalPipeline"
-            ]
-            if selected_payload is not None
-            else None
+            published_payload.get("finalPipeline")
+            or published_payload.get("pipeline")
         ),
 
         feature_columns=list(
-            final_x.columns
+            published_payload.get(
+                "featureColumns",
+                list(final_x.columns),
+            )
         ),
+
+        run_selected=run_selected,
+        published_this_run=published_this_run,
+        publication_reason=publication_reason,
+        current_quality=(
+            _quality_dict(current_quality_key)
+            if current_quality_key is not None
+            else {}
+        ),
+        candidate_quality=_quality_dict(candidate_quality_key),
     )
 
     return result
@@ -1344,6 +1526,7 @@ def export_manifest(
     results,
     thresholds,
     skipped_targets=None,
+    data_sources=None,
 ):
     """
     Exporta el manifiesto reproducible del entrenamiento.
@@ -1363,11 +1546,23 @@ def export_manifest(
             source
         ).as_posix(),
 
+        "dataSources": (
+            data_sources or {
+                "firebaseIncluded": False,
+                "localRows": None,
+                "firebaseRows": 0,
+                "rowsAfterDeduplication": None,
+                "duplicatesRemoved": 0,
+                "matchedExistingPatients": 0,
+                "targetConflicts": 0,
+            }
+        ),
+
         "randomState": RANDOM_STATE,
 
         "methodology": {
             "selection": (
-                "StratifiedKFold CV + validation holdout"
+                "StratifiedGroupKFold por paciente + validation holdout"
             ),
 
             "finalFit": (
@@ -1433,6 +1628,11 @@ def export_manifest(
             dict[str, Any]
         ] = []
 
+        run_selected = (
+            result.run_selected
+            or result.selected
+        )
+
         for candidate in result.candidates:
 
             candidate_model = candidate.get(
@@ -1441,7 +1641,7 @@ def export_manifest(
 
             is_selected = (
                 candidate_model
-                == result.selected
+                == run_selected
             )
 
             algorithms_tested.append(
@@ -1537,6 +1737,16 @@ def export_manifest(
             "targetLabel": result.label,
 
             "selectedModel": result.selected,
+
+            "runSelectedModel": run_selected,
+
+            "publishedThisRun": result.published_this_run,
+
+            "publicationReason": result.publication_reason,
+
+            "currentQuality": result.current_quality,
+
+            "candidateQuality": result.candidate_quality,
 
             "artifact": result.artifact,
 

@@ -130,6 +130,7 @@ def train_algorithm(
     thresholds: dict[str, float],
     cv_folds: int | None = None,
     random_state: int | None = None,
+    groups: Any | None = None,
 ) -> dict[str, Any]:
     """
     Entrena y evalúa un algoritmo candidato.
@@ -251,6 +252,7 @@ def train_algorithm(
             estimator_factory=estimator_factory,
             X=X_train,
             y=y_train,
+            groups=groups,
         )
 
         if not np.isfinite(cv_mean):

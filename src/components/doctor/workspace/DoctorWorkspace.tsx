@@ -14,7 +14,6 @@ import WorkspaceCanvas from "./WorkspaceCanvas";
 import PatientNotes from "@/components/doctor/notes/PatientNotes";
 import {
   buildCarePlan,
-  getLabsOverview,
   getRemoteMonitoringPatients,
   getScheduledPatients,
   summarizeDay,
@@ -143,7 +142,20 @@ function WorkspaceContent({
   const carePlan = buildCarePlan(patient, assessment);
   const scheduledPatients = getScheduledPatients(patients);
   const monitoredPatients = getRemoteMonitoringPatients(patients, getRiskScore);
-  const laboratoryPatients = getLabsOverview(patients, getRiskScore);
+
+  const clinicalResult = (value: unknown, suffix = "") =>
+    value !== undefined && value !== null && value !== ""
+      ? `${value}${suffix}`
+      : "No registrado";
+
+  const laboratoryFields = [
+    ["Glucosa", clinicalResult(patient?.glucose, " mg/dL")],
+    ["Hemoglobina", clinicalResult(patient?.hemoglobin, " g/dL")],
+    ["Creatinina", clinicalResult(patient?.creatinine, " mg/dL")],
+    ["BNP", clinicalResult(patient?.bnp, " pg/mL")],
+    ["ECG", clinicalResult(patient?.ecg)],
+    ["Saturación O₂", clinicalResult(patient?.oxygenSaturation, "%")],
+  ] as const;
 
   return (
     <section className="doctor-workspace-panel">
@@ -200,9 +212,26 @@ function WorkspaceContent({
         )}
 
         {action === "labs-overview" && (
-          <div className="doctor-tool-record-list">
-            {laboratoryPatients.map((item) => <button className="doctor-tool-record-button" type="button" key={item.id} onClick={() => onSelectPatient(item.id)}><strong>{item.name}</strong><span>Glucosa {item.glucose ?? "—"} mg/dL · Creatinina {item.creatinine ?? "—"} mg/dL · BNP {item.bnp ?? "—"}</span><small>Abrir ficha clínica</small></button>)}
-            {!laboratoryPatients.length && <p>No hay resultados clínicos registrados.</p>}
+          <div className="doctor-laboratory-module">
+            {patient ? (
+              <>
+                <div className="doctor-lab-result-grid">
+                  {laboratoryFields.map(([label, value]) => (
+                    <article className="doctor-lab-result-card" key={label}>
+                      <span>{label}</span>
+                      <strong>{value}</strong>
+                    </article>
+                  ))}
+                </div>
+
+                <p className="doctor-tool-disclaimer">
+                  Resultados clínicos registrados en la última ficha disponible.
+                </p>
+              </>
+            ) : (
+              <p>No hay resultados clínicos registrados.</p>
+            )}
+
           </div>
         )}
 

@@ -955,6 +955,597 @@
 }
 
 /* =========================================================
+   ENTRENAMIENTO ML
+   ========================================================= */
+
+.admin-training-module code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--admin-purple-pale);
+  color: var(--admin-purple-dark);
+  font-size: 0.9em;
+}
+
+.admin-training-methodology {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 11px 13px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-blue-soft);
+  color: var(--admin-blue-dark);
+  font-size: 11px;
+}
+
+.admin-training-methodology span,
+.admin-training-methodology strong {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.admin-training-methodology strong {
+  background: var(--admin-blue-dark);
+  color: #ffffff;
+}
+
+.admin-training-source-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding: 11px 13px;
+  border: 1px solid rgba(120, 184, 154, 0.35);
+  border-radius: 10px;
+  background: var(--admin-green-soft);
+  color: var(--admin-text);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.admin-training-source-option input {
+  width: 15px;
+  min-height: 15px;
+  margin-top: 1px;
+  accent-color: var(--admin-green-dark);
+}
+
+.admin-training-source-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-training-source-option small {
+  color: var(--admin-text-muted);
+  font-size: 10px;
+}
+
+.admin-training-data-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 11px 13px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-text-soft);
+  font-size: 10px;
+}
+
+.admin-training-data-summary strong,
+.admin-training-data-summary span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--admin-blue-soft);
+}
+
+.admin-training-data-summary strong {
+  color: var(--admin-blue-dark);
+}
+
+.admin-training-data-summary .is-warning {
+  color: var(--admin-danger);
+}
+
+.admin-training-selection {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.admin-training-panel {
+  min-width: 0;
+  padding: 18px;
+}
+
+.admin-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-check-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.admin-check-option:hover {
+  border-color: var(--admin-purple);
+  background: var(--admin-purple-pale);
+}
+
+.admin-check-option input {
+  width: 15px;
+  min-height: 15px;
+  flex: 0 0 15px;
+  margin: 1px 0 0;
+  accent-color: var(--admin-purple);
+}
+
+.admin-check-option span {
+  min-width: 0;
+}
+
+.admin-check-option small {
+  display: block;
+  margin-top: 3px;
+  color: var(--admin-danger);
+  font-size: 9px;
+}
+
+.admin-training-run {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-training-run-succeeded {
+  border-color: rgba(120, 184, 154, 0.35);
+  background: var(--admin-green-soft);
+}
+
+.admin-training-run-failed {
+  border-color: rgba(201, 133, 145, 0.35);
+  background: var(--admin-danger-soft);
+}
+
+.admin-training-run-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.admin-training-run-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-training-run-header strong {
+  color: var(--admin-text);
+  font-size: 13px;
+}
+
+.admin-training-run-header > span {
+  color: var(--admin-text-muted);
+  font-size: 10px;
+}
+
+.admin-training-log {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 11px;
+  border-radius: 8px;
+  background: #292735;
+  color: #eeeaf7;
+  font: 10px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.admin-training-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.admin-training-result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-training-result-card > span {
+  overflow: hidden;
+  color: var(--admin-text-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-training-result-card > strong {
+  color: var(--admin-text);
+  font-size: 14px;
+}
+
+.admin-training-result-card > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  padding-top: 5px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-training-result-card small {
+  color: var(--admin-text-soft);
+  font-size: 10px;
+}
+
+.admin-training-result-note {
+  display: block;
+  line-height: 1.4;
+}
+
+.admin-training-result-card b {
+  color: var(--admin-text);
+  font-size: 11px;
+}
+
+.admin-training-result-card em {
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.admin-training-result-card em.is-good {
+  color: var(--admin-green-dark);
+}
+
+.admin-training-result-card em.is-warning {
+  color: var(--admin-danger);
+}
+
+.admin-training-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.admin-training-image-card {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-training-image-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.admin-training-image-card figcaption {
+  overflow: hidden;
+  padding: 8px 9px;
+  color: var(--admin-text-soft);
+  font-size: 9px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   COMPARATIVAS VS DE MODELOS
+   ========================================================= */
+
+.admin-training-comparisons {
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface);
+}
+
+.admin-training-comparisons-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.admin-training-comparisons-heading h3 {
+  margin: 4px 0 5px;
+  color: var(--admin-text);
+  font-size: 16px;
+}
+
+.admin-training-comparisons-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--admin-text-soft);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.admin-training-comparisons-heading .admin-training-comparison-note,
+.admin-training-comparison-note {
+  margin-top: 7px;
+  color: var(--admin-blue-dark);
+  font-weight: 700;
+}
+
+.admin-training-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+  gap: 14px;
+}
+
+.admin-training-comparison {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 11px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-training-comparison-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.admin-training-comparison-header h4 {
+  margin: 4px 0 0;
+  color: var(--admin-text);
+  font-size: 14px;
+}
+
+.admin-training-comparison-count {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--admin-blue-soft);
+  color: var(--admin-blue-dark);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-training-best-model {
+  padding: 4px 7px;
+  border: 1px solid rgba(120, 184, 154, 0.45);
+  border-radius: 999px;
+  background: var(--admin-green-soft);
+  color: var(--admin-green-dark);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-training-comparison-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-training-download {
+  min-height: 28px;
+  padding: 5px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.admin-training-chart-block {
+  min-width: 0;
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: var(--admin-surface);
+}
+
+.admin-training-chart-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.admin-training-chart-title strong {
+  color: var(--admin-text);
+  font-size: 11px;
+}
+
+.admin-training-chart-title span {
+  color: var(--admin-text-muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.admin-training-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-training-bar-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 1.1fr) minmax(120px, 3fr) 48px;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-training-bar-label {
+  overflow: hidden;
+  color: var(--admin-text-soft);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-training-bar-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--admin-purple-pale);
+}
+
+.admin-training-bar-track span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--admin-purple), var(--admin-green-dark));
+  transition: width 180ms ease;
+}
+
+.admin-training-bar-row strong {
+  color: var(--admin-text);
+  font-size: 10px;
+  text-align: right;
+}
+
+.admin-training-heatmap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  color: var(--admin-text-soft);
+  font-size: 9px;
+}
+
+.admin-training-heatmap-row {
+  display: grid;
+  grid-template-columns: minmax(116px, 1.5fr) repeat(7, minmax(66px, 1fr));
+  gap: 3px;
+  align-items: stretch;
+  min-width: 760px;
+  min-height: 28px;
+}
+
+.admin-training-heatmap-row > * {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 5px 4px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.admin-training-heatmap-row > strong,
+.admin-training-heatmap-head > span:first-child {
+  justify-content: flex-start;
+  overflow: hidden;
+  color: var(--admin-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-training-heatmap-head {
+  margin-bottom: 3px;
+  color: var(--admin-text-muted);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-training-heatmap-row:not(.admin-training-heatmap-head) > span {
+  color: var(--admin-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-training-test-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid rgba(120, 184, 154, 0.35);
+  border-radius: 8px;
+  background: var(--admin-green-soft);
+  color: var(--admin-text-soft);
+  font-size: 10px;
+}
+
+.admin-training-test-summary strong {
+  color: var(--admin-green-dark);
+  margin-right: 3px;
+}
+
+.admin-training-test-summary span {
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.admin-training-test-reference {
+  color: var(--admin-blue-dark);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .admin-training-comparison-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-training-comparisons {
+    padding: 13px;
+  }
+
+  .admin-training-comparison {
+    padding: 11px;
+  }
+
+  .admin-training-chart-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .admin-training-bar-row {
+    grid-template-columns: minmax(82px, 1fr) minmax(70px, 2fr) 43px;
+    gap: 5px;
+  }
+}
+
+/* =========================================================
    LOADING
    ========================================================= */
 
@@ -1063,7 +1654,7 @@
     display: grid;
 
     grid-template-columns:
-      repeat(5, minmax(0, 1fr));
+      repeat(6, minmax(0, 1fr));
 
     gap: 5px;
   }
@@ -1168,9 +1759,9 @@
     flex-direction: column;
   }
 
-  .admin-navigation {
+    .admin-navigation {
     grid-template-columns:
-      repeat(5, minmax(65px, 1fr));
+      repeat(6, minmax(65px, 1fr));
 
     overflow-x: auto;
   }
@@ -1181,6 +1772,541 @@
 
   .admin-page .panel-header {
     flex-direction: column;
+  }
+
+  .admin-training-selection {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   VALIDACIONES IA
+   ========================================================= */
+
+.admin-page .admin-validations-module {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-page .admin-validations-header {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.admin-page .admin-validations-header h2 {
+  margin: 4px 0 6px;
+}
+
+.admin-page .admin-validations-header p {
+  max-width: 650px;
+  margin: 0;
+  color: var(--admin-text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-page .admin-validation-alert {
+  padding: 11px 13px;
+  border: 1px solid #efd5d9;
+  border-radius: 10px;
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+  font-size: 12px;
+}
+
+.admin-page .admin-validation-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-page .admin-validation-metrics article {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  background: linear-gradient(145deg, var(--admin-surface), var(--admin-surface-soft));
+  box-shadow: 0 5px 18px rgba(80, 70, 110, .04);
+}
+
+.admin-page .admin-validation-metrics span,
+.admin-page .admin-validation-metrics small {
+  color: var(--admin-text-soft);
+  font-size: 10px;
+}
+
+.admin-page .admin-validation-metrics strong {
+  color: var(--admin-purple-dark);
+  font-size: 25px;
+  line-height: 1;
+}
+
+.admin-page .admin-validation-charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 14px;
+}
+
+.admin-page .admin-validation-chart-card,
+.admin-page .admin-validation-list-card,
+.admin-page .admin-validation-comparison-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  background: var(--admin-surface);
+  box-shadow: 0 7px 22px rgba(80, 70, 110, .045);
+}
+
+.admin-page .admin-validation-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.admin-page .admin-validation-card-heading h3,
+.admin-page .admin-validation-list-toolbar h3 {
+  margin: 4px 0 0;
+  color: var(--admin-text);
+  font-size: 15px;
+}
+
+.admin-page .admin-validation-total-mark {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  background: var(--admin-purple-pale);
+  color: var(--admin-purple-dark);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.admin-page .admin-validation-donut-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.admin-page .admin-validation-donut {
+  display: grid;
+  place-items: center;
+  width: min(100%, 180px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5);
+}
+
+.admin-page .admin-validation-donut > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--admin-surface);
+  box-shadow: 0 2px 12px rgba(70, 60, 95, .08);
+  text-align: center;
+}
+
+.admin-page .admin-validation-donut strong {
+  color: var(--admin-text);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.admin-page .admin-validation-donut span {
+  margin-top: 4px;
+  color: var(--admin-text-soft);
+  font-size: 9px;
+}
+
+.admin-page .admin-validation-chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.admin-page .admin-validation-legend-item {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+  color: var(--admin-text-soft);
+  font-size: 10px;
+}
+
+.admin-page .admin-validation-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.admin-page .admin-validation-legend-item strong {
+  color: var(--admin-text);
+  font-size: 11px;
+}
+
+.admin-page .admin-validation-legend-item small {
+  min-width: 42px;
+  color: var(--admin-text-muted);
+  font-size: 9px;
+  text-align: right;
+}
+
+.admin-page .admin-validation-chart-note {
+  margin: 17px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-border);
+  color: var(--admin-text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.admin-page .admin-validation-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 164px;
+  justify-content: center;
+}
+
+.admin-page .admin-validation-model-row {
+  display: grid;
+  grid-template-columns: minmax(145px, .8fr) minmax(160px, 1.2fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-page .admin-validation-model-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-page .admin-validation-model-label strong {
+  overflow: hidden;
+  color: var(--admin-text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .admin-validation-model-label small {
+  color: var(--admin-text-muted);
+  font-size: 9px;
+}
+
+.admin-page .admin-validation-stacked-bar {
+  display: flex;
+  overflow: hidden;
+  height: 18px;
+  border-radius: 999px;
+  background: #f0f0f3;
+  box-shadow: inset 0 0 0 1px rgba(80, 70, 110, .05);
+}
+
+.admin-page .admin-validation-stacked-bar span {
+  min-width: 0;
+  transition: width .2s ease;
+}
+
+.admin-page .admin-validation-stacked-bar span:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.admin-page .admin-validation-stacked-bar span:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+.admin-page .admin-validation-view-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--admin-border);
+  border-radius: 11px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-page .admin-validation-view-tabs button {
+  flex: 1;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--admin-text-soft);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.admin-page .admin-validation-view-tabs button.is-active {
+  background: var(--admin-surface);
+  color: var(--admin-purple-dark);
+  box-shadow: 0 2px 8px rgba(70, 60, 95, .08);
+}
+
+.admin-page .admin-validation-list-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 17px;
+}
+
+.admin-page .admin-validation-list-toolbar p {
+  margin: 5px 0 0;
+  color: var(--admin-text-soft);
+  font-size: 11px;
+}
+
+.admin-page .admin-validation-filters {
+  display: flex;
+  flex: 0 1 430px;
+  gap: 8px;
+}
+
+.admin-page .admin-validation-filters input,
+.admin-page .admin-validation-filters select {
+  min-height: 36px;
+  font-size: 11px;
+}
+
+.admin-page .admin-validation-patient-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-page .admin-validation-patient-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 110px minmax(150px, 1fr) 150px;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-page .admin-validation-patient-main,
+.admin-page .admin-validation-comparison-table td:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-page .admin-validation-patient-main strong,
+.admin-page .admin-validation-comparison-table td:first-child strong {
+  overflow: hidden;
+  color: var(--admin-text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .admin-validation-patient-main span,
+.admin-page .admin-validation-comparison-table td small {
+  overflow: hidden;
+  color: var(--admin-text-soft);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .admin-validation-status {
+  display: inline-flex;
+  justify-content: center;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-page .admin-validation-status.is-validated,
+.admin-page .admin-validation-comparison-status.is-validated {
+  background: var(--admin-green-soft);
+  color: var(--admin-green-dark);
+}
+
+.admin-page .admin-validation-status.is-partial,
+.admin-page .admin-validation-comparison-status.is-partial {
+  background: var(--admin-purple-soft);
+  color: var(--admin-purple-dark);
+}
+
+.admin-page .admin-validation-status.is-missing,
+.admin-page .admin-validation-comparison-status.is-missing {
+  background: #f0f1f4;
+  color: var(--admin-text-muted);
+}
+
+.admin-page .admin-validation-status.is-not-validated,
+.admin-page .admin-validation-comparison-status.is-not-validated {
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.admin-page .admin-validation-patient-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-page .admin-validation-patient-progress strong {
+  color: var(--admin-text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-page .admin-validation-patient-progress > div {
+  overflow: hidden;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--admin-border);
+}
+
+.admin-page .admin-validation-patient-progress > div span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--admin-purple), var(--admin-green));
+}
+
+.admin-page .admin-validation-patient-result {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  color: var(--admin-text-muted);
+  font-size: 10px;
+}
+
+.admin-page .admin-validation-patient-result strong {
+  color: var(--admin-text);
+}
+
+.admin-page .admin-validation-empty {
+  padding: 28px 12px;
+  color: var(--admin-text-soft);
+  font-size: 12px;
+  text-align: center;
+}
+
+.admin-page .admin-validation-comparison-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+}
+
+.admin-page .admin-validation-comparison-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.admin-page .admin-validation-comparison-table th,
+.admin-page .admin-validation-comparison-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--admin-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-page .admin-validation-comparison-table th {
+  background: var(--admin-surface-soft);
+  color: var(--admin-text-soft);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-page .admin-validation-comparison-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-page .admin-validation-comparison-table td > small {
+  display: block;
+  margin-top: 4px;
+  color: var(--admin-text-muted);
+  font-size: 9px;
+}
+
+.admin-page .admin-validation-comparison-status {
+  display: inline-flex;
+  padding: 5px 7px;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 1050px) {
+  .admin-page .admin-validation-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-validation-patient-row {
+    grid-template-columns: minmax(170px, 1.5fr) 105px minmax(150px, 1fr);
+  }
+
+  .admin-page .admin-validation-patient-result {
+    grid-column: 3;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-page .admin-validation-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-page .admin-validation-donut-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-validation-donut {
+    width: 170px;
+  }
+
+  .admin-page .admin-validation-list-toolbar {
+    flex-direction: column;
+  }
+
+  .admin-page .admin-validation-filters {
+    width: 100%;
+    flex-direction: column;
+    flex-basis: auto;
+  }
+
+  .admin-page .admin-validation-patient-row {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .admin-page .admin-validation-patient-progress,
+  .admin-page .admin-validation-patient-result {
+    grid-column: 1 / -1;
+  }
+
+  .admin-page .admin-validation-patient-result {
+    justify-content: flex-start;
   }
 }
 
@@ -1749,4 +2875,35 @@
 .admin-page .assignment-table th,
 .admin-page .assignment-table td {
   white-space: normal;
+}
+ .admin-registration-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.85rem;
+  background: var(--admin-surface-soft);
+}
+
+.admin-registration-control strong {
+  color: var(--admin-text);
+}
+
+.admin-registration-control p {
+  margin: 0.35rem 0 0;
+  color: var(--admin-text-soft);
+}
+
+.admin-registration-toggle.is-danger {
+  color: var(--admin-danger);
+}
+
+@media (max-width: 640px) {
+  .admin-registration-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

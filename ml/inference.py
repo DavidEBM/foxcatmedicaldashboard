@@ -12,6 +12,7 @@ import joblib
 import pandas as pd
 
 MODELS = ROOT / "outputs" / "SavedModels"
+MANIFEST = MODELS / "training-manifest.json"
 
 TARGETS = {
     "copd_gold": MODELS / "copd_gold-xgboost.joblib",
@@ -39,11 +40,36 @@ def patient_features(patient: dict) -> dict:
     }
 
 
-def predict(patient: dict) -> list[dict]:
+def approved_targets() -> tuple[set[str], dict[str, str]]:
+    """Devuelve únicamente modelos que superaron VALIDATION."""
+    try:
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return set(TARGETS), {}
+
+    approved: set[str] = set()
+    blocked: dict[str, str] = {}
+    models = manifest.get("models", {})
+
+    for target in TARGETS:
+        report = models.get(target, {})
+        if report.get("thresholdMet") is True:
+            approved.add(target)
+        else:
+            blocked[target] = (
+                "El modelo no superó los umbrales de VALIDATION y requiere "
+                "más datos o revisión clínica."
+            )
+
+    return approved, blocked
+
+
+def predict(patient: dict) -> tuple[list[dict], dict[str, str]]:
     row = patient_features(patient)
     results = []
+    approved, blocked = approved_targets()
     for target, path in TARGETS.items():
-        if not path.exists():
+        if target not in approved or not path.exists():
             continue
         artifact = joblib.load(path)
         features = artifact.get("featureColumns") or list(row)
@@ -87,12 +113,21 @@ def predict(patient: dict) -> list[dict]:
             "artifact": str(path.relative_to(ROOT.parent)),
             "source": "backend",
         })
-    return results
+    return results, blocked
 
 
 if __name__ == "__main__":
     try:
-        print(json.dumps({"predictions": predict(json.load(sys.stdin))}, ensure_ascii=False))
+        predictions, blocked_models = predict(json.load(sys.stdin))
+        print(
+            json.dumps(
+                {
+                    "predictions": predictions,
+                    "blockedModels": blocked_models,
+                },
+                ensure_ascii=False,
+            )
+        )
     except Exception as error:  # pragma: no cover - surfaced to the API caller
         print(json.dumps({"error": str(error)}, ensure_ascii=False))
         raise SystemExit(1)

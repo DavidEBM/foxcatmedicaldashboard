@@ -192,6 +192,7 @@ def train_catboost(
     X_validation: Any,
     y_validation: Any,
     thresholds: dict[str, float],
+    groups: Any | None = None,
 ) -> dict[str, Any]:
     """
     Entrena y evalúa CatBoost mediante el flujo común.
@@ -209,4 +210,5 @@ def train_catboost(
         thresholds=thresholds,
         cv_folds=CV_FOLDS,
         random_state=RANDOM_STATE,
+        groups=groups,
     )

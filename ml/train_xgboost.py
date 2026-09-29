@@ -278,6 +278,7 @@ def train_xgboost(
     X_validation: Any,
     y_validation: Any,
     thresholds: dict[str, float],
+    groups: Any | None = None,
 ):
     """
     Entrena y evalúa XGBoost utilizando el pipeline común.
@@ -293,4 +294,5 @@ def train_xgboost(
         thresholds=thresholds,
         cv_folds=CV_FOLDS,
         random_state=RANDOM_STATE,
+        groups=groups,
     )

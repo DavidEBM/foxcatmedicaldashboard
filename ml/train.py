@@ -4,11 +4,11 @@ import argparse
 import time
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 
-from .algorithms import TRAINERS
+from .algorithms import TRAINERS, get_trainers
 from .config import (
     DEFAULT_DATASET,
     DEFAULT_OUTPUT_DIR,
@@ -23,6 +23,7 @@ from .data_preparation import (
     split_indices,
     target_dataset,
 )
+from .firebase_dataset import merge_with_firebase
 from .export_iterations import export_training_excel
 from .model_publisher import (
     TargetResult,
@@ -50,6 +51,15 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--firebase-dataset",
+        default=None,
+        help=(
+            "Snapshot JSON de pacientes de Firebase. Se fusiona con el "
+            "dataset histórico y se deduplica antes del split."
+        ),
+    )
+
+    parser.add_argument(
         "--output-dir",
         default=DEFAULT_OUTPUT_DIR,
         help="Directorio de salida.",
@@ -72,6 +82,16 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Features explícitas. Si se omite, se utiliza "
             "la selección automática por target."
+        ),
+    )
+
+    parser.add_argument(
+        "--algorithms",
+        nargs="+",
+        default=None,
+        help=(
+            "Algoritmos a ejecutar. Si se omite, se ejecutan todos "
+            "los algoritmos registrados."
         ),
     )
 
@@ -274,6 +294,8 @@ def train_target(
     te: Any,
     output_dir: Path,
     thresholds: dict[str, float],
+    groups: Any | None = None,
+    trainers: Sequence[tuple[str, Any]] = TRAINERS,
 ) -> TargetResult:
     """
     Entrena todos los candidatos para un target.
@@ -312,7 +334,7 @@ def train_target(
 
     candidates: list[dict[str, Any]] = []
 
-    for algorithm_name, trainer in TRAINERS:
+    for algorithm_name, trainer in trainers:
         print(
             f"  -> {algorithm_name}"
         )
@@ -324,6 +346,7 @@ def train_target(
                 X_validation=X_validation,
                 y_validation=y_validation,
                 thresholds=thresholds,
+                groups=groups,
             )
 
             if not isinstance(
@@ -396,9 +419,14 @@ def _print_target_result(
     """
     if result.artifact:
         metrics = result.test
+        status = (
+            "PUBLICADO"
+            if result.published_this_run
+            else "CONSERVADO"
+        )
 
         print(
-            "PUBLICADO: "
+            f"{status}: "
             f"{result.selected} | "
             f"Accuracy={_format_metric(metrics, 'accuracy')} "
             f"F1={_format_metric(metrics, 'f1')} "
@@ -417,6 +445,13 @@ def _print_target_result(
             "           "
             f"Archivo: {result.artifact}"
         )
+
+        if not result.published_this_run:
+            print(
+                "           "
+                "Candidato de esta corrida no mejoró al modelo actual; "
+                "se conserva el artefacto vigente."
+            )
 
     else:
         error = result.test.get(
@@ -493,6 +528,16 @@ def main() -> int:
         thresholds
     )
 
+    try:
+        trainers = get_trainers(args.algorithms)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    print(
+        "Algoritmos seleccionados: "
+        + ", ".join(name for name, _ in trainers)
+    )
+
     source = Path(
         args.dataset
     )
@@ -519,6 +564,20 @@ def main() -> int:
     raw = load_dataset(
         source
     )
+
+    raw, data_sources = merge_with_firebase(
+        raw,
+        args.firebase_dataset,
+    )
+
+    if data_sources["firebaseIncluded"]:
+        print(
+            "Fuentes fusionadas: "
+            f"local={data_sources['localRows']} | "
+            f"firebase={data_sources['firebaseRows']} | "
+            f"deduplicadas={data_sources['duplicatesRemoved']} | "
+            f"filas finales={data_sources['rowsAfterDeduplication']}"
+        )
 
     (
         df,
@@ -604,14 +663,16 @@ def main() -> int:
                     f"el target '{key}'."
                 )
 
-            X_target, y_target = target_dataset(
+            X_target, y_target, groups_target = target_dataset(
                 df,
                 column,
                 target_features,
+                include_groups=True,
             )
 
             tr, va, te = split_indices(
-                y_target
+                y_target,
+                groups=groups_target,
             )
 
         except ValueError as exc:
@@ -683,6 +744,10 @@ def main() -> int:
                 te,
                 output_dir,
                 thresholds,
+                groups=groups_target.iloc[tr]
+                if groups_target is not None
+                else None,
+                trainers=trainers,
             )
 
         except Exception as exc:
@@ -792,6 +857,7 @@ def main() -> int:
             results,
             thresholds,
             skipped_targets,
+            data_sources=data_sources,
         )
 
         print(
@@ -812,7 +878,15 @@ def main() -> int:
         - start_total
     )
 
-    published_count = sum(
+    updated_count = sum(
+        bool(
+            result.artifact
+            and result.published_this_run
+        )
+        for result in results.values()
+    )
+
+    current_count = sum(
         bool(result.artifact)
         for result in results.values()
     )
@@ -837,8 +911,13 @@ def main() -> int:
     )
 
     print(
-        f"Modelos publicados: "
-        f"{published_count}/{total_results}"
+        f"Modelos actualizados: "
+        f"{updated_count}/{total_results}"
+    )
+
+    print(
+        f"Modelos vigentes: "
+        f"{current_count}/{total_results}"
     )
 
     print(
