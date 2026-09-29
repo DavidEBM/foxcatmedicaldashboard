@@ -153,6 +153,39 @@
   color: var(--admin-text-soft);
 }
 
+.admin-logout-button {
+  min-height: 34px;
+  padding: 7px 12px;
+
+  border: 1px solid var(--admin-border-dark);
+  border-radius: 9px;
+
+  background: var(--admin-surface);
+  color: var(--admin-danger);
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.admin-logout-button:hover:not(:disabled) {
+  background: var(--admin-danger-soft);
+  border-color: var(--admin-danger);
+}
+
+.admin-logout-button:focus-visible {
+  outline: 3px solid rgba(201, 133, 145, 0.25);
+  outline-offset: 2px;
+}
+
+.admin-logout-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 /* =========================================================
    LAYOUT
    ========================================================= */
@@ -1710,6 +1743,11 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 
+    font-size: 11px;
+  }
+
+  .admin-logout-button {
+    padding: 6px 9px;
     font-size: 11px;
   }
 

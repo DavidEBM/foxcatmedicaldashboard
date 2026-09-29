@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { logout } from "@/services/firebase/auth";
 
 import type { AdminUser } from "@/services/firebase/admin-users";
 
@@ -97,6 +98,8 @@ export default function AdminDashboard({
 }: AdminDashboardProps) {
   const [activeSection, setActiveSection] =
     useState<AdminSection>(null);
+  const [isLoggingOut, setIsLoggingOut] =
+    useState(false);
 
   const currentNavigationItem =
     navigationItems.find(
@@ -107,6 +110,19 @@ export default function AdminDashboard({
     section: Exclude<AdminSection, null>
   ) {
     setActiveSection(section);
+  }
+
+  async function handleLogout() {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      window.location.replace("/");
+    } catch {
+      setIsLoggingOut(false);
+    }
   }
 
   function renderActiveSection() {
@@ -245,6 +261,16 @@ export default function AdminDashboard({
               currentAdmin.email ||
               "Administrador"}
           </span>
+
+          <button
+            type="button"
+            className="admin-logout-button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            aria-label="Cerrar sesión"
+          >
+            {isLoggingOut ? "Saliendo..." : "Cerrar sesión"}
+          </button>
         </div>
       </header>
 
