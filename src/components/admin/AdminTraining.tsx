@@ -393,7 +393,7 @@ export default function AdminTraining() {
 
   const loadStatus = useCallback(async (syncLatestJob = true) => {
     const token = await getToken();
-    const response = await fetch("/api/admin/ml", {
+    const response = await fetch(`/api/admin/ml?refresh=${Date.now()}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });

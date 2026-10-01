@@ -4,6 +4,8 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const OUTPUT_DIR = path.resolve(
   process.cwd(),

@@ -144,7 +144,8 @@ Estas variables solo deben existir en el servidor, Vercel o el entorno de despli
 | `FIREBASE_ADMIN_PROJECT_ID` | Proyecto para Firebase Admin |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | Cuenta de servicio |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | Clave privada con saltos de línea escapados como `\\n` |
-| `FIREBASE_ADMIN_CREDENTIALS` | Ruta alternativa a un JSON de cuenta de servicio |
+| `FIREBASE_ADMIN_CREDENTIALS_JSON` | JSON completo de la cuenta de servicio, como alternativa a las tres variables anteriores |
+| `FIREBASE_ADMIN_CREDENTIALS` | Ruta alternativa a un JSON de cuenta de servicio; también acepta el JSON completo |
 | `SESSION_COOKIE_DAYS` | Duración de la cookie de sesión; por defecto, 5 días |
 
 No utilizar el prefijo `NEXT_PUBLIC_` para ninguna credencial administrativa.
@@ -460,6 +461,8 @@ La ruta administrativa usa runtime Node porque depende de `firebase-admin`. La c
 - variables privadas de Firebase correctamente configuradas;
 - `FIREBASE_ADMIN_PRIVATE_KEY` con `\\n` escapados o una ruta válida mediante `FIREBASE_ADMIN_CREDENTIALS`;
 - compatibilidad de dependencias de Firebase Admin y `jwks-rsa`.
+
+En Vercel se pueden definir las tres variables privadas por separado o pegar el JSON completo en `FIREBASE_ADMIN_CREDENTIALS_JSON`. El valor de la clave privada puede llevar saltos de linea reales o la secuencia literal `\\n`.
 
 El proyecto fija la versión compatible de `jose` mediante overrides de npm/pnpm para evitar que una dependencia CommonJS intente cargar una versión ESM incompatible.
 

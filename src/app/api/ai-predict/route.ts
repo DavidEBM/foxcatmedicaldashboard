@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import { NextResponse } from "next/server";
 
+import { resolvePythonCommand } from "@/lib/server/python-runtime";
+
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
@@ -10,15 +12,23 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "El cuerpo de la solicitud debe ser JSON válido." }, { status: 400 });
   }
-  const command = process.env.ML_PYTHON_EXECUTABLE?.trim()
-    || (process.platform === "win32" ? "python" : "python3");
-
-  return new Promise<Response>((resolve) => {
-    const child = spawn(command, ["ml/inference.py"], {
+  let child;
+  try {
+    const python = resolvePythonCommand();
+    child = spawn(python.executable, [...python.args, "ml/inference.py"], {
       cwd: process.cwd(),
       env: { ...process.env, PYTHONUTF8: "1" },
       stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
     });
+  } catch (cause) {
+    return NextResponse.json(
+      { error: cause instanceof Error ? cause.message : "No se pudo iniciar Python." },
+      { status: 503 },
+    );
+  }
+
+  return new Promise<Response>((resolve) => {
     let output = "";
     let error = "";
     child.stdout.on("data", (chunk) => { output += chunk.toString(); });

@@ -11,6 +11,8 @@ import {
 } from "@/services/firebase/admin-server-auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const OUTPUT_DIR = path.resolve(
   process.cwd(),
@@ -68,7 +70,8 @@ export async function GET(request: Request) {
   try {
     await requireAdmin(request);
     const manifest = await readManifest();
-    const imageVersion = String(manifest?.generatedAt ?? Date.now());
+    const refreshToken = new URL(request.url).searchParams.get("refresh") ?? Date.now().toString();
+    const imageVersion = `${manifest?.generatedAt ?? "missing"}-${refreshToken}`;
     const images = await collectImages(OUTPUT_DIR, imageVersion).catch(() => []);
 
     return NextResponse.json(

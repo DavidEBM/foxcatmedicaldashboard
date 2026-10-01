@@ -4,6 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { MlAlgorithmId, MlTargetId } from "@/lib/ml/training-config";
+import { resolvePythonCommand } from "@/lib/server/python-runtime";
 import { getAdminFirestore } from "@/services/firebase/admin-server-auth";
 
 export type MlTrainingStatus = "queued" | "running" | "succeeded" | "failed";
@@ -148,8 +149,6 @@ export async function startTrainingJob({
     return job;
   }
 
-  const command = process.env.ML_PYTHON_EXECUTABLE?.trim()
-    || (process.platform === "win32" ? "python" : "python3");
   const args = [
     "-m",
     "ml.run_training",
@@ -165,14 +164,26 @@ export async function startTrainingJob({
     args.push("--firebase-dataset", firebaseSnapshotPath);
   }
 
-  const child = spawn(command, args, {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      PYTHONUTF8: "1",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  let child;
+  try {
+    const python = resolvePythonCommand();
+    child = spawn(python.executable, [...python.args, ...args], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        PYTHONUTF8: "1",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+  } catch (error) {
+    job.status = "failed";
+    job.finishedAt = new Date().toISOString();
+    job.error = error instanceof Error ? error.message : "No se pudo iniciar Python.";
+    appendLog(job, `\n[error] ${job.error}\n`);
+    if (firebaseSnapshotPath) void rm(firebaseSnapshotPath, { force: true });
+    return job;
+  }
 
   job.status = "running";
 

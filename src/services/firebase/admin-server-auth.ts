@@ -28,9 +28,28 @@ interface ServiceAccountFile {
   private_key?: string;
 }
 
+function parseServiceAccount(value?: string): ServiceAccountFile | null {
+  const source = value?.trim().replace(/^(['"])([\s\S]*)\1$/, "$2").trim();
+  if (!source || !source.startsWith("{")) return null;
+
+  try {
+    return JSON.parse(source) as ServiceAccountFile;
+  } catch {
+    return null;
+  }
+}
+
 function readServiceAccountFile(): ServiceAccountFile | null {
-  const configuredPath =
-    process.env.FIREBASE_ADMIN_CREDENTIALS || DEFAULT_ADMIN_CREDENTIALS_PATH;
+  // Vercel puede recibir todo el JSON como una sola variable. Se admite
+  // FIREBASE_ADMIN_CREDENTIALS por compatibilidad, además del nombre explícito.
+  const configuredJson =
+    process.env.FIREBASE_ADMIN_CREDENTIALS_JSON ||
+    process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT ||
+    process.env.FIREBASE_ADMIN_CREDENTIALS;
+  const fromEnvironment = parseServiceAccount(configuredJson);
+  if (fromEnvironment) return fromEnvironment;
+
+  const configuredPath = process.env.FIREBASE_ADMIN_CREDENTIALS || DEFAULT_ADMIN_CREDENTIALS_PATH;
 
   try {
     const absolutePath = path.isAbsolute(configuredPath)
@@ -48,7 +67,11 @@ function readServiceAccountFile(): ServiceAccountFile | null {
 }
 
 function normalizePrivateKey(value?: string): string | undefined {
-  const normalized = value?.replace(/\\n/g, "\n");
+  const normalized = value
+    ?.trim()
+    .replace(/^(['"])([\s\S]*)\1$/, "$2")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r");
 
   if (
     !normalized ||
@@ -62,20 +85,32 @@ function normalizePrivateKey(value?: string): string | undefined {
   return normalized;
 }
 
+function normalizeText(value?: string): string | undefined {
+  const normalized = value?.trim().replace(/^(['"])([\s\S]*)\1$/, "$2").trim();
+  return normalized || undefined;
+}
+
 function getAdminApp() {
   const existing = getApps()[0];
   if (existing) return existing;
 
   const serviceAccountFile = readServiceAccountFile();
 
-  const projectId =
+  const projectId = normalizeText(
     process.env.FIREBASE_ADMIN_PROJECT_ID ||
-    serviceAccountFile?.project_id ||
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const clientEmail =
-    process.env.FIREBASE_ADMIN_CLIENT_EMAIL || serviceAccountFile?.client_email;
+      process.env.FIREBASE_PROJECT_ID ||
+      serviceAccountFile?.project_id ||
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  );
+  const clientEmail = normalizeText(
+    process.env.FIREBASE_ADMIN_CLIENT_EMAIL ||
+      process.env.FIREBASE_CLIENT_EMAIL ||
+      serviceAccountFile?.client_email,
+  );
   const privateKey =
-    normalizePrivateKey(process.env.FIREBASE_ADMIN_PRIVATE_KEY) ||
+    normalizePrivateKey(
+      process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY,
+    ) ||
     normalizePrivateKey(serviceAccountFile?.private_key);
 
   if (
