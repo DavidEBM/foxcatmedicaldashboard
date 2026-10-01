@@ -1,0 +1,9 @@
+# El entrenamiento se ejecuta localmente desde la ruta administrativa Node.
+api/ml-train-vercel.py
+
+# Datos y reportes de entrenamiento no necesarios para inferencia.
+ml/datasets/
+ml/tests/
+ml/outputs/SavedModels/Models_All/
+ml/outputs/SavedModels/Model_Reports/
+ml/outputs/SavedModels/training_metrics_report.xlsx
