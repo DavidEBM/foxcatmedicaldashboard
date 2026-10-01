@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler
 
-from ml.inference import predict
+from ml.vercel_inference import predict
 
 
 def write_json(handler: BaseHTTPRequestHandler, payload: object, status: int) -> None:

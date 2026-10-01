@@ -1,0 +1,4 @@
+# The root requirements.txt is the minimal production inference environment.
+# Training dependencies are isolated in ml/requirements.txt.
+[pip]
+no-deps = true

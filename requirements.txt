@@ -1,9 +1,6 @@
 # Runtime mínimo para la inferencia Python nativa de Vercel.
 # El entrenamiento local continúa usando ml/requirements.txt.
 numpy>=1.26,<3
-pandas>=2.2,<3
-scikit-learn>=1.5,<1.9
 scipy>=1.12,<2
-joblib>=1.4,<2
-firebase-admin>=6.8,<8
 catboost>=1.2.8,<2
+six>=1.16,<2

@@ -7,3 +7,4 @@ ml/tests/
 ml/outputs/SavedModels/Models_All/
 ml/outputs/SavedModels/Model_Reports/
 ml/outputs/SavedModels/training_metrics_report.xlsx
+ml/outputs/SavedModels/*.joblib

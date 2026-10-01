@@ -9,7 +9,7 @@
   "functions": {
     "api/ai-predict-vercel.py": {
       "maxDuration": 60,
-      "includeFiles": "ml/{**/*.py,outputs/SavedModels/*.joblib,outputs/SavedModels/training-manifest.json}",
+      "includeFiles": "ml/{vercel_inference.py,outputs/SavedModels/*.cbm,outputs/SavedModels/training-manifest.json,outputs/SavedModels/vercel-models.json}",
       "excludeFiles": "ml/{tests/**,datasets/**,outputs/SavedModels/Models_All/**,outputs/SavedModels/Model_Reports/**}"
     }
   }
