@@ -23,9 +23,33 @@ def _firebase_modules() -> tuple[Any, Any, Any, Any, Any]:
     import firebase_admin
     from firebase_admin import auth, credentials, firestore, storage
 
-    project_id = os.getenv("FIREBASE_ADMIN_PROJECT_ID") or os.getenv("NEXT_PUBLIC_FIREBASE_PROJECT_ID")
-    client_email = os.getenv("FIREBASE_ADMIN_CLIENT_EMAIL")
-    private_key = _private_key(os.getenv("FIREBASE_ADMIN_PRIVATE_KEY"))
+    service_account: dict[str, Any] = {}
+    configured_credentials = (
+        os.getenv("FIREBASE_ADMIN_CREDENTIALS_JSON")
+        or os.getenv("FIREBASE_ADMIN_SERVICE_ACCOUNT")
+        or os.getenv("FIREBASE_ADMIN_CREDENTIALS")
+    )
+    if configured_credentials:
+        source = configured_credentials.strip()
+        try:
+            if source.startswith("{"):
+                service_account = json.loads(source)
+            else:
+                credentials_path = Path(source)
+                if credentials_path.is_file():
+                    service_account = json.loads(credentials_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            service_account = {}
+
+    project_id = (
+        os.getenv("FIREBASE_ADMIN_PROJECT_ID")
+        or service_account.get("project_id")
+        or os.getenv("NEXT_PUBLIC_FIREBASE_PROJECT_ID")
+    )
+    client_email = os.getenv("FIREBASE_ADMIN_CLIENT_EMAIL") or service_account.get("client_email")
+    private_key = _private_key(
+        os.getenv("FIREBASE_ADMIN_PRIVATE_KEY") or service_account.get("private_key")
+    )
     bucket_name = os.getenv("FIREBASE_ADMIN_STORAGE_BUCKET") or os.getenv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET")
     if not project_id or not client_email or not private_key:
         raise RuntimeError("Faltan las credenciales FIREBASE_ADMIN_* para el almacenamiento ML.")

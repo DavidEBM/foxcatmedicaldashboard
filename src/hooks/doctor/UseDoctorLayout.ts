@@ -359,6 +359,8 @@ export function useDoctorLayout({
     ]);
 
   useEffect(() => {
+    // The loader synchronizes the external Firebase-backed layout state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadLayout();
   }, [loadLayout]);
 

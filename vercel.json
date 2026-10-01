@@ -9,12 +9,7 @@
   "functions": {
     "api/ai-predict-vercel.py": {
       "maxDuration": 60,
-      "includeFiles": [
-        "ml/**/*.py",
-        "ml/outputs/SavedModels/training-manifest.json",
-        "ml/outputs/SavedModels/copd_gold-catboost.joblib",
-        "ml/outputs/SavedModels/copd_gold-xgboost.joblib"
-      ],
+      "includeFiles": "ml/{**/*.py,outputs/SavedModels/*.joblib,outputs/SavedModels/training-manifest.json}",
       "excludeFiles": "ml/{tests/**,datasets/**,outputs/SavedModels/Models_All/**,outputs/SavedModels/Model_Reports/**}"
     }
   }

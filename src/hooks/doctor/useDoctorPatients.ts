@@ -45,6 +45,9 @@ export function useDoctorPatients(
 
   useEffect(() => {
     if (!doctorId) {
+      // Resetting the subscription state is intentional when the signed-in
+      // doctor changes or logs out.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPatients([]);
       setSelectedPatientId(null);
       setLoading(false);

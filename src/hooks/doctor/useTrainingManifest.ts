@@ -55,6 +55,8 @@ export function useTrainingManifest() {
   );
 
   useEffect(() => {
+    // The loader synchronizes the external API-backed manifest state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 

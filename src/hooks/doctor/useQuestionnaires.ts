@@ -35,6 +35,8 @@ export function useQuestionnaires() {
     const stored =
       loadQuestionnaires();
 
+    // Hydrate browser storage into React state once on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuestionnaires(stored);
 
     setSelectedQuestionnaireId(

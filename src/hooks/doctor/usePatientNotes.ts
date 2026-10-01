@@ -95,6 +95,8 @@ export function usePatientNotes({
     ]);
 
   useEffect(() => {
+    // The loader synchronizes the external Firebase-backed notes state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadNotes();
   }, [loadNotes]);
 
