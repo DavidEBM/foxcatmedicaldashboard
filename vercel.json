@@ -15,12 +15,7 @@
         "ml/outputs/SavedModels/copd_gold-catboost.joblib",
         "ml/outputs/SavedModels/copd_gold-xgboost.joblib"
       ],
-      "excludeFiles": [
-        "ml/tests/**",
-        "ml/datasets/**",
-        "ml/outputs/SavedModels/Models_All/**",
-        "ml/outputs/SavedModels/Model_Reports/**"
-      ]
+      "excludeFiles": "ml/{tests/**,datasets/**,outputs/SavedModels/Models_All/**,outputs/SavedModels/Model_Reports/**}"
     }
   }
 }
