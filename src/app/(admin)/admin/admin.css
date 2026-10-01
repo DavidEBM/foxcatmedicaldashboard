@@ -1239,6 +1239,11 @@
   font-size: 10px;
 }
 
+.admin-training-result-validation {
+  color: var(--admin-blue-dark) !important;
+  line-height: 1.4;
+}
+
 .admin-training-result-note {
   display: block;
   line-height: 1.4;
@@ -1327,6 +1332,25 @@
   color: var(--admin-text-soft);
   font-size: 11px;
   line-height: 1.5;
+}
+
+.admin-training-target-filter {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 210px;
+  color: var(--admin-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-training-target-filter select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  color: var(--admin-text);
+  background: var(--admin-surface);
 }
 
 .admin-training-comparisons-heading .admin-training-comparison-note,
@@ -1723,6 +1747,10 @@
 }
 
 @media (max-width: 900px) {
+  .admin-training-comparisons-heading {
+    display: grid;
+  }
+
   .admin-training-comparison-grid {
     grid-template-columns: minmax(0, 1fr);
   }

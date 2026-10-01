@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { NextResponse } from "next/server";
+import { isRemoteMlStorageEnabled, readRemoteAsset } from "@/lib/server/ml-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,18 @@ const MIME_TYPES: Record<string, string> = {
 
 export async function GET(request: Request) {
   const requestedPath = new URL(request.url).searchParams.get("path") || "";
+  if (isRemoteMlStorageEnabled()) {
+    const remote = await readRemoteAsset(requestedPath);
+    if (remote) {
+      return new NextResponse(new Uint8Array(remote.content), {
+        headers: {
+          "Content-Type": remote.contentType,
+          "Cache-Control": "no-store, max-age=0, must-revalidate",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+  }
   const resolvedPath = path.resolve(OUTPUT_DIR, requestedPath);
   const relativePath = path.relative(OUTPUT_DIR, resolvedPath);
   const extension = path.extname(resolvedPath).toLowerCase();

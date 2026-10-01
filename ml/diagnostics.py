@@ -1825,11 +1825,14 @@ def _safe_model_filename(value: Any) -> str:
     return safe.strip("_") or "modelo"
 
 
-def _candidate_passes_threshold(candidate: Mapping[str, Any]) -> bool:
+def _candidate_passes_threshold(
+    candidate: Mapping[str, Any],
+    thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
+) -> bool:
     if candidate.get("available") is False:
         return False
     metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
-    return isinstance(metrics, Mapping) and qualifies(metrics, DEFAULT_THRESHOLDS)
+    return isinstance(metrics, Mapping) and qualifies(metrics, dict(thresholds))
 
 
 def _export_validation_quality_history(
@@ -1891,14 +1894,15 @@ def _export_validation_model_comparisons(
     candidates: Sequence[Mapping[str, Any]],
     base: Path,
     target_label: str,
+    thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
 ) -> None:
     """Compare every trained candidate using VALIDATION metrics only."""
     requirements = (
-        ("accuracy", "Accuracy", DEFAULT_THRESHOLDS["accuracy"]),
-        ("f1", "F1-Score", DEFAULT_THRESHOLDS["f1"]),
-        ("mcc", "MCC", DEFAULT_THRESHOLDS["mcc"]),
-        ("kappa", "Kappa", DEFAULT_THRESHOLDS["kappa"]),
-        ("auc", "ROC-AUC", DEFAULT_THRESHOLDS["auc"]),
+        ("accuracy", "Accuracy", thresholds["accuracy"]),
+        ("f1", "F1-Score", thresholds["f1"]),
+        ("mcc", "MCC", thresholds["mcc"]),
+        ("kappa", "Kappa", thresholds["kappa"]),
+        ("auc", "ROC-AUC", thresholds["auc"]),
     )
     available = [candidate for candidate in candidates if candidate.get("available") is not False]
     if not available:
@@ -1909,9 +1913,9 @@ def _export_validation_model_comparisons(
     eligible_names = {
         str(candidate.get("model"))
         for candidate in available
-        if _candidate_passes_threshold(candidate)
+        if _candidate_passes_threshold(candidate, thresholds)
     }
-    eligible_candidates = [candidate for candidate in available if _candidate_passes_threshold(candidate)]
+    eligible_candidates = [candidate for candidate in available if _candidate_passes_threshold(candidate, thresholds)]
     winner = max(
         eligible_candidates,
         key=lambda candidate: selection_key(candidate.get("validationMetrics") or candidate.get("validation") or {}),
@@ -1964,10 +1968,10 @@ def _export_validation_model_comparisons(
     order = np.argsort(np.nan_to_num(mcc_values, nan=-2.0))
     ordered_values = mcc_values[order]
     ordered_names = [model_names[index] for index in order]
-    colors = ["#328452" if np.isfinite(value) and value >= DEFAULT_THRESHOLDS["mcc"] else "#d17a7a" for value in ordered_values]
+    colors = ["#328452" if np.isfinite(value) and value >= thresholds["mcc"] else "#d17a7a" for value in ordered_values]
     fig, ax = plt.subplots(figsize=(11, max(4.5, len(available) * 0.45)))
     bars = ax.barh(ordered_names, np.nan_to_num(ordered_values, nan=0), color=colors)
-    ax.axvline(DEFAULT_THRESHOLDS["mcc"], color="#34313d", linestyle="--", linewidth=1.6, label="Umbral 0.40")
+    ax.axvline(thresholds["mcc"], color="#34313d", linestyle="--", linewidth=1.6, label=f"Umbral {thresholds['mcc']:.2f}")
     ax.axvline(0, color="#777", linewidth=.8)
     ax.set_xlim(-1.05, 1.05)
     ax.set_xlabel("MCC real (−1 a 1)")
@@ -2041,12 +2045,13 @@ def _plot_real_mcc_comparison(
     base: Path,
     target_label: str,
     candidates: Sequence[Mapping[str, Any]],
+    thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
 ) -> None:
     """Generate raw validation MCC for every available candidate."""
     rows: list[tuple[str, float]] = []
 
     for candidate in candidates:
-        if not _candidate_passes_threshold(candidate):
+        if not _candidate_passes_threshold(candidate, thresholds):
             continue
         metrics = (
             candidate.get("validationMetrics")
@@ -3036,6 +3041,7 @@ def export_target_diagnostics(
     split_info: Mapping[str, int],
     X_validation: pd.DataFrame | None = None,
     y_validation: pd.Series | None = None,
+    thresholds: Mapping[str, float] | None = None,
 ) -> Path:
     """
     Exporta los diagnósticos finales de un target.
@@ -3058,16 +3064,16 @@ def export_target_diagnostics(
         exist_ok=True,
     )
 
+    required_thresholds = dict(thresholds or DEFAULT_THRESHOLDS)
     _clear_generated_diagnostic_images(base)
     _export_validation_quality_history(candidates, base, target_label)
 
     eligible_candidates = [
         candidate
         for candidate in candidates
-        if _candidate_passes_threshold(candidate)
+        if _candidate_passes_threshold(candidate, required_thresholds)
     ]
-    if eligible_candidates:
-        _export_validation_model_comparisons(candidates, base, target_label)
+    _export_validation_model_comparisons(candidates, base, target_label, required_thresholds)
     eligible_models = {
         str(candidate.get("model"))
         for candidate in eligible_candidates

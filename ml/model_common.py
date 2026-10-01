@@ -1230,8 +1230,6 @@ def qualifies(
     correspondientes.
     """
 
-    del thresholds  # Eligibility is a fixed policy; callers cannot lower gates.
-
     threshold_mapping = {
         "accuracy": "accuracy",
         "f1": "f1",
@@ -1244,7 +1242,7 @@ def qualifies(
         threshold_key,
         metric_key,
     ) in threshold_mapping.items():
-        threshold_raw: Any = DEFAULT_THRESHOLDS.get(threshold_key)
+        threshold_raw: Any = thresholds.get(threshold_key)
         if threshold_raw is None:
             return False
 

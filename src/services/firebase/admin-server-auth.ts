@@ -4,6 +4,7 @@ import path from "node:path";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 export class AdminApiError extends Error {
   constructor(
@@ -182,6 +183,13 @@ export async function requireAdmin(request: Request): Promise<{ uid: string }> {
 
 export function getAdminFirestore() {
   return getFirestore(getAdminApp());
+}
+
+export function getAdminStorageBucket() {
+  const bucketName =
+    process.env.FIREBASE_ADMIN_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  return getStorage(getAdminApp()).bucket(bucketName);
 }
 
 /** Verifica un token de Firebase sin conceder privilegios administrativos. */

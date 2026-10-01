@@ -3947,6 +3947,18 @@ a:focus-visible {
   line-height: 1.4;
 }
 
+/* Signos vitales: un solo scroll vertical, controlado por el cuerpo del widget. */
+#doctor-widget-vitals .doctor-widget-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#doctor-widget-vitals .doctor-clinical-data-grid {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
 .doctor-action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));

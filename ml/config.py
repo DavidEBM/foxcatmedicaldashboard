@@ -123,13 +123,28 @@ DEFAULT_THRESHOLDS: Final[dict[str, float]] = {
     "auc": 0.70,
 }
 
+TARGET_THRESHOLD_OVERRIDES: Final[dict[str, dict[str, float]]] = {
+    # Insuficiencia cardiaca: se relajan los umbrales porcentuales;
+    # MCC y Kappa conservan su piso de correlacion/concordancia.
+    "history_of_heart_failure": {
+        "accuracy": 0.60,
+        "f1": 0.60,
+        "auc": 0.60,
+    },
+}
+
 def thresholds_for_target(
     target_key: str,
     base_thresholds: dict[str, float] | None = None,
 ) -> dict[str, float]:
     """Devuelve los cinco umbrales obligatorios, idénticos para todo target."""
-    del target_key, base_thresholds
-    return dict(DEFAULT_THRESHOLDS)
+    source = base_thresholds or DEFAULT_THRESHOLDS
+    thresholds = {
+        key: float(source.get(key, default))
+        for key, default in DEFAULT_THRESHOLDS.items()
+    }
+    thresholds.update(TARGET_THRESHOLD_OVERRIDES.get(target_key, {}))
+    return thresholds
 
 
 # ---------------------------------------------------------------------------

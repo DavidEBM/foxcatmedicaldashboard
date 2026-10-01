@@ -59,6 +59,7 @@ Componentes principales:
 - Node.js compatible con Next.js 16.
 - npm o pnpm.
 - Python `>=3.10,<3.14` para el pipeline de IA.
+- En Vercel, la inferencia médica se ejecuta mediante la función Python nativa `api/ai-predict-vercel.py`; sus dependencias están en `requirements.txt` en la raíz.
 - Si hay varias versiones de Python, configura `ML_PYTHON_EXECUTABLE` en `.env.local` con la ruta al intérprete del entorno que tiene `ml/requirements.txt` instalado; se usa tanto para inferencia como para entrenamiento.
 - Proyecto Firebase con Authentication y Firestore habilitados.
 - Credenciales administrativas de Firebase únicamente en el servidor.
@@ -461,6 +462,8 @@ La ruta administrativa usa runtime Node porque depende de `firebase-admin`. La c
 - variables privadas de Firebase correctamente configuradas;
 - `FIREBASE_ADMIN_PRIVATE_KEY` con `\\n` escapados o una ruta válida mediante `FIREBASE_ADMIN_CREDENTIALS`;
 - compatibilidad de dependencias de Firebase Admin y `jwks-rsa`.
+
+Vercel debe desplegarse con Python 3.12 y las dependencias de `requirements.txt`. El entrenamiento que modifica modelos y graficas debe ejecutarse localmente o en un worker persistente y luego desplegar los artefactos actualizados; el filesystem de una funcion Vercel no es un almacen persistente.
 
 En Vercel se pueden definir las tres variables privadas por separado o pegar el JSON completo en `FIREBASE_ADMIN_CREDENTIALS_JSON`. El valor de la clave privada puede llevar saltos de linea reales o la secuencia literal `\\n`.
 

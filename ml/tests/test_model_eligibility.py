@@ -49,11 +49,17 @@ def candidate(name: str, metrics: dict[str, float], **extra: object) -> dict[str
     }
 
 
-def test_required_thresholds_are_fixed_for_gold_and_heart_failure() -> None:
+def test_required_thresholds_are_target_specific() -> None:
     expected = {"accuracy": 0.70, "f1": 0.70, "mcc": 0.40, "kappa": 0.40, "auc": 0.70}
     assert DEFAULT_THRESHOLDS == expected
     assert thresholds_for_target("copd_gold", {**expected, "modelQuality": 0.99}) == expected
-    assert thresholds_for_target("history_of_heart_failure", {}) == expected
+    assert thresholds_for_target("history_of_heart_failure", {}) == {
+        "accuracy": 0.60,
+        "f1": 0.60,
+        "mcc": 0.40,
+        "kappa": 0.40,
+        "auc": 0.60,
+    }
 
 
 def test_all_five_thresholds_are_required_including_boundary_values() -> None:
@@ -69,9 +75,14 @@ def test_all_five_thresholds_are_required_including_boundary_values() -> None:
         ("auc", 0.699),
     ):
         assert not qualifies(eligible_metrics(**{metric: failing_value}), DEFAULT_THRESHOLDS)
+    heart_thresholds = thresholds_for_target("history_of_heart_failure")
+    assert qualifies(
+        {"accuracy": 0.60, "f1": 0.60, "mcc": 0.40, "kappa": 0.40, "auc": 0.60},
+        heart_thresholds,
+    )
     assert not qualifies(
-        eligible_metrics(accuracy=0.69),
-        {metric: 0.0 for metric in DEFAULT_THRESHOLDS},
+        {"accuracy": 0.60, "f1": 0.599, "mcc": 0.40, "kappa": 0.40, "auc": 0.60},
+        heart_thresholds,
     )
 
 

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/ai-predict",
+      "destination": "/api/ai-predict-vercel"
+    }
+  ],
+  "functions": {
+    "api/ai-predict-vercel.py": {
+      "maxDuration": 60,
+      "includeFiles": [
+        "ml/**/*.py",
+        "ml/outputs/SavedModels/training-manifest.json",
+        "ml/outputs/SavedModels/copd_gold-catboost.joblib",
+        "ml/outputs/SavedModels/copd_gold-xgboost.joblib"
+      ],
+      "excludeFiles": [
+        "ml/tests/**",
+        "ml/datasets/**",
+        "ml/outputs/SavedModels/Models_All/**",
+        "ml/outputs/SavedModels/Model_Reports/**"
+      ]
+    }
+  }
+}

@@ -96,6 +96,9 @@ def json_safe(value: Any) -> Any:
             else None
         )
 
+    if isinstance(value, float):
+        return value if np.isfinite(value) else None
+
     if isinstance(value, (np.bool_,)):
         return bool(value)
 

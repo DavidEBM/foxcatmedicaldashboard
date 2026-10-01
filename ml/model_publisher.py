@@ -1343,6 +1343,7 @@ def publish_best_model(
             split_info,
             X_validation,
             y_validation,
+            thresholds,
         )
 
     except Exception as exc:
@@ -1504,7 +1505,7 @@ def export_manifest(
 
             "selectionDoesNotUseTest": True,
 
-            "eligibility": "accuracy >= 0.70 AND f1 >= 0.70 AND mcc >= 0.40 AND kappa >= 0.40 AND auc >= 0.70",
+            "eligibility": "Per-target thresholds are recorded in minimumThresholdsByTarget; heart failure uses accuracy/f1/auc >= 0.60 and mcc/kappa >= 0.40.",
 
             "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
 

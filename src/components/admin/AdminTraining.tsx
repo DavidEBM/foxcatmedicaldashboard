@@ -79,6 +79,10 @@ function metric(report: ModelReport | undefined, key: string): string {
   return asPercent(report?.testMetrics?.[key]);
 }
 
+function validationMetric(report: ModelReport | undefined, key: string): string {
+  return asPercent(report?.publishedValidationMetrics?.[key]);
+}
+
 const ELIGIBILITY_THRESHOLDS = {
   accuracy: 0.70,
   f1: 0.70,
@@ -86,6 +90,23 @@ const ELIGIBILITY_THRESHOLDS = {
   kappa: 0.40,
   auc: 0.70,
 } as const;
+
+type EligibilityThresholds = { [key in keyof typeof ELIGIBILITY_THRESHOLDS]: number };
+
+const TARGET_THRESHOLD_OVERRIDES: Record<string, Partial<EligibilityThresholds>> = {
+  history_of_heart_failure: {
+    accuracy: 0.60,
+    f1: 0.60,
+    auc: 0.60,
+  },
+};
+
+function thresholdsForTarget(target: string): EligibilityThresholds {
+  return {
+    ...ELIGIBILITY_THRESHOLDS,
+    ...(TARGET_THRESHOLD_OVERRIDES[target] || {}),
+  };
+}
 
 const SELECTION_METRICS = [
   { key: "accuracy", label: "Accuracy", threshold: ELIGIBILITY_THRESHOLDS.accuracy },
@@ -120,19 +141,29 @@ function metricLabel(candidate: ModelCandidate, key: string): string {
   return percent === null ? "—" : `${(percent * 100).toFixed(1)}%`;
 }
 
-function isCandidateEligible(candidate: ModelCandidate): boolean {
+function isCandidateEligible(
+  candidate: ModelCandidate,
+  thresholds: EligibilityThresholds = ELIGIBILITY_THRESHOLDS,
+): boolean {
   if (candidate.available === false) return false;
-  return SELECTION_METRICS.every(({ key, threshold }) => {
+  return SELECTION_METRICS.every(({ key }) => {
     const value = rawCandidateMetric(candidate, key);
-    return value !== null && value >= threshold;
+    return value !== null && value >= thresholds[key];
   });
 }
 
-function isPublishedModelEligible(report: ModelReport): boolean {
+function hasComparisonMetrics(candidate: ModelCandidate): boolean {
+  return COMPARISON_METRICS.some(({ key }) => rawCandidateMetric(candidate, key) !== null);
+}
+
+function isPublishedModelEligible(report: ModelReport, target = ""): boolean {
   if (!report.selectedModel) return false;
   const metrics = report.publishedValidationMetrics
     ?? report.algorithmsTested?.find((candidate) => candidate.model === report.selectedModel)?.validationMetrics;
-  return isCandidateEligible({ model: report.selectedModel, available: true, validationMetrics: metrics });
+  return isCandidateEligible(
+    { model: report.selectedModel, available: true, validationMetrics: metrics },
+    thresholdsForTarget(target),
+  );
 }
 
 function candidateSelectionRank(candidate: ModelCandidate): number[] {
@@ -167,7 +198,6 @@ function runTestCandidate(
   if (!report.runSelectedModel) return undefined;
   return candidates.find((candidate) => (
     candidate.model === report.runSelectedModel
-    && isCandidateEligible(candidate)
     && candidate.testEvaluationAvailable
     && !!candidate.testMetrics
     && Object.keys(candidate.testMetrics).length > 0
@@ -257,25 +287,31 @@ function chartBase(width: number, height: number, title: string, subtitle: strin
     <text x="48" y="76" class="subtitle">${escapeXml(subtitle)}</text>`;
 }
 
-function eligibilityChartSvg(label: string, candidates: ModelCandidate[]): string {
+function eligibilityChartSvg(
+  label: string,
+  candidates: ModelCandidate[],
+  thresholds: EligibilityThresholds,
+): string {
   const width = 1450;
   const margin = 48;
   const modelWidth = 240;
   const statusWidth = 160;
-  const metricWidth = (width - margin * 2 - modelWidth - statusWidth) / SELECTION_METRICS.length;
+  const selectionMetrics = SELECTION_METRICS.map((item) => ({ ...item, threshold: thresholds[item.key] }));
+  const metricWidth = (width - margin * 2 - modelWidth - statusWidth) / selectionMetrics.length;
   const headerY = 126;
   const rowHeight = 52;
   const height = headerY + 45 + candidates.length * rowHeight + 75;
-  const winner = [...candidates].filter(isCandidateEligible).sort(compareCandidatesBySelection)[0];
-  const headers = SELECTION_METRICS.map((metric, index) => {
+  const winner = [...candidates].filter((candidate) => isCandidateEligible(candidate, thresholds)).sort(compareCandidatesBySelection)[0]
+    ?? [...candidates].sort(compareCandidatesBySelection)[0];
+  const headers = selectionMetrics.map((metric, index) => {
     const x = margin + modelWidth + index * metricWidth;
     return `<text x="${x + metricWidth / 2}" y="${headerY + 24}" text-anchor="middle" class="header">${escapeXml(metric.label)}</text>
       <text x="${x + metricWidth / 2}" y="${headerY + 41}" text-anchor="middle" class="note">mín. ${(metric.threshold * 100).toFixed(0)}%</text>`;
   }).join("");
   const rows = candidates.map((candidate, rowIndex) => {
     const y = headerY + 52 + rowIndex * rowHeight;
-    const eligible = isCandidateEligible(candidate);
-    const cells = SELECTION_METRICS.map((metric, metricIndex) => {
+    const eligible = isCandidateEligible(candidate, thresholds);
+    const cells = selectionMetrics.map((metric, metricIndex) => {
       const value = rawCandidateMetric(candidate, metric.key);
       const x = margin + modelWidth + metricIndex * metricWidth;
       const passed = isMetricPassing(value, metric.threshold);
@@ -295,7 +331,11 @@ function eligibilityChartSvg(label: string, candidates: ModelCandidate[]): strin
     <text x="${margin}" y="${height - 24}" class="note">Elegible solo cuando Accuracy ≥ 0.70, F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70.</text></svg>`;
 }
 
-function mccChartSvg(label: string, candidates: ModelCandidate[]): string {
+function mccChartSvg(
+  label: string,
+  candidates: ModelCandidate[],
+  thresholds: EligibilityThresholds,
+): string {
   const width = 1200;
   const margin = 48;
   const trackX = 360;
@@ -312,7 +352,7 @@ function mccChartSvg(label: string, candidates: ModelCandidate[]): string {
     const barX = value >= 0 ? zeroX : zeroX - barWidth;
     return `<text x="${margin}" y="${y + 20}" class="label">${escapeXml(truncateLabel(candidate.model, 34))}</text>
       <rect x="${trackX}" y="${y}" width="${trackWidth}" height="16" rx="8" fill="#f1f2f6" />
-      <rect x="${barX}" y="${y}" width="${barWidth}" height="16" rx="8" fill="${(mcc ?? -1) >= ELIGIBILITY_THRESHOLDS.mcc ? "#328452" : "#d17a7a"}" />
+      <rect x="${barX}" y="${y}" width="${barWidth}" height="16" rx="8" fill="${(mcc ?? -1) >= thresholds.mcc ? "#328452" : "#d17a7a"}" />
       <text x="${trackX + trackWidth + 18}" y="${y + 13}" class="cell">${mcc === null ? "—" : mcc.toFixed(3)}</text>`;
   }).join("");
   return `${chartBase(width, height, "Gráfica 2 · MCC por modelo", `${label} · Validación · MCC real de −1 a 1 · umbral de elegibilidad: 0.40`)}
@@ -358,11 +398,12 @@ async function downloadComparisonImage(
   label: string,
   graphId: number,
   candidates: ModelCandidate[],
+  thresholds: EligibilityThresholds,
 ): Promise<void> {
   const svg = graphId === 1
-    ? eligibilityChartSvg(label, candidates)
+    ? eligibilityChartSvg(label, candidates, thresholds)
     : graphId === 2
-      ? mccChartSvg(label, candidates)
+      ? mccChartSvg(label, candidates, thresholds)
       : fullMetricsHeatmapSvg(label, candidates);
   await downloadSvgAsPng(svg, target, graphId);
 }
@@ -383,6 +424,7 @@ export default function AdminTraining() {
   const [refreshing, setRefreshing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [downloadingTarget, setDownloadingTarget] = useState<string | null>(null);
+  const [comparisonTarget, setComparisonTarget] = useState("__all__");
   const [error, setError] = useState("");
 
   const getToken = useCallback(async () => {
@@ -527,6 +569,7 @@ export default function AdminTraining() {
         targetLabel(target),
         graphId,
         candidates,
+        thresholdsForTarget(target),
       );
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : "No se pudo descargar la comparativa.");
@@ -538,6 +581,16 @@ export default function AdminTraining() {
   const reports = useMemo(
     () => Object.entries(status?.manifest?.models ?? {}),
     [status?.manifest?.models],
+  );
+
+  const comparableReports = useMemo(
+    () => reports.filter(([target, report]) => (
+      (comparisonTarget === "__all__" || target === comparisonTarget)
+      && (report.algorithmsTested ?? []).some((candidate) => (
+        candidate.available !== false && hasComparisonMetrics(candidate)
+      ))
+    )),
+    [comparisonTarget, reports],
   );
 
   const latestJob = job ?? status?.latestRun;
@@ -679,10 +732,13 @@ export default function AdminTraining() {
               <article className="admin-training-result-card" key={target}>
                 <span>{target}</span>
                 <strong>{report.selectedModel || "Sin modelo publicado"}</strong>
+                <small className="admin-training-result-validation">
+                  SelecciÃ³n VALIDATION publicada: Accuracy {validationMetric(report, "accuracy")} Â· F1 {validationMetric(report, "f1")} Â· AUC {validationMetric(report, "auc")}
+                </small>
                 <div>
-                  <small>Accuracy TEST vigente</small><b>{metric(report, "accuracy")}</b>
-                  <small>F1 TEST vigente</small><b>{metric(report, "f1")}</b>
-                  <small>AUC TEST vigente</small><b>{metric(report, "auc")}</b>
+                  <small>Accuracy TEST final vigente</small><b>{metric(report, "accuracy")}</b>
+                  <small>F1 TEST final vigente</small><b>{metric(report, "f1")}</b>
+                  <small>AUC TEST final vigente</small><b>{metric(report, "auc")}</b>
                 </div>
                 {report.runSelectedModel && report.runSelectedModel !== report.selectedModel && (
                   <small className="admin-training-result-note">
@@ -695,14 +751,18 @@ export default function AdminTraining() {
                     {report.selectedModel ? ` Se conserva el modelo publicado elegible: ${report.selectedModel}.` : " No hay modelo publicado para este objetivo."}
                   </small>
                 )}
-                <em className={isPublishedModelEligible(report) ? "is-good" : "is-warning"}>
-                  {isPublishedModelEligible(report) ? "Modelo publicado elegible" : "Sin modelo publicado elegible"}
+                <em className={isPublishedModelEligible(report, target) ? "is-good" : "is-warning"}>
+                  {isPublishedModelEligible(report, target) ? "Modelo publicado elegible" : "Sin modelo publicado elegible"}
                 </em>
               </article>
             ))}
           </div>
         ) : (
-          <p className="panel-subtitle">Ejecuta un entrenamiento para generar resultados.</p>
+          <p className="panel-subtitle">
+            {status?.manifest
+              ? "El manifiesto está disponible, pero no contiene targets con resultados publicados."
+              : "Ejecuta un entrenamiento para generar resultados."}
+          </p>
         )}
       </div>
 
@@ -712,7 +772,7 @@ export default function AdminTraining() {
             <span className="admin-eyebrow">COMPARATIVA VS</span>
             <h3 id="admin-training-comparisons-title">Rendimiento de todos los modelos por objetivo</h3>
             <p className="admin-training-comparison-note">
-              Solo se comparan targets con al menos un modelo elegible. Para ser elegible debe cumplir simultáneamente Accuracy ≥ 0.70, F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70.
+              Se comparan todos los targets con métricas reportadas, aunque ningún modelo alcance los umbrales. GOLD usa Accuracy/F1/AUC ≥ 0.70; Insuficiencia Cardiaca usa Accuracy/F1/AUC ≥ 0.60. MCC y Kappa permanecen ≥ 0.40.
             </p>
             <p className="admin-training-comparison-note">
               Entre modelos elegibles se prioriza F1-Score y luego ROC-AUC, MCC, Kappa y Accuracy. La calidad normalizada es solo informativa; su gráfico histórico está en Imágenes de diagnóstico.
@@ -721,19 +781,29 @@ export default function AdminTraining() {
               Cada comparativa incluye todos los algoritmos que reportaron métricas, hayan ganado o no; los elegibles aparecen primero y el mejor elegible se marca como ganador.
             </p>
           </div>
+          <label className="admin-training-target-filter">
+            <span>Target a visualizar</span>
+            <select value={comparisonTarget} onChange={(event) => setComparisonTarget(event.target.value)}>
+              <option value="__all__">Todos los targets</option>
+              {reports.map(([target]) => (
+                <option value={target} key={`comparison-target-${target}`}>{targetLabel(target)}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        {reports.some(([, report]) => report.algorithmsTested?.some(isCandidateEligible)) ? (
+        {comparableReports.length ? (
           <div className="admin-training-comparison-grid">
-            {reports.map(([target, sourceReport]) => {
+            {comparableReports.map(([target, sourceReport]) => {
+              const targetThresholds = thresholdsForTarget(target);
+              const selectionMetrics = SELECTION_METRICS.map((item) => ({ ...item, threshold: targetThresholds[item.key] }));
               const candidates = [...(sourceReport.algorithmsTested || [])]
-                .filter((candidate) => candidate.available !== false)
-                .sort((left, right) => Number(isCandidateEligible(right)) - Number(isCandidateEligible(left)) || compareCandidatesBySelection(left, right));
-              const eligibleCandidates = candidates.filter(isCandidateEligible);
-              if (!eligibleCandidates.length) return null;
-              const winner = eligibleCandidates[0];
+                .filter((candidate) => candidate.available !== false && hasComparisonMetrics(candidate))
+                .sort((left, right) => Number(isCandidateEligible(right, targetThresholds)) - Number(isCandidateEligible(left, targetThresholds)) || compareCandidatesBySelection(left, right));
+              const eligibleCandidates = candidates.filter((candidate) => isCandidateEligible(candidate, targetThresholds));
+              const winner = eligibleCandidates[0] ?? candidates[0];
               const testCandidate = runTestCandidate(sourceReport, candidates);
-              const selectedTest = testCandidate?.testMetrics;
+              const selectedTest = testCandidate?.testMetrics || sourceReport.testMetrics;
               const report: ModelReport = {
                 ...sourceReport,
                 selectedModel: testCandidate?.model || sourceReport.selectedModel,
@@ -752,7 +822,7 @@ export default function AdminTraining() {
                         {candidates.length} modelos evaluados · {eligibleCandidates.length} elegibles
                       </span>
                       <span className="admin-training-best-model">
-                        Ganador elegible: {winner.model}
+                        {eligibleCandidates.length ? `Ganador VALIDATION: ${winner.model}` : `Mejor VALIDATION (sin elegibilidad): ${winner.model}`}
                       </span>
                     </div>
                   </header>
@@ -767,19 +837,19 @@ export default function AdminTraining() {
                     <div className="admin-training-policy-heatmap" role="table" aria-label={`Cumplimiento de umbrales por modelo para ${targetLabel(target)}`}>
                       <div className="admin-training-policy-row admin-training-policy-header" role="row">
                         <span role="columnheader">Modelo</span>
-                        {SELECTION_METRICS.map((item) => <span role="columnheader" key={item.key}>{item.label}<small>≥ {item.threshold.toFixed(2)}</small></span>)}
+                        {selectionMetrics.map((item) => <span role="columnheader" key={item.key}>{item.label}<small>≥ {item.threshold.toFixed(2)}</small></span>)}
                         <span role="columnheader">Elegibilidad</span>
                       </div>
                       {candidates.map((candidate) => (
                         <div className="admin-training-policy-row" role="row" key={`${target}-eligibility-${candidate.model}`}>
                           <strong role="rowheader">{candidate.model}{candidate.model === winner.model ? " · GANADOR" : ""}</strong>
-                          {SELECTION_METRICS.map((item) => {
+                          {selectionMetrics.map((item) => {
                             const value = rawCandidateMetric(candidate, item.key);
                             const passed = isMetricPassing(value, item.threshold);
                             const shadeValue = item.key === "mcc" || item.key === "kappa" ? (value ?? -1) : (metricPercent(value) ?? 0);
                             return <span role="cell" className={passed ? "is-passing" : "is-failing"} key={`${candidate.model}-${item.key}`} style={{ background: validationHeatmapColor(shadeValue, item.threshold) }} title={`${item.label}: ${metricLabel(candidate, item.key)} · umbral ${item.threshold.toFixed(2)} · ${passed ? "cumple" : "no cumple"}`}>{metricLabel(candidate, item.key)}<small>{value === null ? "Sin dato" : passed ? "Cumple" : "No cumple"}</small></span>;
                           })}
-                          <span role="cell" className={isCandidateEligible(candidate) ? "admin-training-eligible" : "admin-training-ineligible"}>{isCandidateEligible(candidate) ? "ELEGIBLE" : "NO ELEGIBLE"}</span>
+                          <span role="cell" className={isCandidateEligible(candidate, targetThresholds) ? "admin-training-eligible" : "admin-training-ineligible"}>{isCandidateEligible(candidate, targetThresholds) ? "ELEGIBLE" : "NO ELEGIBLE"}</span>
                         </div>
                       ))}
                     </div>
@@ -805,7 +875,7 @@ export default function AdminTraining() {
                             <span className="admin-training-bar-label">{candidate.model}</span>
                             <div className="admin-training-mcc-track">
                               <span className="admin-training-mcc-zero" />
-                              <span className={`admin-training-mcc-bar ${isMetricPassing(mcc, ELIGIBILITY_THRESHOLDS.mcc) ? "is-passing" : "is-failing"}`} style={{ left: `${barLeft}%`, width: `${barWidth}%` }} />
+                              <span className={`admin-training-mcc-bar ${isMetricPassing(mcc, targetThresholds.mcc) ? "is-passing" : "is-failing"}`} style={{ left: `${barLeft}%`, width: `${barWidth}%` }} />
                             </div>
                             <strong>{mcc === null ? "—" : mcc.toFixed(3)}</strong>
                           </div>

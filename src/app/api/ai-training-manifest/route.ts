@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { NextResponse } from "next/server";
+import { isRemoteMlStorageEnabled, readRemoteManifest } from "@/lib/server/ml-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,12 @@ export async function GET() {
   );
 
   try {
+    if (isRemoteMlStorageEnabled()) {
+      const remoteManifest = await readRemoteManifest();
+      if (remoteManifest) {
+        return NextResponse.json(remoteManifest, { headers: { "Cache-Control": "no-store" } });
+      }
+    }
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
     return NextResponse.json(manifest, {
       headers: { "Cache-Control": "no-store" },

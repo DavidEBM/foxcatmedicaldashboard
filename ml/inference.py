@@ -12,9 +12,10 @@ if hasattr(sys.stdout, "reconfigure"):
 
 import joblib
 import pandas as pd
-from ml.config import DEFAULT_THRESHOLDS
+from ml.config import DEFAULT_THRESHOLDS, thresholds_for_target
 from ml.model_common import qualifies
 from ml.utils import norm
+from ml.vercel_runtime import runtime_models_dir
 
 MODELS = ROOT / "outputs" / "SavedModels"
 MANIFEST = MODELS / "training-manifest.json"
@@ -44,10 +45,12 @@ def patient_features(patient: dict) -> dict:
     }
 
 
-def approved_targets() -> tuple[dict[str, Path], dict[str, str]]:
+def approved_targets(models_dir: Path | None = None) -> tuple[dict[str, Path], dict[str, str]]:
     """Devuelve artefactos seleccionados que cumplen los cinco umbrales."""
+    models_dir = models_dir or MODELS
+    manifest_path = models_dir / "training-manifest.json"
     try:
-        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return {}, {target: "No existe manifiesto de entrenamiento validado." for target in TARGETS}
 
@@ -72,7 +75,7 @@ def approved_targets() -> tuple[dict[str, Path], dict[str, str]]:
         if (
             not selected_model
             or not isinstance(validation_metrics, dict)
-            or not qualifies(validation_metrics, REQUIRED_THRESHOLDS)
+            or not qualifies(validation_metrics, thresholds_for_target(target, REQUIRED_THRESHOLDS))
         ):
             blocked[target] = (
                 "No hay un modelo publicado que cumpla simultáneamente Accuracy ≥ 0.70, "
@@ -80,7 +83,7 @@ def approved_targets() -> tuple[dict[str, Path], dict[str, str]]:
             )
             continue
 
-        artifact = MODELS / f"{norm(target)}-{norm(selected_model)}.joblib"
+        artifact = models_dir / f"{norm(target)}-{norm(selected_model)}.joblib"
         if artifact.is_file():
             approved[target] = artifact
         else:
@@ -92,7 +95,7 @@ def approved_targets() -> tuple[dict[str, Path], dict[str, str]]:
 def predict(patient: dict) -> tuple[list[dict], dict[str, str]]:
     row = patient_features(patient)
     results = []
-    approved, blocked = approved_targets()
+    approved, blocked = approved_targets(runtime_models_dir() or MODELS)
     for target, path in approved.items():
         if not path.exists():
             continue

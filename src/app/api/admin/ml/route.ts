@@ -9,6 +9,7 @@ import {
   adminErrorResponse,
   requireAdmin,
 } from "@/services/firebase/admin-server-auth";
+import { isRemoteMlStorageEnabled, listRemoteImages, readRemoteManifest } from "@/lib/server/ml-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,10 +70,18 @@ async function readManifest(): Promise<Record<string, unknown> | null> {
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
-    const manifest = await readManifest();
-    const refreshToken = new URL(request.url).searchParams.get("refresh") ?? Date.now().toString();
+    const remoteStorage = isRemoteMlStorageEnabled();
+    const manifest = remoteStorage
+      ? (await readRemoteManifest()) ?? await readManifest()
+      : await readManifest();
+    const refreshToken = new URL(request.url).searchParams.get("refresh") ?? "latest";
     const imageVersion = `${manifest?.generatedAt ?? "missing"}-${refreshToken}`;
-    const images = await collectImages(OUTPUT_DIR, imageVersion).catch(() => []);
+    const remoteImages = remoteStorage
+      ? await listRemoteImages(imageVersion).catch(() => [])
+      : [];
+    const images = remoteStorage && remoteImages.length
+      ? remoteImages
+      : await collectImages(OUTPUT_DIR, imageVersion).catch(() => []);
 
     return NextResponse.json(
       {

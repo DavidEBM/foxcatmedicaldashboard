@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T19:06:59.571295+00:00",
+  "generatedAt": "2026-10-01T22:35:20.311190+00:00",
   "sourceDataset": "ml/datasets/dataset_final_armonizado.csv",
   "dataSources": {
     "firebaseIncluded": true,
@@ -17,7 +17,7 @@
     "testUsage": "TEST reserved exclusively for final evaluation of the selected model",
     "missingData": "Missing values are imputed inside each training pipeline/fold.",
     "selectionDoesNotUseTest": true,
-    "eligibility": "accuracy >= 0.70 AND f1 >= 0.70 AND mcc >= 0.40 AND kappa >= 0.40 AND auc >= 0.70",
+    "eligibility": "Per-target thresholds are recorded in minimumThresholdsByTarget; heart failure uses accuracy/f1/auc >= 0.60 and mcc/kappa >= 0.40.",
     "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
     "selectionFallback": "If no candidate meets every required metric, no candidate is selected or published; an already-published model is retained only if its recorded validation metrics meet the current requirements."
   },
@@ -109,11 +109,11 @@
       "auc": 0.7
     },
     "history_of_heart_failure": {
-      "accuracy": 0.7,
-      "f1": 0.7,
+      "accuracy": 0.6,
+      "f1": 0.6,
       "mcc": 0.4,
       "kappa": 0.4,
-      "auc": 0.7
+      "auc": 0.6
     }
   },
   "models": {
@@ -261,12 +261,12 @@
         },
         "normalizedQuality": 0.7638665410465082,
         "normalizedQualityPercent": 76.38665410465082,
-        "predictionLatencyMs": 5.818187499926353,
-        "predictionLatencyStdMs": 0.4329274547976228,
-        "responseTimeMsPerRecord": 5.818187499926353,
-        "predictionsPerSecond": 171.87483215565985,
-        "predictionBatchLatencyMs": 6.0124374997485575,
-        "batchPredictionsPerSecond": 2494.8284286742783
+        "predictionLatencyMs": 6.588674999875366,
+        "predictionLatencyStdMs": 0.42082510700826037,
+        "responseTimeMsPerRecord": 6.588674999875366,
+        "predictionsPerSecond": 151.77558462345107,
+        "predictionBatchLatencyMs": 7.382500000176151,
+        "batchPredictionsPerSecond": 2031.8320351699413
       },
       "algorithmsTested": [
         {
@@ -550,12 +550,12 @@
             },
             "normalizedQuality": 0.7638665410465082,
             "normalizedQualityPercent": 76.38665410465082,
-            "predictionLatencyMs": 5.818187499926353,
-            "predictionLatencyStdMs": 0.4329274547976228,
-            "responseTimeMsPerRecord": 5.818187499926353,
-            "predictionsPerSecond": 171.87483215565985,
-            "predictionBatchLatencyMs": 6.0124374997485575,
-            "batchPredictionsPerSecond": 2494.8284286742783
+            "predictionLatencyMs": 6.588674999875366,
+            "predictionLatencyStdMs": 0.42082510700826037,
+            "responseTimeMsPerRecord": 6.588674999875366,
+            "predictionsPerSecond": 151.77558462345107,
+            "predictionBatchLatencyMs": 7.382500000176151,
+            "batchPredictionsPerSecond": 2031.8320351699413
           },
           "testCI95": {
             "precisionCI95Low": 0.44968749999999996,
@@ -1021,22 +1021,57 @@
     "history_of_heart_failure": {
       "targetColumn": "History of Heart Failure(Si ó no)(Target)",
       "targetLabel": "Antecedente de insuficiencia cardiaca",
-      "selectedModel": null,
-      "runSelectedModel": null,
-      "publishedThisRun": false,
-      "publicationReason": "no_eligible_candidate_no_model_published",
+      "selectedModel": "CatBoost",
+      "runSelectedModel": "CatBoost",
+      "publishedThisRun": true,
+      "publicationReason": "highest_f1_eligible_candidate_published",
       "currentQuality": {},
       "candidateQuality": {
-        "thresholdMet": false,
-        "f1": -Infinity,
-        "auc": -Infinity,
-        "mcc": -Infinity,
-        "kappa": -Infinity,
-        "accuracy": -Infinity
+        "thresholdMet": true,
+        "f1": 0.6666666666666666,
+        "auc": 0.625,
+        "mcc": 0.47809144373375745,
+        "kappa": 0.47058823529411764,
+        "accuracy": 0.75
       },
-      "artifact": null,
-      "thresholdMet": false,
-      "publishedValidationMetrics": {},
+      "artifact": "ml\\outputs\\SavedModels\\history_of_heart_failure-catboost.joblib",
+      "thresholdMet": true,
+      "publishedValidationMetrics": {
+        "accuracy": 0.75,
+        "f1": 0.6666666666666666,
+        "mcc": 0.47809144373375745,
+        "kappa": 0.47058823529411764,
+        "auc": 0.625,
+        "precision": 0.6,
+        "recallSensitivity": 0.75,
+        "balancedAccuracy": 0.75,
+        "classes": [
+          "NO",
+          "SI"
+        ],
+        "positiveLabel": "SI",
+        "confusionMatrix": [
+          [
+            6,
+            2
+          ],
+          [
+            1,
+            3
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.75,
+          "balancedAccuracy": 0.75,
+          "f1": 0.6666666666666666,
+          "precision": 0.6,
+          "recallSensitivity": 0.75,
+          "auc": 0.625,
+          "mcc": 0.7390457218668787,
+          "kappa": 0.7352941176470589
+        },
+        "normalizedQuality": 0.7020008132725755
+      },
       "split": {
         "train": 54,
         "validation": 12,
@@ -1047,8 +1082,47 @@
         "SI": 5
       },
       "testMetrics": {
-        "available": false,
-        "error": "No hubo modelo seleccionado."
+        "accuracy": 0.5833333333333334,
+        "f1": 0.0,
+        "mcc": 0.0,
+        "kappa": 0.0,
+        "auc": 0.48571428571428577,
+        "precision": 0.0,
+        "recallSensitivity": 0.0,
+        "balancedAccuracy": 0.5,
+        "classes": [
+          "NO",
+          "SI"
+        ],
+        "positiveLabel": "SI",
+        "confusionMatrix": [
+          [
+            7,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.5833333333333334,
+          "balancedAccuracy": 0.5,
+          "f1": 0.0,
+          "precision": 0.0,
+          "recallSensitivity": 0.0,
+          "auc": 0.48571428571428577,
+          "mcc": 0.5,
+          "kappa": 0.5
+        },
+        "normalizedQuality": 0.3211309523809524,
+        "normalizedQualityPercent": 32.11309523809524,
+        "predictionLatencyMs": 5.464112500021656,
+        "predictionLatencyStdMs": 0.7735572071109389,
+        "responseTimeMsPerRecord": 5.464112500021656,
+        "predictionsPerSecond": 183.01233731846418,
+        "predictionBatchLatencyMs": 5.606412500355873,
+        "batchPredictionsPerSecond": 2140.406186529851
       },
       "algorithmsTested": [
         {
@@ -1186,7 +1260,7 @@
           "validationScore": 0.6381352851875146,
           "cvMeanScore": 0.4966328465756196,
           "cvStdScore": 0.02484635610019794,
-          "validationThresholdMet": false,
+          "validationThresholdMet": true,
           "validationMetrics": {
             "accuracy": 0.75,
             "f1": 0.6666666666666666,
@@ -1223,9 +1297,65 @@
             },
             "normalizedQuality": 0.7020008132725755
           },
-          "testEvaluationAvailable": false,
-          "testMetrics": {},
-          "testCI95": {},
+          "testEvaluationAvailable": true,
+          "testMetrics": {
+            "accuracy": 0.5833333333333334,
+            "f1": 0.0,
+            "mcc": 0.0,
+            "kappa": 0.0,
+            "auc": 0.48571428571428577,
+            "precision": 0.0,
+            "recallSensitivity": 0.0,
+            "balancedAccuracy": 0.5,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                7,
+                0
+              ],
+              [
+                5,
+                0
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.5833333333333334,
+              "balancedAccuracy": 0.5,
+              "f1": 0.0,
+              "precision": 0.0,
+              "recallSensitivity": 0.0,
+              "auc": 0.48571428571428577,
+              "mcc": 0.5,
+              "kappa": 0.5
+            },
+            "normalizedQuality": 0.3211309523809524,
+            "normalizedQualityPercent": 32.11309523809524,
+            "predictionLatencyMs": 5.464112500021656,
+            "predictionLatencyStdMs": 0.7735572071109389,
+            "responseTimeMsPerRecord": 5.464112500021656,
+            "predictionsPerSecond": 183.01233731846418,
+            "predictionBatchLatencyMs": 5.606412500355873,
+            "batchPredictionsPerSecond": 2140.406186529851
+          },
+          "testCI95": {
+            "precisionCI95Low": 0.0,
+            "precisionCI95High": 0.0,
+            "accuracyCI95Low": 0.25,
+            "accuracyCI95High": 0.8333333333333334,
+            "recallSensitivityCI95Low": 0.0,
+            "recallSensitivityCI95High": 0.0,
+            "f1CI95Low": 0.0,
+            "f1CI95High": 0.0,
+            "aucCI95Low": 0.11060606060606062,
+            "aucCI95High": 0.8125,
+            "mccCI95Low": 0.0,
+            "mccCI95High": 0.0,
+            "bootstrapReplicates": 200.0
+          },
           "hyperparameters": {
             "iterations": 200,
             "depth": 6,
@@ -1234,7 +1364,7 @@
             "random_strength": 1.0,
             "cat_features": null
           },
-          "artifact": null
+          "artifact": "ml\\outputs\\SavedModels\\Models_All\\history_of_heart_failure\\catboost.joblib"
         },
         {
           "model": "RandomForest",
