@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any
+
+VENDOR = Path(__file__).resolve().parent / "vercel_vendor"
+sys.path.insert(0, str(VENDOR))
 
 import numpy as np
 from catboost import CatBoostClassifier, Pool
