@@ -7,17 +7,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent))
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 import joblib
 import pandas as pd
+from ml.config import DEFAULT_THRESHOLDS
+from ml.model_common import qualifies
+from ml.utils import norm
 
 MODELS = ROOT / "outputs" / "SavedModels"
 MANIFEST = MODELS / "training-manifest.json"
 
-TARGETS = {
-    "copd_gold": MODELS / "copd_gold-xgboost.joblib",
-    "history_of_heart_failure": MODELS / "history_of_heart_failure-logisticregression.joblib",
-}
+TARGETS = ("copd_gold", "history_of_heart_failure")
+
+REQUIRED_THRESHOLDS = DEFAULT_THRESHOLDS
 
 
 def patient_features(patient: dict) -> dict:
@@ -40,26 +44,47 @@ def patient_features(patient: dict) -> dict:
     }
 
 
-def approved_targets() -> tuple[set[str], dict[str, str]]:
-    """Devuelve únicamente modelos que superaron VALIDATION."""
+def approved_targets() -> tuple[dict[str, Path], dict[str, str]]:
+    """Devuelve artefactos seleccionados que cumplen los cinco umbrales."""
     try:
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return set(TARGETS), {}
+        return {}, {target: "No existe manifiesto de entrenamiento validado." for target in TARGETS}
 
-    approved: set[str] = set()
+    approved: dict[str, Path] = {}
     blocked: dict[str, str] = {}
     models = manifest.get("models", {})
 
     for target in TARGETS:
         report = models.get(target, {})
-        if report.get("thresholdMet") is True:
-            approved.add(target)
-        else:
+        selected_model = report.get("selectedModel")
+        selected_candidate = next(
+            (
+                candidate
+                for candidate in report.get("algorithmsTested", [])
+                if candidate.get("model") == selected_model
+            ),
+            {},
+        )
+        validation_metrics = report.get("publishedValidationMetrics")
+        if not isinstance(validation_metrics, dict):
+            validation_metrics = selected_candidate.get("validationMetrics", {})
+        if (
+            not selected_model
+            or not isinstance(validation_metrics, dict)
+            or not qualifies(validation_metrics, REQUIRED_THRESHOLDS)
+        ):
             blocked[target] = (
-                "El modelo no superó los umbrales de VALIDATION y requiere "
-                "más datos o revisión clínica."
+                "No hay un modelo publicado que cumpla simultáneamente Accuracy ≥ 0.70, "
+                "F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70."
             )
+            continue
+
+        artifact = MODELS / f"{norm(target)}-{norm(selected_model)}.joblib"
+        if artifact.is_file():
+            approved[target] = artifact
+        else:
+            blocked[target] = f"No se encontró el artefacto publicado para {selected_model}."
 
     return approved, blocked
 
@@ -68,8 +93,8 @@ def predict(patient: dict) -> tuple[list[dict], dict[str, str]]:
     row = patient_features(patient)
     results = []
     approved, blocked = approved_targets()
-    for target, path in TARGETS.items():
-        if target not in approved or not path.exists():
+    for target, path in approved.items():
+        if not path.exists():
             continue
         artifact = joblib.load(path)
         features = artifact.get("featureColumns") or list(row)

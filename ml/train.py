@@ -34,7 +34,7 @@ from .model_publisher import (
 from .risk_projection import export_risk_projections
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """
     Procesa los argumentos de línea de comandos.
     """
@@ -52,6 +52,33 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--output-dir",
+        default=DEFAULT_OUTPUT_DIR,
+        help="Directorio donde se publican los modelos y reportes.",
+    )
+
+    parser.add_argument(
+        "--algorithms",
+        nargs="+",
+        default=None,
+        help="Algoritmos a ejecutar. Si se omite, se ejecutan todos.",
+    )
+
+    parser.add_argument(
+        "--targets",
+        nargs="+",
+        default=None,
+        help="Targets a entrenar. Si se omite, se detectan del dataset.",
+    )
+
+    parser.add_argument(
+        "--features",
+        nargs="+",
+        default=None,
+        help="Features explícitas, opcionales.",
+    )
+
+    parser.add_argument(
         "--firebase-dataset",
         default=None,
         help=(
@@ -60,78 +87,8 @@ def parse_args() -> argparse.Namespace:
         ),
     )
 
-    parser.add_argument(
-        "--output-dir",
-        default=DEFAULT_OUTPUT_DIR,
-        help="Directorio de salida.",
-    )
 
-    parser.add_argument(
-        "--targets",
-        nargs="+",
-        default=None,
-        help=(
-            "Targets a entrenar. Si se omite, se utilizan "
-            "los targets detectados por la preparación."
-        ),
-    )
-
-    parser.add_argument(
-        "--features",
-        nargs="+",
-        default=None,
-        help=(
-            "Features explícitas. Si se omite, se utiliza "
-            "la selección automática por target."
-        ),
-    )
-
-    parser.add_argument(
-        "--algorithms",
-        nargs="+",
-        default=None,
-        help=(
-            "Algoritmos a ejecutar. Si se omite, se ejecutan todos "
-            "los algoritmos registrados."
-        ),
-    )
-
-    parser.add_argument(
-        "--min-accuracy",
-        type=float,
-        default=DEFAULT_THRESHOLDS["accuracy"],
-        help="Accuracy mínima requerida.",
-    )
-
-    parser.add_argument(
-        "--min-f1",
-        type=float,
-        default=DEFAULT_THRESHOLDS["f1"],
-        help="F1 mínima requerida.",
-    )
-
-    parser.add_argument(
-        "--min-mcc",
-        type=float,
-        default=DEFAULT_THRESHOLDS["mcc"],
-        help="MCC mínimo requerido.",
-    )
-
-    parser.add_argument(
-        "--min-kappa",
-        type=float,
-        default=DEFAULT_THRESHOLDS["kappa"],
-        help="Kappa mínimo requerido.",
-    )
-
-    parser.add_argument(
-        "--min-auc",
-        type=float,
-        default=DEFAULT_THRESHOLDS["auc"],
-        help="AUC mínima requerida.",
-    )
-
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def validate_thresholds(
@@ -517,13 +474,7 @@ def main() -> int:
         RANDOM_STATE
     )
 
-    thresholds = {
-        "accuracy": args.min_accuracy,
-        "f1": args.min_f1,
-        "mcc": args.min_mcc,
-        "kappa": args.min_kappa,
-        "auc": args.min_auc,
-    }
+    thresholds = dict(DEFAULT_THRESHOLDS)
 
     validate_thresholds(
         thresholds
@@ -657,8 +608,11 @@ def main() -> int:
 
         target_thresholds = thresholds_by_target[key]
         print(
-            "  Umbral de calidad del modelo: "
-            f"{target_thresholds['modelQuality']:.0%}"
+            "  Requisitos de elegibilidad: "
+            + ", ".join(
+                f"{name} ≥ {value:.0%}"
+                for name, value in target_thresholds.items()
+            )
         )
 
         target_start = time.perf_counter()

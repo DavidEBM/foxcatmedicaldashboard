@@ -403,16 +403,6 @@ def train_algorithm(
     except Exception:
         quality = 0.0
 
-    model_quality_threshold = thresholds.get("modelQuality")
-    if model_quality_threshold is not None:
-        try:
-            threshold_met = bool(
-                threshold_met
-                and quality >= float(model_quality_threshold)
-            )
-        except (TypeError, ValueError, OverflowError):
-            threshold_met = False
-
     try:
         composite_score = model_common.score(
             validation_metrics,

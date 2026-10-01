@@ -59,6 +59,7 @@ Componentes principales:
 - Node.js compatible con Next.js 16.
 - npm o pnpm.
 - Python `>=3.10,<3.14` para el pipeline de IA.
+- Si hay varias versiones de Python, configura `ML_PYTHON_EXECUTABLE` en `.env.local` con la ruta al intérprete del entorno que tiene `ml/requirements.txt` instalado; se usa tanto para inferencia como para entrenamiento.
 - Proyecto Firebase con Authentication y Firestore habilitados.
 - Credenciales administrativas de Firebase únicamente en el servidor.
 
@@ -159,15 +160,19 @@ No utilizar el prefijo `NEXT_PUBLIC_` para ninguna credencial administrativa.
 | `CV_FOLDS` | `3` | Número base de folds de validación cruzada |
 | `HARMONIZED_DATASET_PATH` | `ml/datasets/dataset_final_armonizado.csv` | Dataset local |
 | `AI_OUTPUT_DIR` | `ml/outputs/SavedModels` | Carpeta de modelos y reportes |
-| `MIN_ACCURACY` | `0.70` | Accuracy mínima |
-| `MIN_F1` | `0.70` | F1 mínima |
-| `MIN_MCC` | `0.40` | MCC mínimo |
-| `MIN_KAPPA` | `0.40` | Kappa mínima |
-| `MIN_AUC` | `0.70` | AUC mínima |
-| `MIN_MODEL_QUALITY` | `0.70` | Umbral global de calidad para targets distintos de GOLD |
-| `MIN_GOLD_MODEL_QUALITY` | `0.75` | Umbral global de calidad para `copd_gold` |
+| `ML_PYTHON_EXECUTABLE` | Python del sistema | Intérprete compartido por inferencia y entrenamiento; opcional, admite ruta absoluta |
 
-Los umbrales de métricas se aplican conjuntamente como barreras mínimas. Además, el modelo debe alcanzar una calidad global normalizada de al menos 75% para `copd_gold` y 70% para los demás targets. La calidad global transforma MCC y Kappa a [0, 1] y promedia las métricas disponibles.
+Umbrales de elegibilidad fijos:
+
+| Métrica | Umbral | Definición |
+|---|---:|---|
+| Accuracy | `0.70` | Accuracy |
+| F1-Score | `0.70` | F1 macro para GOLD multiclase; F1 de `SI` para insuficiencia binaria |
+| MCC | `0.40` | Matthews Correlation Coefficient |
+| Kappa | `0.40` | Cohen's Kappa |
+| ROC-AUC | `0.70` | AUC multiclase OVR para GOLD; binario para insuficiencia |
+
+Los cinco umbrales son obligatorios y no configurables; deben cumplirse simultáneamente. La calidad normalizada se conserva únicamente como dato informativo e histórico y su gráfico está en Imágenes de diagnóstico.
 
 ## Funcionamiento de la aplicación
 
@@ -248,20 +253,7 @@ Manifest + modelos + tablas + gráficas
 
 ### Selección y publicación
 
-El score compuesto de selección combina:
-
-| Métrica | Peso |
-|---|---:|
-| Accuracy | 20% |
-| Balanced Accuracy | 20% |
-| F1 | 20% |
-| MCC | 15% |
-| Kappa | 15% |
-| AUC | 10% |
-
-La selección se realiza con CV y VALIDATION, nunca con TEST. Si ningún candidato alcanza todos los umbrales, el mejor candidato disponible puede conservarse únicamente para diagnóstico, pero `thresholdMet` queda en `false`.
-
-El umbral global de calidad es específico por target: `copd_gold` exige `modelQuality >= 0.75`; el resto exige `modelQuality >= 0.70`.
+La elegibilidad se determina solo con las cinco métricas anteriores de VALIDATION. Entre modelos elegibles se elige el F1-Score más alto; los empates se resuelven, en orden, por ROC-AUC, MCC, Kappa y Accuracy. CV, TEST y calidad normalizada no alteran ese orden. Si no hay modelos elegibles, no se elige ni se publica un ganador nuevo; un modelo previamente publicado se conserva únicamente si sus métricas de VALIDATION verifican los cinco umbrales actuales.
 
 ## Targets y algoritmos
 
@@ -291,16 +283,14 @@ Cada entrenador devuelve un pipeline compatible con el flujo común, sus hiperpa
 
 ## Umbrales y publicación
 
-Un candidato es elegible cuando supera simultáneamente:
+Un candidato es elegible cuando alcanza simultáneamente:
 
 ```text
-accuracy >= MIN_ACCURACY
-f1       >= MIN_F1
-mcc      >= MIN_MCC
-kappa    >= MIN_KAPPA
-auc      >= MIN_AUC
-modelQuality >= 0.75  # copd_gold
-modelQuality >= 0.70  # demás targets
+accuracy >= 0.70
+f1       >= 0.70
+mcc      >= 0.40
+kappa    >= 0.40
+auc      >= 0.70
 ```
 
 El estado se interpreta así:
@@ -308,7 +298,7 @@ El estado se interpreta así:
 - **Umbrales cumplidos**: el candidato superó VALIDATION y puede participar en publicación/diagnóstico.
 - **Requiere revisión**: al menos una métrica no alcanzó el mínimo, o no hay evidencia suficiente para publicarlo.
 - **Publicado**: el artefacto fue seleccionado y quedó disponible para inferencia.
-- **Conservado**: existe un artefacto anterior, pero la corrida actual no demostró una mejora válida.
+- **Conservado**: no hubo un nuevo candidato elegible (o falló el ajuste final) y se mantuvo un artefacto anterior que sí cumple los cinco requisitos actuales.
 
 Nunca se debe interpretar un modelo de diagnóstico con `thresholdMet=false` como un modelo aprobado para entorno real.
 

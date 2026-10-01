@@ -25,7 +25,7 @@ from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
-from .config import CV_FOLDS, RANDOM_STATE
+from .config import CV_FOLDS, DEFAULT_THRESHOLDS, RANDOM_STATE
 
 
 # ============================================================================
@@ -1230,8 +1230,7 @@ def qualifies(
     correspondientes.
     """
 
-    if not thresholds:
-        return True
+    del thresholds  # Eligibility is a fixed policy; callers cannot lower gates.
 
     threshold_mapping = {
         "accuracy": "accuracy",
@@ -1241,26 +1240,13 @@ def qualifies(
         "auc": "auc",
     }
 
-    checks: list[
-        bool
-    ] = []
-
     for (
         threshold_key,
         metric_key,
     ) in threshold_mapping.items():
-
-        if threshold_key not in thresholds:
-            continue
-
-        threshold_raw: Any = (
-            thresholds.get(
-                threshold_key
-            )
-        )
-
+        threshold_raw: Any = DEFAULT_THRESHOLDS.get(threshold_key)
         if threshold_raw is None:
-            continue
+            return False
 
         try:
             threshold = float(
@@ -1272,7 +1258,7 @@ def qualifies(
             ValueError,
             OverflowError,
         ):
-            continue
+            return False
 
         value = _finite_metric(
             metrics,
@@ -1285,16 +1271,25 @@ def qualifies(
         ):
             return False
 
-        checks.append(
-            value >= threshold
-        )
+        if value < threshold:
+            return False
 
-    if not checks:
-        return True
+    return True
 
-    return all(
-        checks
-    )
+
+def selection_key(metrics: dict[str, Any]) -> tuple[float, float, float, float, float]:
+    """Ranking lexicográfico de candidatos elegibles; CV/quality no intervienen."""
+    values: list[float] = []
+    for metric_name in ("f1", "auc", "mcc", "kappa", "accuracy"):
+        raw_value = metrics.get(metric_name)
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError, OverflowError):
+            value = float("-inf")
+        if not np.isfinite(value):
+            value = float("-inf")
+        values.append(value)
+    return tuple(values)  # type: ignore[return-value]
 
 
 # ============================================================================

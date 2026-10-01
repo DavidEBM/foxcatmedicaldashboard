@@ -19,8 +19,9 @@ interface TrainingImage {
 interface ModelReport {
   selectedModel?: string | null;
   runSelectedModel?: string | null;
+  publishedValidationMetrics?: Record<string, unknown>;
+  publicationReason?: string;
   publishedThisRun?: boolean;
-  thresholdMet?: boolean;
   split?: { train?: number; validation?: number; test?: number };
   testMetrics?: Record<string, unknown>;
   algorithmsTested?: ModelCandidate[];
@@ -29,10 +30,6 @@ interface ModelReport {
 interface ModelCandidate {
   model: string;
   available?: boolean;
-  validationScore?: number;
-  cvMeanScore?: number;
-  cvStdScore?: number;
-  validationThresholdMet?: boolean;
   validationMetrics?: Record<string, unknown>;
   testEvaluationAvailable?: boolean;
   testMetrics?: Record<string, unknown>;
@@ -82,45 +79,67 @@ function metric(report: ModelReport | undefined, key: string): string {
   return asPercent(report?.testMetrics?.[key]);
 }
 
-function ratio(value: unknown): number {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 0;
-  return Math.max(0, Math.min(1, numeric > 1 ? numeric / 100 : numeric));
+const ELIGIBILITY_THRESHOLDS = {
+  accuracy: 0.70,
+  f1: 0.70,
+  mcc: 0.40,
+  kappa: 0.40,
+  auc: 0.70,
+} as const;
+
+const SELECTION_METRICS = [
+  { key: "accuracy", label: "Accuracy", threshold: ELIGIBILITY_THRESHOLDS.accuracy },
+  { key: "f1", label: "F1-Score", threshold: ELIGIBILITY_THRESHOLDS.f1 },
+  { key: "mcc", label: "MCC", threshold: ELIGIBILITY_THRESHOLDS.mcc },
+  { key: "kappa", label: "Kappa", threshold: ELIGIBILITY_THRESHOLDS.kappa },
+  { key: "auc", label: "ROC-AUC", threshold: ELIGIBILITY_THRESHOLDS.auc },
+] as const;
+
+const COMPARISON_METRICS = [
+  ...SELECTION_METRICS.map(({ key, label }) => ({ key, label })),
+  { key: "balancedAccuracy", label: "Balanced Acc." },
+  { key: "precision", label: "Precisión" },
+  { key: "recallSensitivity", label: "Sensibilidad" },
+] as const;
+
+function rawCandidateMetric(candidate: ModelCandidate, key: string): number | null {
+  const numeric = Number(candidate.validationMetrics?.[key]);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
-function candidateMetric(candidate: ModelCandidate, key: string): number {
-  const normalizedMetrics = candidate.validationMetrics?.normalizedMetrics;
-  if (normalizedMetrics && typeof normalizedMetrics === "object") {
-    const normalizedValue = (normalizedMetrics as Record<string, unknown>)[key];
-    if (normalizedValue !== undefined) return ratio(normalizedValue);
-  }
-
-  const rawValue = candidate.validationMetrics?.[key];
-  if (key === "mcc" || key === "kappa") {
-    const numeric = Number(rawValue);
-    if (Number.isFinite(numeric)) {
-      return Math.max(0, Math.min(1, (numeric + 1) / 2));
-    }
-  }
-
-  return ratio(rawValue);
+function metricPercent(value: number | null): number | null {
+  if (value === null) return null;
+  return value > 1 ? value / 100 : value;
 }
 
-function candidateQuality(candidate: ModelCandidate): number {
-  return ratio(
-    candidate.validationMetrics?.normalizedQuality ?? candidate.validationScore,
-  );
+function metricLabel(candidate: ModelCandidate, key: string): string {
+  const value = rawCandidateMetric(candidate, key);
+  if (value === null) return "—";
+  if (key === "mcc" || key === "kappa") return value.toFixed(3);
+  const percent = metricPercent(value);
+  return percent === null ? "—" : `${(percent * 100).toFixed(1)}%`;
+}
+
+function isCandidateEligible(candidate: ModelCandidate): boolean {
+  if (candidate.available === false) return false;
+  return SELECTION_METRICS.every(({ key, threshold }) => {
+    const value = rawCandidateMetric(candidate, key);
+    return value !== null && value >= threshold;
+  });
+}
+
+function isPublishedModelEligible(report: ModelReport): boolean {
+  if (!report.selectedModel) return false;
+  const metrics = report.publishedValidationMetrics
+    ?? report.algorithmsTested?.find((candidate) => candidate.model === report.selectedModel)?.validationMetrics;
+  return isCandidateEligible({ model: report.selectedModel, available: true, validationMetrics: metrics });
 }
 
 function candidateSelectionRank(candidate: ModelCandidate): number[] {
-  const validationScore = Number(candidate.validationScore);
-  const cvStdScore = Number(candidate.cvStdScore);
-  const cvMeanScore = Number(candidate.cvMeanScore);
   return [
-    candidate.validationThresholdMet ? 1 : 0,
-    Number.isFinite(validationScore) ? validationScore : Number.NEGATIVE_INFINITY,
-    Number.isFinite(cvStdScore) ? -cvStdScore : Number.NEGATIVE_INFINITY,
-    Number.isFinite(cvMeanScore) ? cvMeanScore : Number.NEGATIVE_INFINITY,
+    ...["f1", "auc", "mcc", "kappa", "accuracy"].map((key) =>
+      rawCandidateMetric(candidate, key) ?? Number.NEGATIVE_INFINITY,
+    ),
   ];
 }
 
@@ -148,21 +167,12 @@ function runTestCandidate(
   if (!report.runSelectedModel) return undefined;
   return candidates.find((candidate) => (
     candidate.model === report.runSelectedModel
+    && isCandidateEligible(candidate)
     && candidate.testEvaluationAvailable
     && !!candidate.testMetrics
     && Object.keys(candidate.testMetrics).length > 0
   ));
 }
-
-const COMPARISON_METRICS = [
-  { key: "accuracy", label: "Accuracy" },
-  { key: "f1", label: "F1" },
-  { key: "auc", label: "AUC" },
-  { key: "precision", label: "Precisión" },
-  { key: "recallSensitivity", label: "Sensibilidad" },
-  { key: "mcc", label: "MCC*" },
-  { key: "kappa", label: "Kappa*" },
-] as const;
 
 function escapeXml(value: string): string {
   return value
@@ -177,115 +187,7 @@ function truncateLabel(value: string, maxLength: number): string {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
 }
 
-function heatmapColor(value: number): string {
-  const red = Math.round(235 - value * 115);
-  const green = Math.round(246 - value * 55);
-  const blue = Math.round(241 - value * 70);
-  return `rgb(${red}, ${green}, ${blue})`;
-}
-
-async function downloadComparisonImage(
-  target: string,
-  label: string,
-  candidates: ModelCandidate[],
-  selectedModel: string | null | undefined,
-  testMetrics: Record<string, unknown> | undefined,
-): Promise<void> {
-  const width = 1600;
-  const margin = 60;
-  const barLabelWidth = 250;
-  const barTrackX = margin + barLabelWidth;
-  const barTrackWidth = 1110;
-  const valueX = barTrackX + barTrackWidth + 24;
-  const barStartY = 230;
-  const barRowHeight = 42;
-  const mccStartY = barStartY + candidates.length * barRowHeight + 110;
-  const heatmapY = mccStartY + candidates.length * barRowHeight + 86;
-  const modelColumnWidth = 250;
-  const metricColumnWidth = (width - margin * 2 - modelColumnWidth) / COMPARISON_METRICS.length;
-  const heatmapHeaderHeight = 42;
-  const heatmapRowHeight = 36;
-  const testY = heatmapY + heatmapHeaderHeight + candidates.length * heatmapRowHeight + 34;
-  const height = testY + (testMetrics ? 94 : 52);
-
-  const barRows = candidates.map((candidate, index) => {
-    const quality = candidateQuality(candidate);
-    const y = barStartY + index * barRowHeight;
-    const modelLabel = index === 0 ? `${candidate.model} [MEJOR]` : candidate.model;
-    return `
-      <text x="${margin}" y="${y + 22}" class="label">${escapeXml(truncateLabel(modelLabel, 28))}</text>
-      <rect x="${barTrackX}" y="${y + 8}" width="${barTrackWidth}" height="16" rx="8" fill="#eeeafa" />
-      <rect x="${barTrackX}" y="${y + 8}" width="${Math.max(3, quality * barTrackWidth)}" height="16" rx="8" fill="#7867b7" />
-      <text x="${valueX}" y="${y + 22}" class="value">${(quality * 100).toFixed(1)}%</text>`;
-  }).join("");
-
-  const mccRows = candidates.map((candidate, index) => {
-    const mcc = candidateMetric(candidate, "mcc");
-    const y = mccStartY + index * barRowHeight;
-    const modelLabel = index === 0 ? `${candidate.model} [MEJOR]` : candidate.model;
-    return `
-      <text x="${margin}" y="${y + 22}" class="label">${escapeXml(truncateLabel(modelLabel, 28))}</text>
-      <rect x="${barTrackX}" y="${y + 8}" width="${barTrackWidth}" height="16" rx="8" fill="#e4f0f2" />
-      <rect x="${barTrackX}" y="${y + 8}" width="${Math.max(3, mcc * barTrackWidth)}" height="16" rx="8" fill="#4f96a6" />
-      <text x="${valueX}" y="${y + 22}" class="value">${(mcc * 100).toFixed(1)}%</text>`;
-  }).join("");
-
-  const heatmapHeader = COMPARISON_METRICS.map((item, index) => {
-    const x = margin + modelColumnWidth + index * metricColumnWidth;
-    return `<text x="${x + metricColumnWidth / 2}" y="${heatmapY + 27}" class="header" text-anchor="middle">${escapeXml(item.label)}</text>`;
-  }).join("");
-
-  const heatmapRows = candidates.map((candidate, rowIndex) => {
-    const y = heatmapY + heatmapHeaderHeight + rowIndex * heatmapRowHeight;
-    const modelLabel = rowIndex === 0 ? `${candidate.model} [MEJOR]` : candidate.model;
-    const cells = COMPARISON_METRICS.map((item, metricIndex) => {
-      const value = candidateMetric(candidate, item.key);
-      const x = margin + modelColumnWidth + metricIndex * metricColumnWidth;
-      return `
-        <rect x="${x + 2}" y="${y + 2}" width="${metricColumnWidth - 4}" height="${heatmapRowHeight - 4}" rx="4" fill="${heatmapColor(value)}" />
-        <text x="${x + metricColumnWidth / 2}" y="${y + 24}" class="cell" text-anchor="middle">${(value * 100).toFixed(1)}%</text>`;
-    }).join("");
-    return `
-      <text x="${margin}" y="${y + 24}" class="label">${escapeXml(truncateLabel(modelLabel, 28))}</text>
-      ${cells}`;
-  }).join("");
-
-  const testSummary = testMetrics
-    ? `<rect x="${margin}" y="${testY}" width="${width - margin * 2}" height="70" rx="10" fill="#e7f3ed" stroke="#78b89a" />
-       <text x="${margin + 20}" y="${testY + 27}" class="test-title">TEST final - ${escapeXml(selectedModel || "Modelo seleccionado")}</text>
-       <text x="${margin + 20}" y="${testY + 51}" class="test-value">Accuracy ${escapeXml(asPercent(testMetrics.accuracy))}</text>
-       <text x="${margin + 220}" y="${testY + 51}" class="test-value">F1 ${escapeXml(asPercent(testMetrics.f1))}</text>
-       <text x="${margin + 380}" y="${testY + 51}" class="test-value">AUC ${escapeXml(asPercent(testMetrics.auc))}</text>`
-    : `<text x="${margin}" y="${testY + 25}" class="note">TEST final no disponible en este objetivo.</text>`;
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-    <rect width="100%" height="100%" fill="#ffffff" />
-    <style>
-      .title { fill: #292735; font: 700 30px Arial, sans-serif; }
-      .subtitle { fill: #656273; font: 400 16px Arial, sans-serif; }
-      .section { fill: #292735; font: 700 18px Arial, sans-serif; }
-      .header { fill: #656273; font: 700 12px Arial, sans-serif; }
-      .label { fill: #4f4c5c; font: 400 14px Arial, sans-serif; }
-      .value { fill: #292735; font: 700 14px Arial, sans-serif; }
-      .cell { fill: #292735; font: 700 12px Arial, sans-serif; }
-      .test-title { fill: #2f6c51; font: 700 15px Arial, sans-serif; }
-      .test-value { fill: #4f4c5c; font: 400 14px Arial, sans-serif; }
-      .note { fill: #656273; font: 400 13px Arial, sans-serif; }
-    </style>
-    <text x="${margin}" y="58" class="title">Comparativa VS de modelos</text>
-    <text x="${margin}" y="88" class="subtitle">Objetivo clinico: ${escapeXml(label)} - ${candidates.length} modelos con datos reales</text>
-    <text x="${margin}" y="154" class="section">Grafica 1 - Calidad normalizada en validacion</text>
-    ${barRows}
-    <text x="${margin}" y="${mccStartY - 28}" class="section">Grafica 2 - Matthews Correlation Coefficient (MCC)</text>
-    ${mccRows}
-    <text x="${margin}" y="${heatmapY - 28}" class="section">Grafica 3 - Heatmap de metricas en validacion</text>
-    <text x="${margin}" y="${heatmapY + 27}" class="header">Modelo</text>
-    ${heatmapHeader}
-    ${heatmapRows}
-    ${testSummary}
-    <text x="${margin}" y="${height - 18}" class="note">Las metricas de validacion se comparan entre modelos; TEST corresponde solo al modelo seleccionado.</text>
-  </svg>`;
-
+async function downloadSvgAsPng(svg: string, target: string, graphId: number): Promise<void> {
   const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
   try {
     const image = new Image();
@@ -295,27 +197,22 @@ async function downloadComparisonImage(
       image.onload = () => resolve();
       image.onerror = () => reject(new Error("No se pudo preparar la imagen."));
     });
-
     const canvas = document.createElement("canvas");
     const scale = 2;
-    canvas.width = width * scale;
-    canvas.height = height * scale;
+    canvas.width = image.naturalWidth * scale;
+    canvas.height = image.naturalHeight * scale;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("El navegador no pudo crear el lienzo de descarga.");
     context.scale(scale, scale);
-    context.drawImage(image, 0, 0, width, height);
-
+    context.drawImage(image, 0, 0);
     const pngBlob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error("No se pudo convertir la comparativa a PNG."));
-      }, "image/png");
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo convertir el gráfico a PNG.")), "image/png");
     });
     const pngUrl = URL.createObjectURL(pngBlob);
     const safeTarget = target.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "");
     const link = document.createElement("a");
     link.href = pngUrl;
-    link.download = `comparativa-modelos-${safeTarget || "objetivo"}.png`;
+    link.download = `grafica-${graphId}-${safeTarget || "objetivo"}.png`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -323,6 +220,151 @@ async function downloadComparisonImage(
   } finally {
     URL.revokeObjectURL(svgUrl);
   }
+}
+
+function validationHeatmapColor(value: number, threshold: number): string {
+  const clamp = Math.max(-1, Math.min(1, value));
+  const interpolate = (start: number[], end: number[], amount: number) =>
+    `rgb(${start.map((channel, index) => Math.round(channel + (end[index] - channel) * amount)).join(",")})`;
+  if (clamp >= threshold) {
+    return interpolate([224, 244, 231], [18, 92, 50], (clamp - threshold) / (1 - threshold));
+  }
+  const failureStrength = Math.max(0, Math.min(1, 1 - Math.max(0, clamp) / threshold));
+  return interpolate([255, 239, 239], [190, 62, 62], failureStrength);
+}
+
+function informativeHeatmapColor(value: number | null, key: string): string {
+  if (value === null) return "#eef0f4";
+  const scaled = key === "mcc" || key === "kappa"
+    ? (value + 1) / 2
+    : metricPercent(value) ?? 0;
+  const intensity = Math.max(0, Math.min(1, scaled));
+  const red = Math.round(238 - intensity * 94);
+  const green = Math.round(245 - intensity * 74);
+  const blue = Math.round(241 - intensity * 113);
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function isMetricPassing(value: number | null, threshold: number): boolean {
+  return value !== null && value >= threshold;
+}
+
+function chartBase(width: number, height: number, title: string, subtitle: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <rect width="100%" height="100%" fill="#fff" />
+    <style>.title{fill:#25263a;font:700 28px Arial,sans-serif}.subtitle{fill:#626477;font:400 15px Arial,sans-serif}.label{fill:#3f4051;font:600 13px Arial,sans-serif}.header{fill:#535569;font:700 12px Arial,sans-serif}.cell{fill:#25263a;font:700 12px Arial,sans-serif}.note{fill:#626477;font:400 12px Arial,sans-serif}</style>
+    <text x="48" y="48" class="title">${escapeXml(title)}</text>
+    <text x="48" y="76" class="subtitle">${escapeXml(subtitle)}</text>`;
+}
+
+function eligibilityChartSvg(label: string, candidates: ModelCandidate[]): string {
+  const width = 1450;
+  const margin = 48;
+  const modelWidth = 240;
+  const statusWidth = 160;
+  const metricWidth = (width - margin * 2 - modelWidth - statusWidth) / SELECTION_METRICS.length;
+  const headerY = 126;
+  const rowHeight = 52;
+  const height = headerY + 45 + candidates.length * rowHeight + 75;
+  const winner = [...candidates].filter(isCandidateEligible).sort(compareCandidatesBySelection)[0];
+  const headers = SELECTION_METRICS.map((metric, index) => {
+    const x = margin + modelWidth + index * metricWidth;
+    return `<text x="${x + metricWidth / 2}" y="${headerY + 24}" text-anchor="middle" class="header">${escapeXml(metric.label)}</text>
+      <text x="${x + metricWidth / 2}" y="${headerY + 41}" text-anchor="middle" class="note">mín. ${(metric.threshold * 100).toFixed(0)}%</text>`;
+  }).join("");
+  const rows = candidates.map((candidate, rowIndex) => {
+    const y = headerY + 52 + rowIndex * rowHeight;
+    const eligible = isCandidateEligible(candidate);
+    const cells = SELECTION_METRICS.map((metric, metricIndex) => {
+      const value = rawCandidateMetric(candidate, metric.key);
+      const x = margin + modelWidth + metricIndex * metricWidth;
+      const passed = isMetricPassing(value, metric.threshold);
+      const shadeValue = metric.key === "mcc" || metric.key === "kappa" ? (value ?? -1) : (metricPercent(value) ?? 0);
+      return `<rect x="${x + 3}" y="${y + 3}" width="${metricWidth - 6}" height="${rowHeight - 6}" rx="6" fill="${validationHeatmapColor(shadeValue, metric.threshold)}" />
+        <text x="${x + metricWidth / 2}" y="${y + 24}" text-anchor="middle" class="cell">${escapeXml(metricLabel(candidate, metric.key))}</text>
+        <text x="${x + metricWidth / 2}" y="${y + 40}" text-anchor="middle" class="note">${value === null ? "sin dato" : passed ? "Cumple" : "No cumple"}</text>`;
+    }).join("");
+    const statusX = width - margin - statusWidth;
+    const modelLabel = candidate.model === winner?.model ? `${candidate.model} · GANADOR` : candidate.model;
+    return `<text x="${margin}" y="${y + 29}" class="label">${escapeXml(truncateLabel(modelLabel, 30))}</text>${cells}
+      <text x="${statusX + statusWidth / 2}" y="${y + 29}" fill="${eligible ? "#17633a" : "#a33838"}" font-family="Arial,sans-serif" font-size="12" font-weight="700">${eligible ? "ELEGIBLE" : "NO ELEGIBLE"}</text>`;
+  }).join("");
+  return `${chartBase(width, height, "Gráfica 1 · Cumplimiento de requisitos", `${label} · verde = umbral cumplido, rojo = no cumplido; se exigen los cinco.`)}
+    <text x="${margin}" y="${headerY + 24}" class="header">Modelo</text>${headers}
+    <text x="${width - margin - statusWidth + statusWidth / 2}" y="${headerY + 24}" text-anchor="middle" class="header">Elegibilidad</text>${rows}
+    <text x="${margin}" y="${height - 24}" class="note">Elegible solo cuando Accuracy ≥ 0.70, F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70.</text></svg>`;
+}
+
+function mccChartSvg(label: string, candidates: ModelCandidate[]): string {
+  const width = 1200;
+  const margin = 48;
+  const trackX = 360;
+  const trackWidth = 690;
+  const startY = 142;
+  const rowHeight = 46;
+  const height = startY + candidates.length * rowHeight + 84;
+  const zeroX = trackX + trackWidth / 2;
+  const rows = candidates.map((candidate, index) => {
+    const y = startY + index * rowHeight;
+    const mcc = rawCandidateMetric(candidate, "mcc");
+    const value = Math.max(-1, Math.min(1, mcc ?? 0));
+    const barWidth = Math.abs(value) * trackWidth / 2;
+    const barX = value >= 0 ? zeroX : zeroX - barWidth;
+    return `<text x="${margin}" y="${y + 20}" class="label">${escapeXml(truncateLabel(candidate.model, 34))}</text>
+      <rect x="${trackX}" y="${y}" width="${trackWidth}" height="16" rx="8" fill="#f1f2f6" />
+      <rect x="${barX}" y="${y}" width="${barWidth}" height="16" rx="8" fill="${(mcc ?? -1) >= ELIGIBILITY_THRESHOLDS.mcc ? "#328452" : "#d17a7a"}" />
+      <text x="${trackX + trackWidth + 18}" y="${y + 13}" class="cell">${mcc === null ? "—" : mcc.toFixed(3)}</text>`;
+  }).join("");
+  return `${chartBase(width, height, "Gráfica 2 · MCC por modelo", `${label} · Validación · MCC real de −1 a 1 · umbral de elegibilidad: 0.40`)}
+    <line x1="${zeroX}" y1="${startY - 12}" x2="${zeroX}" y2="${height - 56}" stroke="#747688" stroke-width="2" />
+    <text x="${trackX}" y="${startY - 16}" class="note">−1</text><text x="${zeroX}" y="${startY - 16}" text-anchor="middle" class="note">0</text><text x="${trackX + trackWidth}" y="${startY - 16}" text-anchor="end" class="note">1</text>${rows}</svg>`;
+}
+
+function fullMetricsHeatmapSvg(label: string, candidates: ModelCandidate[]): string {
+  const width = 1550;
+  const margin = 38;
+  const modelWidth = 190;
+  const metricWidth = (width - margin * 2 - modelWidth) / COMPARISON_METRICS.length;
+  const startY = 136;
+  const rowHeight = 46;
+  const height = startY + candidates.length * rowHeight + 74;
+  const header = COMPARISON_METRICS.map((metric, index) => {
+    const x = margin + modelWidth + index * metricWidth;
+    return `<text x="${x + metricWidth / 2}" y="${startY - 22}" text-anchor="middle" class="header">${escapeXml(metric.label)}</text>`;
+  }).join("");
+  const rows = candidates.map((candidate, rowIndex) => {
+    const y = startY + rowIndex * rowHeight;
+    const cells = COMPARISON_METRICS.map((metric, metricIndex) => {
+      const value = rawCandidateMetric(candidate, metric.key);
+      const scaled = metric.key === "mcc" || metric.key === "kappa"
+        ? (value === null ? 0 : (value + 1) / 2)
+        : metricPercent(value) ?? 0;
+      const clamped = Math.max(0, Math.min(1, scaled));
+      const red = Math.round(239 - clamped * 100);
+      const green = Math.round(245 - clamped * 70);
+      const blue = Math.round(241 - clamped * 120);
+      const x = margin + modelWidth + metricIndex * metricWidth;
+      return `<rect x="${x + 2}" y="${y + 2}" width="${metricWidth - 4}" height="${rowHeight - 4}" rx="5" fill="rgb(${red},${green},${blue})" />
+        <text x="${x + metricWidth / 2}" y="${y + 28}" text-anchor="middle" class="cell">${escapeXml(metricLabel(candidate, metric.key))}</text>`;
+    }).join("");
+    return `<text x="${margin}" y="${y + 28}" class="label">${escapeXml(truncateLabel(candidate.model, 26))}</text>${cells}`;
+  }).join("");
+  return `${chartBase(width, height, "Gráfica 3 · Heatmap de métricas", `${label} · VALIDATION · Incluye métricas dentro y fuera de los requisitos de selección.`)}${header}${rows}
+    <text x="${margin}" y="${height - 24}" class="note">MCC/Kappa: color normalizado solo para comparación visual; los valores mostrados son los originales.</text></svg>`;
+}
+
+async function downloadComparisonImage(
+  target: string,
+  label: string,
+  graphId: number,
+  candidates: ModelCandidate[],
+): Promise<void> {
+  const svg = graphId === 1
+    ? eligibilityChartSvg(label, candidates)
+    : graphId === 2
+      ? mccChartSvg(label, candidates)
+      : fullMetricsHeatmapSvg(label, candidates);
+  await downloadSvgAsPng(svg, target, graphId);
 }
 
 export default function AdminTraining() {
@@ -338,6 +380,7 @@ export default function AdminTraining() {
   const [runId, setRunId] = useState<string | null>(null);
   const [job, setJob] = useState<TrainingJob | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [downloadingTarget, setDownloadingTarget] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -348,7 +391,7 @@ export default function AdminTraining() {
     return user.getIdToken();
   }, []);
 
-  const loadStatus = useCallback(async () => {
+  const loadStatus = useCallback(async (syncLatestJob = true) => {
     const token = await getToken();
     const response = await fetch("/api/admin/ml", {
       headers: { Authorization: `Bearer ${token}` },
@@ -357,10 +400,10 @@ export default function AdminTraining() {
     const payload = await response.json() as TrainingStatusResponse & { error?: string };
     if (!response.ok) throw new Error(payload.error || "No se pudo cargar el estado ML.");
     setStatus(payload);
-    if (payload.latestRun && !runId) {
+    if (syncLatestJob && payload.latestRun) {
       setJob(payload.latestRun);
     }
-  }, [getToken, runId]);
+  }, [getToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,7 +444,7 @@ export default function AdminTraining() {
 
         if (payload.job.status === "succeeded" || payload.job.status === "failed") {
           setRunId(null);
-          await loadStatus();
+          await loadStatus(false);
         }
       } catch (cause: unknown) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : "Falló la consulta del entrenamiento.");
@@ -458,22 +501,32 @@ export default function AdminTraining() {
     }
   }
 
+  async function refreshTrainingData() {
+    try {
+      setRefreshing(true);
+      setError("");
+      await loadStatus(false);
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : "No se pudieron actualizar los resultados.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function handleDownloadComparison(
     target: string,
-    report: ModelReport,
+    graphId: number,
     candidates: ModelCandidate[],
   ) {
     if (downloadingTarget) return;
     try {
-      setDownloadingTarget(target);
+      setDownloadingTarget(`${target}:${graphId}`);
       setError("");
-      const testCandidate = runTestCandidate(report, candidates);
       await downloadComparisonImage(
         target,
         targetLabel(target),
+        graphId,
         candidates,
-        testCandidate?.model,
-        testCandidate?.testMetrics,
       );
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : "No se pudo descargar la comparativa.");
@@ -508,6 +561,14 @@ export default function AdminTraining() {
           disabled={starting || running || !selectedAlgorithms.length || !selectedTargets.length}
         >
           {running || starting ? "Entrenando..." : "Iniciar entrenamiento"}
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => void refreshTrainingData()}
+          disabled={refreshing || running || loading}
+        >
+          {refreshing ? "Actualizando..." : "Actualizar resultados"}
         </button>
       </div>
 
@@ -628,8 +689,14 @@ export default function AdminTraining() {
                     Esta corrida probÃ³ {report.runSelectedModel}; se mantuvo el modelo vigente {report.selectedModel}.
                   </small>
                 )}
-                <em className={report.thresholdMet ? "is-good" : "is-warning"}>
-                  {report.thresholdMet ? "Umbrales cumplidos" : "Requiere revisión"}
+                {report.publicationReason?.startsWith("no_eligible_candidate") && (
+                  <small className="admin-training-result-note">
+                    Ningún modelo cumplió los cinco requisitos en esta corrida; no se eligió un ganador nuevo.
+                    {report.selectedModel ? ` Se conserva el modelo publicado elegible: ${report.selectedModel}.` : " No hay modelo publicado para este objetivo."}
+                  </small>
+                )}
+                <em className={isPublishedModelEligible(report) ? "is-good" : "is-warning"}>
+                  {isPublishedModelEligible(report) ? "Modelo publicado elegible" : "Sin modelo publicado elegible"}
                 </em>
               </article>
             ))}
@@ -645,27 +712,26 @@ export default function AdminTraining() {
             <span className="admin-eyebrow">COMPARATIVA VS</span>
             <h3 id="admin-training-comparisons-title">Rendimiento de todos los modelos por objetivo</h3>
             <p className="admin-training-comparison-note">
-              Las barras y el heatmap son VALIDATION. El bloque TEST corresponde al modelo evaluado en esta corrida; el resultado vigente puede pertenecer a una corrida anterior.
+              Solo se comparan targets con al menos un modelo elegible. Para ser elegible debe cumplir simultáneamente Accuracy ≥ 0.70, F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70.
             </p>
             <p className="admin-training-comparison-note">
-              MCC y Kappa se muestran normalizados a 0-100% con la formula (valor + 1) / 2.
+              Entre modelos elegibles se prioriza F1-Score y luego ROC-AUC, MCC, Kappa y Accuracy. La calidad normalizada es solo informativa; su gráfico histórico está en Imágenes de diagnóstico.
             </p>
             <p className="admin-training-comparison-note">
-              El orden del ranking usa el mismo criterio del entrenamiento: umbrales, validationScore, menor variabilidad CV y mayor media CV.
-            </p>
-            <p>
-              Las barras y el heatmap usan las métricas reales de validación de cada algoritmo.
-              El TEST final se muestra únicamente para el modelo seleccionado.
+              Cada comparativa incluye todos los algoritmos que reportaron métricas, hayan ganado o no; los elegibles aparecen primero y el mejor elegible se marca como ganador.
             </p>
           </div>
         </div>
 
-        {reports.some(([, report]) => report.algorithmsTested?.length) ? (
+        {reports.some(([, report]) => report.algorithmsTested?.some(isCandidateEligible)) ? (
           <div className="admin-training-comparison-grid">
             {reports.map(([target, sourceReport]) => {
               const candidates = [...(sourceReport.algorithmsTested || [])]
                 .filter((candidate) => candidate.available !== false)
-                .sort(compareCandidatesBySelection);
+                .sort((left, right) => Number(isCandidateEligible(right)) - Number(isCandidateEligible(left)) || compareCandidatesBySelection(left, right));
+              const eligibleCandidates = candidates.filter(isCandidateEligible);
+              if (!eligibleCandidates.length) return null;
+              const winner = eligibleCandidates[0];
               const testCandidate = runTestCandidate(sourceReport, candidates);
               const selectedTest = testCandidate?.testMetrics;
               const report: ModelReport = {
@@ -673,8 +739,6 @@ export default function AdminTraining() {
                 selectedModel: testCandidate?.model || sourceReport.selectedModel,
                 testMetrics: testCandidate?.testMetrics || sourceReport.testMetrics,
               };
-
-              if (!candidates.length) return null;
 
               return (
                 <article className="admin-training-comparison" key={`comparison-${target}`}>
@@ -685,62 +749,65 @@ export default function AdminTraining() {
                     </div>
                     <div className="admin-training-comparison-actions">
                       <span className="admin-training-comparison-count">
-                        {candidates.length} modelos
+                        {candidates.length} modelos evaluados · {eligibleCandidates.length} elegibles
                       </span>
                       <span className="admin-training-best-model">
-                        Mejor: {candidates[0]?.model || "Sin datos"}
+                        Ganador elegible: {winner.model}
                       </span>
-                      <button
-                        type="button"
-                        className="btn btn-secondary admin-training-download"
-                        onClick={() => void handleDownloadComparison(target, report, candidates)}
-                        disabled={downloadingTarget !== null}
-                      >
-                        {downloadingTarget === target ? "Generando..." : "Descargar PNG"}
-                      </button>
                     </div>
                   </header>
 
                   <div className="admin-training-chart-block">
                     <div className="admin-training-chart-title">
-                      <strong>Gráfica 1 · Calidad normalizada VS</strong>
-                      <span>Validación · porcentaje</span>
+                      <div><strong>Gráfica 1 · Heatmap de elegibilidad</strong><span>Validación · cada celda compara la métrica con su umbral obligatorio</span></div>
+                      <button type="button" className="btn btn-secondary admin-training-download" onClick={() => void handleDownloadComparison(target, 1, candidates)} disabled={downloadingTarget !== null}>
+                        {downloadingTarget === `${target}:1` ? "Generando..." : "Descargar gráfica 1"}
+                      </button>
                     </div>
-                    <div className="admin-training-bar-chart" role="img" aria-label={`Comparativa de calidad normalizada para ${targetLabel(target)}`}>
-                      {candidates.map((candidate) => {
-                        const quality = candidateQuality(candidate);
-                        return (
-                          <div className="admin-training-bar-row" key={`${target}-${candidate.model}`}>
-                            <span className="admin-training-bar-label">{candidate.model}</span>
-                            <div className="admin-training-bar-track">
-                              <span style={{ width: `${quality * 100}%` }} />
-                            </div>
-                            <strong>{(quality * 100).toFixed(1)}%</strong>
-                          </div>
-                        );
-                      })}
+                    <div className="admin-training-policy-heatmap" role="table" aria-label={`Cumplimiento de umbrales por modelo para ${targetLabel(target)}`}>
+                      <div className="admin-training-policy-row admin-training-policy-header" role="row">
+                        <span role="columnheader">Modelo</span>
+                        {SELECTION_METRICS.map((item) => <span role="columnheader" key={item.key}>{item.label}<small>≥ {item.threshold.toFixed(2)}</small></span>)}
+                        <span role="columnheader">Elegibilidad</span>
+                      </div>
+                      {candidates.map((candidate) => (
+                        <div className="admin-training-policy-row" role="row" key={`${target}-eligibility-${candidate.model}`}>
+                          <strong role="rowheader">{candidate.model}{candidate.model === winner.model ? " · GANADOR" : ""}</strong>
+                          {SELECTION_METRICS.map((item) => {
+                            const value = rawCandidateMetric(candidate, item.key);
+                            const passed = isMetricPassing(value, item.threshold);
+                            const shadeValue = item.key === "mcc" || item.key === "kappa" ? (value ?? -1) : (metricPercent(value) ?? 0);
+                            return <span role="cell" className={passed ? "is-passing" : "is-failing"} key={`${candidate.model}-${item.key}`} style={{ background: validationHeatmapColor(shadeValue, item.threshold) }} title={`${item.label}: ${metricLabel(candidate, item.key)} · umbral ${item.threshold.toFixed(2)} · ${passed ? "cumple" : "no cumple"}`}>{metricLabel(candidate, item.key)}<small>{value === null ? "Sin dato" : passed ? "Cumple" : "No cumple"}</small></span>;
+                          })}
+                          <span role="cell" className={isCandidateEligible(candidate) ? "admin-training-eligible" : "admin-training-ineligible"}>{isCandidateEligible(candidate) ? "ELEGIBLE" : "NO ELEGIBLE"}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   <div className="admin-training-chart-block">
                     <div className="admin-training-chart-title">
                       <strong>Gráfica 2 · Matthews Correlation Coefficient (MCC)</strong>
-                      <span>Validación · 0–100% normalizado</span>
+                      <div><span>Validación · MCC real (−1 a 1) · umbral 0.40</span><button type="button" className="btn btn-secondary admin-training-download" onClick={() => void handleDownloadComparison(target, 2, candidates)} disabled={downloadingTarget !== null}>{downloadingTarget === `${target}:2` ? "Generando..." : "Descargar gráfica 2"}</button></div>
                     </div>
                     <div
-                      className="admin-training-bar-chart admin-training-mcc-chart"
-                      role="img"
+                      className="admin-training-mcc-comparison"
+                      role="list"
                       aria-label={`Comparativa MCC de los modelos para ${targetLabel(target)}`}
                     >
                       {candidates.map((candidate) => {
-                        const mcc = candidateMetric(candidate, "mcc");
+                        const mcc = rawCandidateMetric(candidate, "mcc");
+                        const clampedMcc = Math.max(-1, Math.min(1, mcc ?? 0));
+                        const barWidth = Math.abs(clampedMcc) * 50;
+                        const barLeft = clampedMcc >= 0 ? 50 : 50 - barWidth;
                         return (
-                          <div className="admin-training-bar-row" key={`${target}-mcc-${candidate.model}`}>
+                          <div className="admin-training-mcc-row" role="listitem" key={`${target}-mcc-${candidate.model}`}>
                             <span className="admin-training-bar-label">{candidate.model}</span>
-                            <div className="admin-training-bar-track admin-training-mcc-bar-track">
-                              <span style={{ width: `${mcc * 100}%` }} />
+                            <div className="admin-training-mcc-track">
+                              <span className="admin-training-mcc-zero" />
+                              <span className={`admin-training-mcc-bar ${isMetricPassing(mcc, ELIGIBILITY_THRESHOLDS.mcc) ? "is-passing" : "is-failing"}`} style={{ left: `${barLeft}%`, width: `${barWidth}%` }} />
                             </div>
-                            <strong>{(mcc * 100).toFixed(1)}%</strong>
+                            <strong>{mcc === null ? "—" : mcc.toFixed(3)}</strong>
                           </div>
                         );
                       })}
@@ -749,27 +816,27 @@ export default function AdminTraining() {
 
                   <div className="admin-training-chart-block">
                     <div className="admin-training-chart-title">
-                      <strong>Gráfica 3 · Heatmap de métricas</strong>
-                      <span>Validación · escala 0–100%</span>
+                      <strong>Gráfica 3 · Heatmap de todas las métricas</strong>
+                      <div><span>Incluye métricas fuera del ámbito de selección</span><button type="button" className="btn btn-secondary admin-training-download" onClick={() => void handleDownloadComparison(target, 3, candidates)} disabled={downloadingTarget !== null}>{downloadingTarget === `${target}:3` ? "Generando..." : "Descargar gráfica 3"}</button></div>
                     </div>
-                    <div className="admin-training-heatmap" role="table" aria-label={`Heatmap de métricas para ${targetLabel(target)}`}>
-                      <div className="admin-training-heatmap-row admin-training-heatmap-head" role="row">
+                    <div className="admin-training-full-heatmap" role="table" aria-label={`Heatmap de todas las métricas para ${targetLabel(target)}`}>
+                      <div className="admin-training-full-heatmap-row admin-training-full-heatmap-head" role="row">
                         <span role="columnheader">Modelo</span>
                         {COMPARISON_METRICS.map((item) => <span role="columnheader" key={item.key}>{item.label}</span>)}
                       </div>
                       {candidates.map((candidate) => (
-                        <div className="admin-training-heatmap-row" role="row" key={`heatmap-${target}-${candidate.model}`}>
+                        <div className="admin-training-full-heatmap-row" role="row" key={`heatmap-${target}-${candidate.model}`}>
                           <strong role="rowheader">{candidate.model}</strong>
                           {COMPARISON_METRICS.map((item) => {
-                            const value = candidateMetric(candidate, item.key);
+                            const value = rawCandidateMetric(candidate, item.key);
                             return (
                               <span
                                 role="cell"
                                 key={`${candidate.model}-${item.key}`}
-                                title={`${candidate.model} · ${item.label}: ${(value * 100).toFixed(1)}%`}
-                                style={{ background: `linear-gradient(90deg, rgba(120, 184, 154, ${0.18 + value * 0.72}), rgba(120, 169, 200, ${0.12 + value * 0.45}))` }}
+                                title={`${candidate.model} · ${item.label}: ${metricLabel(candidate, item.key)}`}
+                                style={{ background: informativeHeatmapColor(value, item.key) }}
                               >
-                                {(value * 100).toFixed(1)}%
+                                {metricLabel(candidate, item.key)}
                               </span>
                             );
                           })}
@@ -796,7 +863,7 @@ export default function AdminTraining() {
             })}
           </div>
         ) : (
-          <p className="panel-subtitle">El manifiesto actual no contiene el detalle comparativo de los modelos.</p>
+            <p className="panel-subtitle">No hay objetivos con modelos elegibles en la corrida actual. Se requieren los cinco umbrales; ningún modelo por debajo de ellos se selecciona ni se publica. La calidad normalizada histórica se conserva en Imágenes de diagnóstico.</p>
         )}
       </section>
 
@@ -819,7 +886,7 @@ export default function AdminTraining() {
         <div className="panel-header">
           <div>
             <h3 className="panel-title">Imágenes de diagnóstico</h3>
-            <p className="panel-subtitle">Matrices de confusión, ROC, importancia de variables y comparativas.</p>
+            <p className="panel-subtitle">Matrices de confusión, ROC, importancia de variables y calidad normalizada informativa (sin participación en selección).</p>
           </div>
           <span className="admin-patients-count">{status?.images.length ?? 0} archivos</span>
         </div>

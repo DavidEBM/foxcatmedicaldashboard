@@ -1711,10 +1711,11 @@ export default function DoctorDashboard() {
                 <div>
                   <strong>Aviso de investigación y privacidad</strong>
                   <p>
+                    El dato principal que queremos validar es la prediccion del nivel GOLD de los pacientes asi como su riesgo.
                     Todos los pacientes expuestos en este sistema son de datasets públicos anonimizados
                     (sin identificación por protección a su privacidad), es por eso que algunos pacientes
                     pueden tener datos clínicos faltantes. Favor tener en cuenta esto a la hora de hacer
-                    la validación y gracias por ayudar en esta investigación.
+                    la validación y muchas gracias por ayudar en esta investigación.
                   </p>
                 </div>
               </aside>

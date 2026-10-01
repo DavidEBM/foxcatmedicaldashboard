@@ -1,5 +1,8 @@
 "use client";
 
+// ──────────────────────────────────────────────────────
+// Admin Area – access point for authenticated administrators
+// ──────────────────────────────────────────────────────
 import {
   useEffect,
   useState,

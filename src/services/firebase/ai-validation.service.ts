@@ -14,6 +14,7 @@ import { db } from "@/services/firebase/config";
 
 import {
   AI_VALIDATIONS_COLLECTION,
+  EXPECTED_VALIDATION_KEYS,
   EXPECTED_PREDICTIONS_PER_PATIENT,
 } from "@/lib/doctor/ai-validation/constants";
 
@@ -22,6 +23,7 @@ import type {
   AdminPredictionValidationSummary,
   AdminValidationAnalytics,
   AdminValidationPredictionReview,
+  AdminValidationRecord,
 } from "@/types/admin-validation";
 import type {
   AiPatientValidationStatus,
@@ -64,9 +66,9 @@ function timestampMillis(value: unknown): number {
 }
 
 /**
- * Unifica las claves de backend y las claves de las estimaciones locales.
- * Por ejemplo, copd_gold y paciente-respiratory-risk representan el mismo
- * modelo en distintas rutas de la interfaz.
+ * Unifica las claves de las estimaciones de riesgo local y backend.
+ * Las clasificaciones categóricas, como copd_gold, conservan su propia clave
+ * para que su validación no se confunda con una predicción de riesgo.
  */
 export function canonicalizePredictionKey(
   predictionKey: unknown,
@@ -75,7 +77,7 @@ export function canonicalizePredictionKey(
     .trim()
     .toLowerCase();
 
-  if (key === "copd_gold" || key.endsWith("-respiratory-risk")) {
+  if (key.endsWith("-respiratory-risk")) {
     return "respiratory-risk";
   }
 
@@ -142,10 +144,7 @@ function getSummary(
   patientId: string,
   validations: Map<string, LatestValidation>,
 ): AiPatientValidationSummary {
-  const validatedCount = Math.min(
-    validations.size,
-    EXPECTED_PREDICTIONS_PER_PATIENT,
-  );
+  const validatedCount = EXPECTED_VALIDATION_KEYS.filter((key) => validations.has(key)).length;
   const totalPredictions = EXPECTED_PREDICTIONS_PER_PATIENT;
   const pendingCount = Math.max(totalPredictions - validatedCount, 0);
   const latest = Array.from(validations.values()).sort(
@@ -164,6 +163,7 @@ function getSummary(
     totalPredictions,
     pendingCount,
     status,
+    goldVerdict: validations.get("copd_gold")?.verdict ?? null,
     latestUpdatedAt: latest?.updatedAt,
   };
 }
@@ -213,6 +213,33 @@ export function subscribeToAdminValidationAnalytics(
       const latestByPatient = getLatestValidations(snapshot.docs);
       const patientSummaries: Record<string, AdminPatientValidationSummary> = {};
       const predictionSummaries: Record<string, AdminPredictionValidationSummary> = {};
+      const latestByReview = new Map<string, AdminValidationRecord>();
+
+      snapshot.docs.forEach((document) => {
+        const data = document.data();
+        const patientId = String(data.patientId ?? "").trim();
+        const doctorUid = String(data.doctorUid ?? data.assignedBy ?? "").trim();
+        const predictionKey = canonicalizePredictionKey(data.predictionKey);
+        if (!patientId || !doctorUid || !predictionKey) return;
+
+        const target = String(data.predictionValues?.target ?? data.target ?? predictionKey).trim();
+        const updatedAt = data.createdAt ?? data.assignedAt;
+        const updatedAtMillis = timestampMillis(updatedAt);
+        const record: AdminValidationRecord = {
+          patientId,
+          doctorUid,
+          predictionKey,
+          target,
+          verdict: data.status === "validado" ? "valid" : "incorrect",
+          updatedAt,
+          updatedAtMillis,
+        };
+        const recordKey = `${patientId}::${doctorUid}::${predictionKey}`;
+        const previous = latestByReview.get(recordKey);
+        if (!previous || record.updatedAtMillis >= previous.updatedAtMillis) {
+          latestByReview.set(recordKey, record);
+        }
+      });
 
       latestByPatient.forEach((validations, patientId) => {
         const reviews: Record<string, AdminValidationPredictionReview> = {};
@@ -228,10 +255,12 @@ export function subscribeToAdminValidationAnalytics(
             updatedAt: validation.updatedAt,
           };
 
-          if (validation.verdict === "valid") {
-            validCount += 1;
-          } else {
-            incorrectCount += 1;
+          if ((EXPECTED_VALIDATION_KEYS as readonly string[]).includes(predictionKey)) {
+            if (validation.verdict === "valid") {
+              validCount += 1;
+            } else {
+              incorrectCount += 1;
+            }
           }
 
           const current = predictionSummaries[predictionKey] ?? {
@@ -253,10 +282,7 @@ export function subscribeToAdminValidationAnalytics(
           predictionSummaries[predictionKey] = current;
         });
 
-        const reviewedCount = Math.min(
-          validations.size,
-          EXPECTED_PREDICTIONS_PER_PATIENT,
-        );
+        const reviewedCount = EXPECTED_VALIDATION_KEYS.filter((key) => validations.has(key)).length;
         const totalPredictions = EXPECTED_PREDICTIONS_PER_PATIENT;
         const pendingCount = Math.max(totalPredictions - reviewedCount, 0);
         const latest = Array.from(validations.values()).sort(
@@ -277,12 +303,13 @@ export function subscribeToAdminValidationAnalytics(
               : reviewedCount >= totalPredictions
                 ? "validated"
                 : "partial",
+          goldVerdict: validations.get("copd_gold")?.verdict ?? null,
           predictions: reviews,
           latestUpdatedAt: latest?.updatedAt,
         };
       });
 
-      options.onData({ patientSummaries, predictionSummaries });
+      options.onData({ patientSummaries, predictionSummaries, records: Array.from(latestByReview.values()) });
     },
     (error) => options.onError?.(error),
   );
@@ -394,6 +421,9 @@ export async function saveAiPredictionValidation(
 
   const predictionValues = {
     risk: normalizeRisk(input.prediction.risk),
+    ...(input.prediction.predictedValue !== undefined ? { predictedValue: input.prediction.predictedValue } : {}),
+    ...(input.prediction.clinicalValue !== undefined ? { clinicalValue: input.prediction.clinicalValue } : {}),
+    ...(input.prediction.confidence !== undefined ? { confidence: normalizeRisk(input.prediction.confidence) } : {}),
     horizonHours: normalizeHours(input.prediction.horizonHours),
     timeline: predictionTimeline,
     source: input.prediction.source,

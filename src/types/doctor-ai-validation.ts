@@ -14,6 +14,7 @@ export interface AiPatientValidationSummary {
   totalPredictions: number;
   pendingCount: number;
   status: AiPatientValidationStatus;
+  goldVerdict: AiValidationVerdict | null;
   latestUpdatedAt?: unknown;
 }
 
@@ -32,6 +33,12 @@ export interface AiPrediction {
   key: string;
   label: string;
   risk: number;
+  /** Categorical model output, e.g. the predicted COPD GOLD class. */
+  predictedValue?: string;
+  /** Clinician-entered value captured when this prediction was requested. */
+  clinicalValue?: string;
+  /** Probability assigned to the predicted class, when available. */
+  confidence?: number;
   horizonHours: number;
   timeline: PredictionTimelinePoint[];
   source: PredictionSource;
@@ -50,6 +57,9 @@ export interface AiPredictionValidation {
   predictionName: string;
   predictionValues: {
     risk: number;
+    predictedValue?: string;
+    clinicalValue?: string;
+    confidence?: number;
     horizonHours: number;
     timeline: PredictionTimelinePoint[];
     source: PredictionSource;

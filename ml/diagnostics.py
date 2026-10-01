@@ -11,6 +11,7 @@ matplotlib.use("Agg", force=True)
 
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
@@ -25,7 +26,9 @@ from sklearn.metrics import (
     roc_curve,
 )
 
+from .config import DEFAULT_THRESHOLDS
 from .model_common import evaluate as evaluate_pipeline
+from .model_common import qualifies, selection_key
 
 
 # ============================================================
@@ -1115,12 +1118,15 @@ def _clear_generated_diagnostic_images(base: Path) -> None:
         "metricas_barras.png",
         "metricas_heatmap.png",
         "metricas_normalizadas.png",
+        "calidad_normalizada_validacion.png",
         "metricas_ic95.png",
         "mcc_real_comparativa.png",
         "metricas_sesgo_*.png",
         "distribucion_clases_test.png",
         "boxplot_tiempos_prediccion.png",
         "learning_curve_*.png",
+        "validacion_modelos_elegibilidad.png",
+        "validacion_modelos_mcc.png",
     )
 
     for pattern in patterns:
@@ -1822,12 +1828,162 @@ def _safe_model_filename(value: Any) -> str:
 def _candidate_passes_threshold(candidate: Mapping[str, Any]) -> bool:
     if candidate.get("available") is False:
         return False
-    return bool(
-        candidate.get(
-            "thresholdMet",
-            candidate.get("validationThresholdMet", False),
-        )
+    metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
+    return isinstance(metrics, Mapping) and qualifies(metrics, DEFAULT_THRESHOLDS)
+
+
+def _export_validation_quality_history(
+    candidates: Sequence[Mapping[str, Any]],
+    base: Path,
+    target_label: str,
+) -> None:
+    """Export normalized quality as historical/informational data only."""
+    records: list[tuple[str, float]] = []
+    for candidate in candidates:
+        metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
+        raw_value = metrics.get("normalizedQuality") if isinstance(metrics, Mapping) else None
+        if raw_value is None:
+            raw_value = candidate.get("normalizedQuality")
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not np.isfinite(value):
+            continue
+        if value > 1.0:
+            value /= 100.0
+        records.append((str(candidate.get("model") or "Modelo"), float(np.clip(value, 0, 1))))
+
+    if not records:
+        return
+
+    records.sort(key=lambda record: record[1], reverse=True)
+    names = [record[0] for record in records]
+    values = [record[1] for record in records]
+    fig, ax = plt.subplots(figsize=(11, max(4, len(records) * 0.45)))
+    bars = ax.barh(names, values, color="#7d6ab2", alpha=0.82)
+    ax.invert_yaxis()
+    ax.set_xlim(0, 1.05)
+    ax.set_xlabel("Calidad normalizada (0–1)")
+    ax.set_title(f"Calidad normalizada VALIDATION · {target_label}\nIndicador informativo; no participa en elegibilidad ni selección")
+    ax.grid(axis="x", alpha=0.2)
+    for bar, value in zip(bars, values):
+        ax.text(value + 0.015, bar.get_y() + bar.get_height() / 2, f"{value:.1%}", va="center", fontsize=9)
+    _save_figure(fig, base / "calidad_normalizada_validacion.png", dpi=190)
+
+
+def _eligibility_heatmap_color(value: float, threshold: float) -> tuple[float, float, float]:
+    """Pastel red for a missed gate, shaded green for a passed gate."""
+    if not np.isfinite(value):
+        return (0.92, 0.93, 0.95)
+    if value >= threshold:
+        strength = float(np.clip((value - threshold) / max(1.0 - threshold, 1e-9), 0, 1))
+        start = np.array([0.88, 0.96, 0.90])
+        end = np.array([0.08, 0.36, 0.20])
+    else:
+        strength = float(np.clip(1 - max(0.0, value) / max(threshold, 1e-9), 0, 1))
+        start = np.array([1.0, 0.92, 0.92])
+        end = np.array([0.68, 0.20, 0.23])
+    return tuple(start + (end - start) * strength)
+
+
+def _export_validation_model_comparisons(
+    candidates: Sequence[Mapping[str, Any]],
+    base: Path,
+    target_label: str,
+) -> None:
+    """Compare every trained candidate using VALIDATION metrics only."""
+    requirements = (
+        ("accuracy", "Accuracy", DEFAULT_THRESHOLDS["accuracy"]),
+        ("f1", "F1-Score", DEFAULT_THRESHOLDS["f1"]),
+        ("mcc", "MCC", DEFAULT_THRESHOLDS["mcc"]),
+        ("kappa", "Kappa", DEFAULT_THRESHOLDS["kappa"]),
+        ("auc", "ROC-AUC", DEFAULT_THRESHOLDS["auc"]),
     )
+    available = [candidate for candidate in candidates if candidate.get("available") is not False]
+    if not available:
+        return
+
+    model_names = [str(candidate.get("model") or "Modelo") for candidate in available]
+    matrix = np.full((len(available), len(requirements)), np.nan, dtype=float)
+    eligible_names = {
+        str(candidate.get("model"))
+        for candidate in available
+        if _candidate_passes_threshold(candidate)
+    }
+    eligible_candidates = [candidate for candidate in available if _candidate_passes_threshold(candidate)]
+    winner = max(
+        eligible_candidates,
+        key=lambda candidate: selection_key(candidate.get("validationMetrics") or candidate.get("validation") or {}),
+        default=None,
+    )
+    winner_name = str(winner.get("model")) if winner else None
+    for row_index, candidate in enumerate(available):
+        validation_metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
+        for column_index, (metric_key, _label, _threshold) in enumerate(requirements):
+            try:
+                value = float(validation_metrics.get(metric_key))
+            except (AttributeError, TypeError, ValueError, OverflowError):
+                continue
+            if np.isfinite(value):
+                matrix[row_index, column_index] = value
+
+    # Heatmap of all five mandatory gates. Non-eligible models remain visible
+    # alongside the winning candidate, with each metric's own threshold.
+    fig, ax = plt.subplots(figsize=(12, max(4.8, len(available) * 0.52)))
+    for row_index in range(matrix.shape[0]):
+        for column_index, (_key, _label, threshold) in enumerate(requirements):
+            value = matrix[row_index, column_index]
+            color = _eligibility_heatmap_color(value, threshold)
+            ax.add_patch(Rectangle((column_index, row_index), 1, 1, color=color, ec="white", lw=2))
+            shown = "—" if not np.isfinite(value) else (f"{value:.3f}" if column_index in (2, 3) else f"{value:.1%}")
+            ax.text(column_index + 0.5, row_index + 0.5, shown, ha="center", va="center", fontsize=9, fontweight="bold")
+
+    labels = [
+        f"{name} · GANADOR" if name == winner_name
+        else f"{name} · ELEGIBLE" if name in eligible_names
+        else name
+        for name in model_names
+    ]
+    ax.set_yticks(np.arange(len(available)) + 0.5, labels=labels)
+    ax.set_xticks(
+        np.arange(len(requirements)) + 0.5,
+        labels=[f"{label}\n≥ {threshold:.2f}" for _key, label, threshold in requirements],
+    )
+    ax.set_xlim(0, len(requirements))
+    ax.set_ylim(len(available), 0)
+    ax.tick_params(axis="both", length=0, labelsize=9)
+    ax.set_title(f"Comparativa de elegibilidad · {target_label}\nTodos los modelos entrenados · métricas de VALIDATION", pad=18, fontweight="bold")
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    fig.tight_layout()
+    _save_figure(fig, base / "validacion_modelos_elegibilidad.png", dpi=190)
+
+    # Raw signed MCC comparison across all candidates, with the required gate.
+    mcc_values = matrix[:, 2]
+    order = np.argsort(np.nan_to_num(mcc_values, nan=-2.0))
+    ordered_values = mcc_values[order]
+    ordered_names = [model_names[index] for index in order]
+    colors = ["#328452" if np.isfinite(value) and value >= DEFAULT_THRESHOLDS["mcc"] else "#d17a7a" for value in ordered_values]
+    fig, ax = plt.subplots(figsize=(11, max(4.5, len(available) * 0.45)))
+    bars = ax.barh(ordered_names, np.nan_to_num(ordered_values, nan=0), color=colors)
+    ax.axvline(DEFAULT_THRESHOLDS["mcc"], color="#34313d", linestyle="--", linewidth=1.6, label="Umbral 0.40")
+    ax.axvline(0, color="#777", linewidth=.8)
+    ax.set_xlim(-1.05, 1.05)
+    ax.set_xlabel("MCC real (−1 a 1)")
+    ax.set_title(f"MCC de todos los modelos · {target_label}\nComparativa de VALIDATION; incluye modelos no ganadores", fontweight="bold")
+    ax.grid(axis="x", alpha=.2)
+    ax.legend(loc="lower right")
+    for bar, value in zip(bars, ordered_values):
+        text = "Sin dato" if not np.isfinite(value) else f"{value:.3f}"
+        if not np.isfinite(value):
+            text_x, alignment = 0.02, "left"
+        elif value >= 0:
+            text_x, alignment = value + 0.025, "left"
+        else:
+            text_x, alignment = value - 0.025, "right"
+        ax.text(text_x, bar.get_y() + bar.get_height() / 2, text, va="center", ha=alignment, fontsize=8, fontweight="bold")
+    _save_figure(fig, base / "validacion_modelos_mcc.png", dpi=190)
 
 
 def _build_majority_bias_resamples(
@@ -2887,9 +3043,9 @@ def export_target_diagnostics(
     TEST se utiliza exclusivamente para la evaluación final del modelo
     seleccionado y para generar sus reportes diagnósticos.
 
-    `candidates` se conserva en la firma para compatibilidad con el
-    publicador, aunque los diagnósticos TEST se generan únicamente a
-    partir de `test_payloads`.
+    `candidates` alimenta el gráfico histórico de calidad normalizada y la
+    lista de modelos elegibles; los demás diagnósticos TEST se generan
+    únicamente a partir de `test_payloads`.
     """
     base = (
         Path(output_dir)
@@ -2903,12 +3059,15 @@ def export_target_diagnostics(
     )
 
     _clear_generated_diagnostic_images(base)
+    _export_validation_quality_history(candidates, base, target_label)
 
     eligible_candidates = [
         candidate
         for candidate in candidates
         if _candidate_passes_threshold(candidate)
     ]
+    if eligible_candidates:
+        _export_validation_model_comparisons(candidates, base, target_label)
     eligible_models = {
         str(candidate.get("model"))
         for candidate in eligible_candidates

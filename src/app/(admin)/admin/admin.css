@@ -1559,6 +1559,169 @@
   font-weight: 700;
 }
 
+.admin-training-chart-title > div,
+.admin-training-chart-title > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-training-chart-title > div > span {
+  color: var(--admin-text-muted);
+  font-size: 9px;
+}
+
+.admin-training-chart-title > div:has(> button) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.admin-training-policy-heatmap,
+.admin-training-full-heatmap {
+  width: 100%;
+  overflow-x: auto;
+  color: var(--admin-text-soft);
+  font-size: 9px;
+}
+
+.admin-training-policy-row,
+.admin-training-policy-header {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.45fr) repeat(5, minmax(86px, 1fr)) minmax(104px, .9fr);
+  gap: 4px;
+  align-items: stretch;
+  min-width: 780px;
+  min-height: 44px;
+  margin-bottom: 4px;
+}
+
+.admin-training-policy-row > *,
+.admin-training-full-heatmap-row > * {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 5px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.admin-training-policy-row > strong,
+.admin-training-policy-header > span:first-child,
+.admin-training-full-heatmap-row > strong,
+.admin-training-full-heatmap-head > span:first-child {
+  justify-content: flex-start;
+  overflow: hidden;
+  color: var(--admin-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-training-policy-header,
+.admin-training-full-heatmap-head {
+  min-height: 38px;
+  color: var(--admin-text-muted);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-training-policy-header > span,
+.admin-training-policy-row > span {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-training-policy-header small,
+.admin-training-policy-row small {
+  display: block;
+  color: inherit;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.admin-training-eligible {
+  background: #e1f2e5;
+  color: #17633a;
+  font-weight: 900;
+}
+
+.admin-training-ineligible {
+  background: #f9e7e7;
+  color: #a33838;
+  font-weight: 900;
+}
+
+.admin-training-mcc-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.admin-training-mcc-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(150px, 4fr) 54px;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-training-mcc-track {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fae8e8 0 50%, #e1f2e5 50% 100%);
+}
+
+.admin-training-mcc-zero {
+  position: absolute;
+  z-index: 1;
+  top: -3px;
+  bottom: -3px;
+  left: 50%;
+  width: 1px;
+  background: #656575;
+}
+
+.admin-training-mcc-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.admin-training-mcc-bar.is-passing { background: #328452; }
+.admin-training-mcc-bar.is-failing { background: #d17a7a; }
+.admin-training-mcc-row > strong { color: var(--admin-text); font-size: 10px; text-align: right; }
+
+.admin-training-full-heatmap-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.3fr) repeat(8, minmax(78px, 1fr));
+  gap: 3px;
+  align-items: stretch;
+  min-width: 1030px;
+  min-height: 30px;
+  margin-bottom: 3px;
+}
+
+.admin-training-full-heatmap-head {
+  color: var(--admin-text-muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.admin-training-full-heatmap-row:not(.admin-training-full-heatmap-head) > span {
+  color: var(--admin-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.admin-training-chart-title .admin-training-download {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 900px) {
   .admin-training-comparison-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -1578,6 +1741,10 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 3px;
+  }
+
+  .admin-training-chart-title > div:has(> button) {
+    justify-content: flex-start;
   }
 
   .admin-training-bar-row {
@@ -1908,12 +2075,146 @@
   box-shadow: 0 7px 22px rgba(80, 70, 110, .045);
 }
 
+.admin-page .admin-validation-chart-controls {
+  display: grid;
+  grid-template-columns: minmax(210px, .8fr) minmax(0, 2fr) minmax(180px, .8fr);
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  background: var(--admin-surface-soft);
+}
+
+.admin-page .admin-validation-chart-controls > label,
+.admin-page .admin-validation-risk-target-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--admin-text-soft);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.admin-page .admin-validation-chart-controls select,
+.admin-page .admin-validation-risk-target-filter select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.admin-page .admin-validation-doctor-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 9px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: var(--admin-surface);
+}
+
+.admin-page .admin-validation-doctor-group legend {
+  padding: 0 4px;
+  color: var(--admin-text-soft);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-page .admin-validation-doctor-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  color: var(--admin-text);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.admin-page .admin-validation-doctor-group input {
+  accent-color: var(--admin-purple);
+}
+
+.admin-page .admin-validation-chart-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: var(--admin-surface);
+}
+
+.admin-page .admin-validation-chart-scope span {
+  color: var(--admin-text-muted);
+  font-size: 9px;
+}
+
+.admin-page .admin-validation-chart-scope strong {
+  overflow-wrap: anywhere;
+  color: var(--admin-purple-dark);
+  font-size: 11px;
+}
+
+.admin-page .admin-validation-donut-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .admin-page .admin-validation-card-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 17px;
+}
+
+.admin-page .admin-validation-card-heading > div:first-child {
+  min-width: 0;
+}
+
+.admin-page .admin-validation-card-heading p {
+  margin: 5px 0 0;
+  color: var(--admin-text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.admin-page .admin-validation-download {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--admin-border);
+  border-radius: 9px;
+  background: var(--admin-surface);
+  color: var(--admin-purple-dark);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.admin-page .admin-validation-download:hover:not(:disabled) {
+  border-color: var(--admin-purple);
+  background: var(--admin-purple-pale);
+}
+
+.admin-page .admin-validation-download:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.admin-page .admin-validation-risk-target-filter {
+  max-width: 420px;
+  margin: -3px 0 14px;
 }
 
 .admin-page .admin-validation-card-heading h3,
@@ -2233,6 +2534,26 @@
   background: linear-gradient(90deg, var(--admin-purple), var(--admin-green));
 }
 
+.admin-page .admin-validation-gold-verdict {
+  align-self: flex-start;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #fff2d6;
+  color: #805b13;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-page .admin-validation-gold-verdict.is-valid {
+  background: #e3f3e8;
+  color: #27643a;
+}
+
+.admin-page .admin-validation-gold-verdict.is-incorrect {
+  background: #fae7e8;
+  color: #a53d47;
+}
+
 .admin-page .admin-validation-patient-result {
   display: flex;
   justify-content: flex-end;
@@ -2304,8 +2625,13 @@
 }
 
 @media (max-width: 1050px) {
-  .admin-page .admin-validation-charts-grid {
+  .admin-page .admin-validation-charts-grid,
+  .admin-page .admin-validation-donut-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-validation-chart-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
   }
 
   .admin-page .admin-validation-patient-row {
@@ -2325,6 +2651,18 @@
 
   .admin-page .admin-validation-donut-layout {
     grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-validation-chart-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .admin-validation-card-heading {
+    flex-direction: column;
+  }
+
+  .admin-page .admin-validation-download {
+    width: 100%;
   }
 
   .admin-page .admin-validation-donut {

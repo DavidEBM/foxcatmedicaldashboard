@@ -56,33 +56,43 @@ export default function PredictionCard({
           </span>
         </div>
 
-        <div
-          className={`ai-validation-risk ${riskClass}`}
-        >
-          <span>Riesgo actual</span>
-          <strong>{prediction.risk}<small>%</small></strong>
-          <span>{riskLabel}</span>
+        {!prediction.predictedValue && (
+          <div className={`ai-validation-risk ${riskClass}`}>
+            <span>Riesgo actual</span>
+            <strong>{prediction.risk}<small>%</small></strong>
+            <span>{riskLabel}</span>
+          </div>
+        )}
+      </div>
+
+      {prediction.predictedValue ? (
+        <div className="ai-gold-card-result">
+          <div className="ai-gold-card-values">
+            <div>
+              <span>Predicción IA · por validar</span>
+              <strong>GOLD {prediction.predictedValue}</strong>
+            </div>
+            <div>
+              <span>Registro clínico</span>
+              <strong>{prediction.clinicalValue ? `GOLD ${prediction.clinicalValue}` : "No registrado"}</strong>
+            </div>
+          </div>
+          {prediction.confidence !== undefined && <small>Confianza del modelo para esta clase: {prediction.confidence}%</small>}
         </div>
-      </div>
+      ) : (
+        <div className="ai-validation-current">
+          <span>Predicción inicial</span>
+          <strong>{prediction.risk}% · {formatHorizon(prediction.horizonHours)}</strong>
+        </div>
+      )}
 
-      <div className="ai-validation-current">
-        <span>Predicción inicial</span>
-
-        <strong>
-          {prediction.risk}% ·{" "}
-          {formatHorizon(
-            prediction.horizonHours,
-          )}
-        </strong>
-      </div>
-
-      {showChart && (
+      {showChart && !prediction.predictedValue && (
         <PredictionChart
           timeline={prediction.timeline}
         />
       )}
 
-      <div className="ai-validation-timeline" aria-label="Valores de riesgo por ventana temporal">
+      {!prediction.predictedValue && <div className="ai-validation-timeline" aria-label="Valores de riesgo por ventana temporal">
         {prediction.timeline.map(
           (point) => (
             <div
@@ -96,7 +106,7 @@ export default function PredictionCard({
             </div>
           ),
         )}
-      </div>
+      </div>}
 
       <div className="ai-validation-actions">
         <button

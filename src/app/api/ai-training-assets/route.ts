@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return new NextResponse(new Uint8Array(content), {
       headers: {
         "Content-Type": MIME_TYPES[extension],
-        "Cache-Control": "no-store",
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
         "X-Content-Type-Options": "nosniff",
       },
     });

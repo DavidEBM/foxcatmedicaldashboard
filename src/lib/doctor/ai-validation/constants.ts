@@ -6,9 +6,15 @@ import type {
 export const AI_VALIDATIONS_COLLECTION =
   "ValidacionPredicciones";
 
-// El panel clínico consolida dos predicciones del backend y una estimación
-// local de síntomas de alarma para cada paciente.
-export const EXPECTED_PREDICTIONS_PER_PATIENT = 3;
+// Cobertura clínica: clasificación categórica GOLD más tres riesgos clínicos.
+export const EXPECTED_PREDICTIONS_PER_PATIENT = 4;
+
+export const EXPECTED_VALIDATION_KEYS = [
+  "copd_gold",
+  "respiratory-risk",
+  "cardiac-risk",
+  "danger-symptom-risk",
+] as const;
 
 export const VALIDATION_VERDICTS: Record<
   Uppercase<AiValidationVerdict>,

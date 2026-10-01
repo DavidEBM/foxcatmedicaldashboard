@@ -22,6 +22,7 @@ const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
 
 async function collectImages(
   directory: string,
+  imageVersion: string,
   relativeDirectory = "",
 ): Promise<Array<{ path: string; name: string; url: string }>> {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -32,7 +33,7 @@ async function collectImages(
     const absolutePath = path.join(directory, entry.name);
 
     if (entry.isDirectory()) {
-      images.push(...await collectImages(absolutePath, relativePath));
+      images.push(...await collectImages(absolutePath, imageVersion, relativePath));
       continue;
     }
 
@@ -44,7 +45,7 @@ async function collectImages(
     images.push({
       path: normalizedPath,
       name: entry.name,
-      url: `/api/ai-training-assets?path=${encodeURIComponent(normalizedPath)}`,
+      url: `/api/ai-training-assets?path=${encodeURIComponent(normalizedPath)}&v=${encodeURIComponent(imageVersion)}`,
     });
   }
 
@@ -66,15 +67,20 @@ async function readManifest(): Promise<Record<string, unknown> | null> {
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
-    const images = await collectImages(OUTPUT_DIR).catch(() => []);
+    const manifest = await readManifest();
+    const imageVersion = String(manifest?.generatedAt ?? Date.now());
+    const images = await collectImages(OUTPUT_DIR, imageVersion).catch(() => []);
 
-    return NextResponse.json({
-      algorithms: ML_ALGORITHMS,
-      targets: ML_TARGETS,
-      manifest: await readManifest(),
-      images,
-      latestRun: getLatestTrainingJob(),
-    });
+    return NextResponse.json(
+      {
+        algorithms: ML_ALGORITHMS,
+        targets: ML_TARGETS,
+        manifest,
+        images,
+        latestRun: getLatestTrainingJob(),
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } },
+    );
   } catch (error) {
     return adminErrorResponse(error);
   }

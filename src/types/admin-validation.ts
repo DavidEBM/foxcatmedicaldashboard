@@ -22,6 +22,7 @@ export interface AdminPatientValidationSummary {
   totalPredictions: number;
   pendingCount: number;
   status: AdminPatientValidationStatus;
+  goldVerdict: AiValidationVerdict | null;
   predictions: Record<string, AdminValidationPredictionReview>;
   latestUpdatedAt?: unknown;
 }
@@ -36,7 +37,18 @@ export interface AdminPredictionValidationSummary {
   incorrectCount: number;
 }
 
+export interface AdminValidationRecord {
+  patientId: string;
+  doctorUid: string;
+  predictionKey: string;
+  target: string;
+  verdict: AiValidationVerdict;
+  updatedAt?: unknown;
+  updatedAtMillis: number;
+}
+
 export interface AdminValidationAnalytics {
   patientSummaries: Record<string, AdminPatientValidationSummary>;
   predictionSummaries: Record<string, AdminPredictionValidationSummary>;
+  records: AdminValidationRecord[];
 }

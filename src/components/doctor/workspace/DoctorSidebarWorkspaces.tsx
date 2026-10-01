@@ -366,6 +366,7 @@ export function DoctorPatientsWorkspace({
               validatedCount: 0,
               totalPredictions: EXPECTED_PREDICTIONS_PER_PATIENT,
               pendingCount: EXPECTED_PREDICTIONS_PER_PATIENT,
+              goldVerdict: null,
               status: "pending" as const,
             };
             const validationLabel = validationSummary.status === "complete"
@@ -403,6 +404,9 @@ export function DoctorPatientsWorkspace({
                   >
                     <i aria-hidden="true" />
                     {validationLabel} · {validationSummary.validatedCount}/{validationSummary.totalPredictions}
+                  </span>
+                  <span className={`doctor-gold-validation-status is-${validationSummary.goldVerdict ?? "pending"}`}>
+                    GOLD · {validationSummary.goldVerdict === "valid" ? "Validada" : validationSummary.goldVerdict === "incorrect" ? "Incorrecta" : "Pendiente"}
                   </span>
                 </span>
               </button>

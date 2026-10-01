@@ -148,7 +148,8 @@ export async function startTrainingJob({
     return job;
   }
 
-  const command = process.platform === "win32" ? "python" : "python3";
+  const command = process.env.ML_PYTHON_EXECUTABLE?.trim()
+    || (process.platform === "win32" ? "python" : "python3");
   const args = [
     "-m",
     "ml.run_training",

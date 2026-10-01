@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T14:44:33.491425+00:00",
+  "generatedAt": "2026-10-01T19:06:59.571295+00:00",
   "sourceDataset": "ml/datasets/dataset_final_armonizado.csv",
   "dataSources": {
     "firebaseIncluded": true,
@@ -17,7 +17,9 @@
     "testUsage": "TEST reserved exclusively for final evaluation of the selected model",
     "missingData": "Missing values are imputed inside each training pipeline/fold.",
     "selectionDoesNotUseTest": true,
-    "selectionFallback": "If no candidate meets thresholds, the best available candidate is retained for diagnostic purposes and thresholdMet remains false."
+    "eligibility": "accuracy >= 0.70 AND f1 >= 0.70 AND mcc >= 0.40 AND kappa >= 0.40 AND auc >= 0.70",
+    "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
+    "selectionFallback": "If no candidate meets every required metric, no candidate is selected or published; an already-published model is retained only if its recorded validation metrics meet the current requirements."
   },
   "splitTotals": {
     "train": 120,
@@ -104,40 +106,96 @@
       "f1": 0.7,
       "mcc": 0.4,
       "kappa": 0.4,
-      "auc": 0.7,
-      "modelQuality": 0.75
+      "auc": 0.7
     },
     "history_of_heart_failure": {
       "accuracy": 0.7,
       "f1": 0.7,
       "mcc": 0.4,
       "kappa": 0.4,
-      "auc": 0.7,
-      "modelQuality": 0.7
+      "auc": 0.7
     }
   },
   "models": {
     "copd_gold": {
       "targetColumn": "COPD GOLD(1 a 4) (Target)",
       "targetLabel": "COPD GOLD (1–4)",
-      "selectedModel": "XGBoost",
+      "selectedModel": "CatBoost",
       "runSelectedModel": "CatBoost",
-      "publishedThisRun": false,
-      "publicationReason": "existing_model_is_better_or_equal",
+      "publishedThisRun": true,
+      "publicationReason": "highest_f1_eligible_candidate_published",
       "currentQuality": {
         "thresholdMet": true,
-        "validationScore": 0.8457639522212423,
-        "cvStdScore": 0.13478303512221887,
-        "cvMeanScore": 0.4409606861810243
+        "f1": 0.8041666666666667,
+        "auc": 0.9170454545454545,
+        "mcc": 0.7153467767436237,
+        "kappa": 0.710344827586207,
+        "accuracy": 0.7857142857142857
       },
       "candidateQuality": {
         "thresholdMet": true,
-        "validationScore": 0.7818678099135439,
-        "cvStdScore": 0.08991087054204888,
-        "cvMeanScore": 0.6610063270859833
+        "f1": 0.8041666666666667,
+        "auc": 0.9170454545454545,
+        "mcc": 0.7153467767436237,
+        "kappa": 0.710344827586207,
+        "accuracy": 0.7857142857142857
       },
-      "artifact": "ml\\outputs\\SavedModels\\copd_gold-xgboost.joblib",
+      "artifact": "ml\\outputs\\SavedModels\\copd_gold-catboost.joblib",
       "thresholdMet": true,
+      "publishedValidationMetrics": {
+        "accuracy": 0.7857142857142857,
+        "f1": 0.8041666666666667,
+        "mcc": 0.7153467767436237,
+        "kappa": 0.710344827586207,
+        "auc": 0.9170454545454545,
+        "precision": 0.8375,
+        "recallSensitivity": 0.7916666666666666,
+        "balancedAccuracy": 0.7916666666666666,
+        "classes": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "positiveLabel": null,
+        "confusionMatrix": [
+          [
+            3,
+            1,
+            0,
+            0
+          ],
+          [
+            1,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            2,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.7857142857142857,
+          "balancedAccuracy": 0.7916666666666666,
+          "f1": 0.8041666666666667,
+          "precision": 0.8375,
+          "recallSensitivity": 0.7916666666666666,
+          "auc": 0.9170454545454545,
+          "mcc": 0.8576733883718118,
+          "kappa": 0.8551724137931035
+        },
+        "normalizedQuality": 0.8300756928030819
+      },
       "split": {
         "train": 66,
         "validation": 14,
@@ -150,14 +208,14 @@
         "4": 2
       },
       "testMetrics": {
-        "accuracy": 0.8666666666666667,
-        "f1": 0.8958333333333334,
-        "mcc": 0.835710894037345,
-        "kappa": 0.8148148148148149,
-        "auc": 0.99,
-        "precision": 0.9285714285714286,
-        "recallSensitivity": 0.9,
-        "balancedAccuracy": 0.9,
+        "accuracy": 0.7333333333333333,
+        "f1": 0.6888888888888889,
+        "mcc": 0.6503189868852074,
+        "kappa": 0.6385542168674698,
+        "auc": 0.8776068376068377,
+        "precision": 0.7,
+        "recallSensitivity": 0.7333333333333334,
+        "balancedAccuracy": 0.7333333333333334,
         "classes": [
           "1",
           "2",
@@ -167,22 +225,22 @@
         "positiveLabel": null,
         "confusionMatrix": [
           [
-            5,
+            4,
             0,
+            1,
+            0
+          ],
+          [
+            1,
+            4,
             0,
             0
           ],
           [
-            2,
-            3,
-            0,
-            0
-          ],
-          [
             0,
             0,
-            3,
-            0
+            1,
+            2
           ],
           [
             0,
@@ -192,23 +250,23 @@
           ]
         ],
         "normalizedMetrics": {
-          "accuracy": 0.8666666666666667,
-          "balancedAccuracy": 0.9,
-          "f1": 0.8958333333333334,
-          "precision": 0.9285714285714286,
-          "recallSensitivity": 0.9,
-          "auc": 0.99,
-          "mcc": 0.9178554470186725,
-          "kappa": 0.9074074074074074
+          "accuracy": 0.7333333333333333,
+          "balancedAccuracy": 0.7333333333333334,
+          "f1": 0.6888888888888889,
+          "precision": 0.7,
+          "recallSensitivity": 0.7333333333333334,
+          "auc": 0.8776068376068377,
+          "mcc": 0.8251594934426036,
+          "kappa": 0.8192771084337349
         },
-        "normalizedQuality": 0.9132917853746886,
-        "normalizedQualityPercent": 91.32917853746886,
-        "predictionLatencyMs": 5.728162499849532,
-        "predictionLatencyStdMs": 0.5340843537106466,
-        "responseTimeMsPerRecord": 5.728162499849532,
-        "predictionsPerSecond": 174.57605297096026,
-        "predictionBatchLatencyMs": 8.280637499979093,
-        "batchPredictionsPerSecond": 1811.4547340150891
+        "normalizedQuality": 0.7638665410465082,
+        "normalizedQualityPercent": 76.38665410465082,
+        "predictionLatencyMs": 5.818187499926353,
+        "predictionLatencyStdMs": 0.4329274547976228,
+        "responseTimeMsPerRecord": 5.818187499926353,
+        "predictionsPerSecond": 171.87483215565985,
+        "predictionBatchLatencyMs": 6.0124374997485575,
+        "batchPredictionsPerSecond": 2494.8284286742783
       },
       "algorithmsTested": [
         {
@@ -492,12 +550,12 @@
             },
             "normalizedQuality": 0.7638665410465082,
             "normalizedQualityPercent": 76.38665410465082,
-            "predictionLatencyMs": 4.494762500144134,
-            "predictionLatencyStdMs": 0.05868572310281061,
-            "responseTimeMsPerRecord": 4.494762500144134,
-            "predictionsPerSecond": 222.48116557169215,
-            "predictionBatchLatencyMs": 4.819387500219818,
-            "batchPredictionsPerSecond": 3112.428705787993
+            "predictionLatencyMs": 5.818187499926353,
+            "predictionLatencyStdMs": 0.4329274547976228,
+            "responseTimeMsPerRecord": 5.818187499926353,
+            "predictionsPerSecond": 171.87483215565985,
+            "predictionBatchLatencyMs": 6.0124374997485575,
+            "batchPredictionsPerSecond": 2494.8284286742783
           },
           "testCI95": {
             "precisionCI95Low": 0.44968749999999996,
@@ -963,24 +1021,22 @@
     "history_of_heart_failure": {
       "targetColumn": "History of Heart Failure(Si ó no)(Target)",
       "targetLabel": "Antecedente de insuficiencia cardiaca",
-      "selectedModel": "CatBoost",
-      "runSelectedModel": "CatBoost",
+      "selectedModel": null,
+      "runSelectedModel": null,
       "publishedThisRun": false,
-      "publicationReason": "existing_model_is_better_or_equal",
-      "currentQuality": {
-        "thresholdMet": false,
-        "validationScore": 0.6381352851875146,
-        "cvStdScore": 0.02484635610019794,
-        "cvMeanScore": 0.4966328465756196
-      },
+      "publicationReason": "no_eligible_candidate_no_model_published",
+      "currentQuality": {},
       "candidateQuality": {
         "thresholdMet": false,
-        "validationScore": 0.6381352851875146,
-        "cvStdScore": 0.02484635610019794,
-        "cvMeanScore": 0.4966328465756196
+        "f1": -Infinity,
+        "auc": -Infinity,
+        "mcc": -Infinity,
+        "kappa": -Infinity,
+        "accuracy": -Infinity
       },
-      "artifact": "ml\\outputs\\SavedModels\\history_of_heart_failure-catboost.joblib",
+      "artifact": null,
       "thresholdMet": false,
+      "publishedValidationMetrics": {},
       "split": {
         "train": 54,
         "validation": 12,
@@ -991,47 +1047,8 @@
         "SI": 5
       },
       "testMetrics": {
-        "accuracy": 0.5833333333333334,
-        "f1": 0.0,
-        "mcc": 0.0,
-        "kappa": 0.0,
-        "auc": 0.48571428571428577,
-        "precision": 0.0,
-        "recallSensitivity": 0.0,
-        "balancedAccuracy": 0.5,
-        "classes": [
-          "NO",
-          "SI"
-        ],
-        "positiveLabel": "SI",
-        "confusionMatrix": [
-          [
-            7,
-            0
-          ],
-          [
-            5,
-            0
-          ]
-        ],
-        "normalizedMetrics": {
-          "accuracy": 0.5833333333333334,
-          "balancedAccuracy": 0.5,
-          "f1": 0.0,
-          "precision": 0.0,
-          "recallSensitivity": 0.0,
-          "auc": 0.48571428571428577,
-          "mcc": 0.5,
-          "kappa": 0.5
-        },
-        "normalizedQuality": 0.3211309523809524,
-        "normalizedQualityPercent": 32.11309523809524,
-        "predictionLatencyMs": 3.904437500068525,
-        "predictionLatencyStdMs": 0.3180201874085979,
-        "responseTimeMsPerRecord": 3.904437500068525,
-        "predictionsPerSecond": 256.11883913686654,
-        "predictionBatchLatencyMs": 3.932950000034907,
-        "batchPredictionsPerSecond": 3051.1448149336993
+        "available": false,
+        "error": "No hubo modelo seleccionado."
       },
       "algorithmsTested": [
         {
@@ -1206,65 +1223,9 @@
             },
             "normalizedQuality": 0.7020008132725755
           },
-          "testEvaluationAvailable": true,
-          "testMetrics": {
-            "accuracy": 0.5833333333333334,
-            "f1": 0.0,
-            "mcc": 0.0,
-            "kappa": 0.0,
-            "auc": 0.48571428571428577,
-            "precision": 0.0,
-            "recallSensitivity": 0.0,
-            "balancedAccuracy": 0.5,
-            "classes": [
-              "NO",
-              "SI"
-            ],
-            "positiveLabel": "SI",
-            "confusionMatrix": [
-              [
-                7,
-                0
-              ],
-              [
-                5,
-                0
-              ]
-            ],
-            "normalizedMetrics": {
-              "accuracy": 0.5833333333333334,
-              "balancedAccuracy": 0.5,
-              "f1": 0.0,
-              "precision": 0.0,
-              "recallSensitivity": 0.0,
-              "auc": 0.48571428571428577,
-              "mcc": 0.5,
-              "kappa": 0.5
-            },
-            "normalizedQuality": 0.3211309523809524,
-            "normalizedQualityPercent": 32.11309523809524,
-            "predictionLatencyMs": 3.5326874997281266,
-            "predictionLatencyStdMs": 0.08723645094216369,
-            "responseTimeMsPerRecord": 3.5326874997281266,
-            "predictionsPerSecond": 283.07060844667393,
-            "predictionBatchLatencyMs": 3.9565375004713133,
-            "batchPredictionsPerSecond": 3032.954950779698
-          },
-          "testCI95": {
-            "precisionCI95Low": 0.0,
-            "precisionCI95High": 0.0,
-            "accuracyCI95Low": 0.25,
-            "accuracyCI95High": 0.8333333333333334,
-            "recallSensitivityCI95Low": 0.0,
-            "recallSensitivityCI95High": 0.0,
-            "f1CI95Low": 0.0,
-            "f1CI95High": 0.0,
-            "aucCI95Low": 0.11060606060606062,
-            "aucCI95High": 0.8125,
-            "mccCI95Low": 0.0,
-            "mccCI95High": 0.0,
-            "bootstrapReplicates": 200.0
-          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
           "hyperparameters": {
             "iterations": 200,
             "depth": 6,
@@ -1273,7 +1234,7 @@
             "random_strength": 1.0,
             "cat_features": null
           },
-          "artifact": "ml\\outputs\\SavedModels\\Models_All\\history_of_heart_failure\\catboost.joblib"
+          "artifact": null
         },
         {
           "model": "RandomForest",

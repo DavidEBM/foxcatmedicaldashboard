@@ -10,7 +10,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from .config import RANDOM_STATE, TARGET_LABELS
+from .config import DEFAULT_THRESHOLDS, RANDOM_STATE, TARGET_LABELS
 from .diagnostics import (
     _bootstrap_ci,
     export_target_diagnostics,
@@ -20,6 +20,8 @@ from .model_common import (
     build_pipeline,
     evaluate,
     normalized_quality,
+    qualifies,
+    selection_key,
 )
 from .utils import json_safe, norm, utc_now
 
@@ -79,6 +81,7 @@ class TargetResult:
     publication_reason: str = "published"
     current_quality: dict[str, Any] = field(default_factory=dict)
     candidate_quality: dict[str, Any] = field(default_factory=dict)
+    published_validation_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 # ============================================================================
@@ -309,136 +312,47 @@ def _candidate_is_available(
     ):
         return False
 
-    score = candidate.get(
-        "validationScore",
-        np.nan,
-    )
-
-    try:
-        return bool(
-            np.isfinite(
-                float(score)
-            )
-        )
-
-    except (
-        TypeError,
-        ValueError,
-        OverflowError,
-    ):
-        return False
+    metrics = candidate.get("validationMetrics") or candidate.get("validation")
+    return isinstance(metrics, dict) and bool(metrics)
 
 
 def _candidate_selection_key(
     candidate: dict[str, Any],
-) -> tuple[float, float, float]:
-    """
-    Clave determinista de selección.
-
-    Prioridad:
-
-        1. validationScore mayor.
-        2. menor variabilidad CV.
-        3. CV mean mayor.
-
-    TEST no interviene.
-    """
-
-    validation_score = candidate.get(
-        "validationScore",
-        -np.inf,
-    )
-
-    cv_std = candidate.get(
-        "cvStdScore",
-        np.inf,
-    )
-
-    cv_mean = candidate.get(
-        "cvMeanScore",
-        -np.inf,
-    )
-
-    try:
-        validation_score = float(
-            validation_score
-        )
-
-    except (
-        TypeError,
-        ValueError,
-        OverflowError,
-    ):
-        validation_score = -np.inf
-
-    try:
-        cv_std = float(
-            cv_std
-        )
-
-        if not np.isfinite(
-            cv_std
-        ):
-            cv_std = np.inf
-
-    except (
-        TypeError,
-        ValueError,
-        OverflowError,
-    ):
-        cv_std = np.inf
-
-    try:
-        cv_mean = float(
-            cv_mean
-        )
-
-    except (
-        TypeError,
-        ValueError,
-        OverflowError,
-    ):
-        cv_mean = -np.inf
-
-    return (
-        validation_score,
-        -cv_std,
-        cv_mean,
-    )
+) -> tuple[float, float, float, float, float]:
+    """Orden lexicográfico F1, AUC, MCC, Kappa y Accuracy."""
+    metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
+    return selection_key(metrics)
 
 
 def _quality_key(
-    candidate: Optional[dict[str, Any]],
+    metrics: dict[str, Any],
     threshold_met: bool,
-) -> tuple[float, float, float, float]:
-    """Orden de calidad usado para comparar publicaciones entre corridas."""
-    selection_key = _candidate_selection_key(candidate or {})
+) -> tuple[float, float, float, float, float, float]:
+    """Clave informativa basada solo en elegibilidad y métricas obligatorias."""
+    ranked = selection_key(metrics)
     return (
         1.0 if threshold_met else 0.0,
-        selection_key[0],
-        selection_key[1],
-        selection_key[2],
+        *ranked,
     )
 
 
 def _quality_dict(
-    quality: tuple[float, float, float, float],
+    quality: tuple[float, float, float, float, float, float],
 ) -> dict[str, Any]:
     return {
         "thresholdMet": bool(quality[0]),
-        "validationScore": quality[1],
-        "cvStdScore": (
-            -quality[2]
-            if np.isfinite(quality[2])
-            else None
-        ),
-        "cvMeanScore": quality[3],
+        "f1": quality[1],
+        "auc": quality[2],
+        "mcc": quality[3],
+        "kappa": quality[4],
+        "accuracy": quality[5],
     }
 
 
 def _load_published_state(
     output: Path,
     key: str,
+    thresholds: dict[str, float],
 ) -> Optional[dict[str, Any]]:
     """Carga el mejor artefacto vigente y su calidad sin modificarlo.
 
@@ -457,12 +371,20 @@ def _load_published_state(
     info = (manifest.get("models") or {}).get(key)
     if not isinstance(info, dict):
         info = {}
+    validation_by_model = {
+        str(candidate.get("model")): candidate.get("validationMetrics")
+        for candidate in info.get("algorithmsTested", [])
+        if isinstance(candidate, dict) and candidate.get("model")
+    }
 
     artifact_paths: list[Path] = []
     artifact_ref = info.get("artifact")
     if artifact_ref:
         artifact_paths.append(Path(str(artifact_ref).replace("\\", "/")))
-    artifact_paths.extend(output.glob(f"{norm(key)}-*.joblib"))
+    elif info.get("selectedModel"):
+        artifact_paths.append(
+            output / f"{norm(key)}-{norm(info['selectedModel'])}.joblib"
+        )
 
     states: list[dict[str, Any]] = []
     seen_paths: set[str] = set()
@@ -490,30 +412,25 @@ def _load_published_state(
         )
         if not selected:
             continue
-
-        candidate = {
-            "validationScore": selection.get("validationScore"),
-            "cvStdScore": selection.get("cvStdScore"),
-            "cvMeanScore": selection.get("cvMeanScore"),
-        }
-        threshold_met = bool(
-            payload.get(
-                "validationThresholdMet",
-                False,
-            )
+        validation_metrics = (
+            info.get("publishedValidationMetrics")
+            if str(selected) == str(info.get("selectedModel"))
+            else None
         )
-        if (
-            not threshold_met
-            and selected == info.get("selectedModel")
-        ):
-            threshold_met = bool(info.get("thresholdMet"))
+        if not isinstance(validation_metrics, dict):
+            validation_metrics = validation_by_model.get(str(selected))
+        if not isinstance(validation_metrics, dict):
+            validation_metrics = selection.get("validationMetrics")
+        if not isinstance(validation_metrics, dict) or not qualifies(validation_metrics, thresholds):
+            continue
 
         states.append(
             {
                 "selected": str(selected),
                 "artifact": str(artifact_path),
-                "thresholdMet": threshold_met,
-                "quality": _quality_key(candidate, threshold_met),
+                "thresholdMet": True,
+                "validationMetrics": validation_metrics,
+                "quality": _quality_key(validation_metrics, True),
                 "testMetrics": payload.get("testMetrics")
                 or info.get("testMetrics")
                 or {},
@@ -529,18 +446,18 @@ def _load_published_state(
 
 def _select_candidate(
     candidates: list[dict[str, Any]],
+    thresholds: Optional[dict[str, float]] = None,
 ) -> tuple[
     Optional[dict[str, Any]],
     bool,
 ]:
     """
-    Selecciona el candidato exclusivamente con CV + VALIDATION.
+    Selecciona el candidato exclusivamente con VALIDATION.
 
-    Si ningún candidato cumple los umbrales, conserva el mejor
-    candidato disponible para diagnóstico.
-
-    En ese caso threshold_met permanece en False.
+    Si ningún candidato cumple todos los umbrales, no se selecciona
+    ningún candidato.
     """
+    required_thresholds = thresholds or DEFAULT_THRESHOLDS
 
     available = [
         candidate
@@ -556,31 +473,22 @@ def _select_candidate(
     eligible = [
         candidate
         for candidate in available
-        if candidate.get(
-            "thresholdMet",
-            False,
+        if qualifies(
+            candidate.get("validationMetrics") or candidate.get("validation") or {},
+            required_thresholds,
         )
     ]
-
-    pool = (
-        eligible
-        if eligible
-        else available
-    )
+    if not eligible:
+        return None, False
 
     selected = max(
-        pool,
+        eligible,
         key=_candidate_selection_key,
     )
 
     return (
         selected,
-        bool(
-            selected.get(
-                "thresholdMet",
-                False,
-            )
-        ),
+        True,
     )
 
 
@@ -1091,7 +999,8 @@ def publish_best_model(
         selected_candidate,
         selected_threshold_met,
     ) = _select_candidate(
-        candidates
+        candidates,
+        thresholds,
     )
 
     selected = (
@@ -1116,9 +1025,14 @@ def publish_best_model(
         exist_ok=True,
     )
 
-    current_state = _load_published_state(output, key)
+    current_state = _load_published_state(output, key, thresholds)
+    selected_metrics = (
+        selected_candidate.get("validationMetrics") or selected_candidate.get("validation") or {}
+        if selected_candidate is not None
+        else {}
+    )
     candidate_quality_key = _quality_key(
-        selected_candidate,
+        selected_metrics,
         selected_threshold_met,
     )
     current_quality_key = (
@@ -1126,13 +1040,7 @@ def publish_best_model(
         if current_state is not None
         else None
     )
-    should_publish = bool(
-        selected_candidate is not None
-        and (
-            current_quality_key is None
-            or candidate_quality_key > current_quality_key
-        )
-    )
+    should_publish = selected_candidate is not None
 
     all_dir = (
         output
@@ -1205,15 +1113,17 @@ def publish_best_model(
     }
 
     published_payload: dict[str, Any] = {}
+    published_validation_metrics: dict[str, Any] = {}
 
-    if current_state is not None and not should_publish:
-        # El candidato queda disponible para diagnóstico, pero no sustituye
-        # al modelo vigente porque su calidad no es estrictamente superior.
+    if current_state is not None and (not should_publish or selected_payload is None):
+        # Sin ganador elegible (o si falla el ajuste final), conserva solo un
+        # artefacto previo que también cumpla los umbrales actuales.
         selected = current_state["selected"]
         selected_threshold_met = bool(current_state["thresholdMet"])
         artifact = current_state["artifact"]
         test = current_state["testMetrics"]
         published_payload = current_state.get("payload") or {}
+        published_validation_metrics = current_state.get("validationMetrics") or {}
 
     elif (
         selected is not None
@@ -1233,6 +1143,7 @@ def publish_best_model(
             "metrics"
         ]
         published_payload = selected_payload
+        published_validation_metrics = selected_metrics
 
         # --------------------------------------------------------------
         # Artefacto principal
@@ -1304,6 +1215,10 @@ def publish_best_model(
                     if selected_candidate
                     else None
                 ),
+
+                "validationMetrics": selected_metrics,
+
+                "selectionKey": list(_candidate_selection_key(selected_candidate)),
 
                 "selectionUsesTest": False,
             },
@@ -1451,11 +1366,15 @@ def publish_best_model(
         and selected_payload is not None
     )
     if published_this_run:
-        publication_reason = "candidate_strictly_better"
+        publication_reason = "highest_f1_eligible_candidate_published"
     elif current_state is not None:
-        publication_reason = "existing_model_is_better_or_equal"
+        publication_reason = (
+            "eligible_candidate_final_fit_failed_existing_model_retained"
+            if run_selected is not None
+            else "no_eligible_candidate_existing_eligible_model_retained"
+        )
     elif selected_payload is None:
-        publication_reason = "no_usable_model"
+        publication_reason = "no_eligible_candidate_no_model_published"
     else:
         publication_reason = "published_initial_model"
 
@@ -1509,6 +1428,7 @@ def publish_best_model(
             else {}
         ),
         candidate_quality=_quality_dict(candidate_quality_key),
+        published_validation_metrics=published_validation_metrics,
     )
 
     return result
@@ -1584,11 +1504,11 @@ def export_manifest(
 
             "selectionDoesNotUseTest": True,
 
-            "selectionFallback": (
-                "If no candidate meets thresholds, "
-                "the best available candidate is retained "
-                "for diagnostic purposes and thresholdMet remains false."
-            ),
+            "eligibility": "accuracy >= 0.70 AND f1 >= 0.70 AND mcc >= 0.40 AND kappa >= 0.40 AND auc >= 0.70",
+
+            "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
+
+            "selectionFallback": "If no candidate meets every required metric, no candidate is selected or published; an already-published model is retained only if its recorded validation metrics meet the current requirements.",
         },
 
         "splitTotals": {
@@ -1636,10 +1556,7 @@ def export_manifest(
             dict[str, Any]
         ] = []
 
-        run_selected = (
-            result.run_selected
-            or result.selected
-        )
+        run_selected = result.run_selected
 
         for candidate in result.candidates:
 
@@ -1759,6 +1676,8 @@ def export_manifest(
             "artifact": result.artifact,
 
             "thresholdMet": result.threshold_met,
+
+            "publishedValidationMetrics": result.published_validation_metrics,
 
             "split": result.split,
 

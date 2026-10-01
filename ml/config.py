@@ -116,55 +116,20 @@ DEFAULT_OUTPUT_DIR: Final[str] = _env_str(
 # ---------------------------------------------------------------------------
 
 DEFAULT_THRESHOLDS: Final[dict[str, float]] = {
-    "accuracy": _env_float(
-        "MIN_ACCURACY",
-        0.70,
-    ),
-    "f1": _env_float(
-        "MIN_F1",
-        0.70,
-    ),
-    "mcc": _env_float(
-        "MIN_MCC",
-        0.40,
-    ),
-    "kappa": _env_float(
-        "MIN_KAPPA",
-        0.40,
-    ),
-    "auc": _env_float(
-        "MIN_AUC",
-        0.70,
-    ),
+    "accuracy": 0.70,
+    "f1": 0.70,
+    "mcc": 0.40,
+    "kappa": 0.40,
+    "auc": 0.70,
 }
-
-
-# Umbral global de calidad para publicación por target. La calidad global
-# utiliza `normalized_quality`, que lleva MCC y Kappa a [0, 1] antes de
-# promediar las métricas disponibles.
-DEFAULT_MODEL_QUALITY_THRESHOLD: Final[float] = _env_float(
-    "MIN_MODEL_QUALITY",
-    0.70,
-)
-
-GOLD_MODEL_QUALITY_THRESHOLD: Final[float] = _env_float(
-    "MIN_GOLD_MODEL_QUALITY",
-    0.75,
-)
-
 
 def thresholds_for_target(
     target_key: str,
-    base_thresholds: dict[str, float],
+    base_thresholds: dict[str, float] | None = None,
 ) -> dict[str, float]:
-    """Añade el umbral global de calidad correspondiente al target."""
-    thresholds = dict(base_thresholds)
-    thresholds["modelQuality"] = (
-        GOLD_MODEL_QUALITY_THRESHOLD
-        if target_key == "copd_gold"
-        else DEFAULT_MODEL_QUALITY_THRESHOLD
-    )
-    return thresholds
+    """Devuelve los cinco umbrales obligatorios, idénticos para todo target."""
+    del target_key, base_thresholds
+    return dict(DEFAULT_THRESHOLDS)
 
 
 # ---------------------------------------------------------------------------
@@ -346,17 +311,6 @@ def validate_config() -> None:
                 f"El umbral de {metric} debe estar entre 0 y 1; "
                 f"valor actual={threshold}."
             )
-
-    for name, threshold in (
-        ("MIN_MODEL_QUALITY", DEFAULT_MODEL_QUALITY_THRESHOLD),
-        ("MIN_GOLD_MODEL_QUALITY", GOLD_MODEL_QUALITY_THRESHOLD),
-    ):
-        if not 0.0 <= threshold <= 1.0:
-            raise ValueError(
-                f"El umbral de {name} debe estar entre 0 y 1; "
-                f"valor actual={threshold}."
-            )
-
 
 # ---------------------------------------------------------------------------
 # Resolución de rutas

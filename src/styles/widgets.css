@@ -1133,6 +1133,40 @@
 .ai-status-summary-disclaimer { color: var(--doctor-placeholder); font-size: 9px; line-height: 1.35; }
 .ai-widget-loading { display: flex; align-items: center; justify-content: center; min-height: 150px; color: var(--doctor-muted); font-size: 11px; text-align: center; }
 
+.ai-gold-comparison { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid color-mix(in srgb, var(--doctor-primary) 24%, var(--doctor-border)); border-radius: var(--doctor-radius-md); background: linear-gradient(135deg, var(--doctor-primary-soft), var(--doctor-surface)); }
+.ai-gold-comparison-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ai-gold-comparison-header > div, .ai-gold-value { display: flex; flex-direction: column; gap: 4px; }
+.ai-gold-comparison-header > div > span, .ai-gold-value > span { color: var(--doctor-muted); font-size: 10px; font-weight: 700; }
+.ai-gold-comparison-header h4 { margin: 0; color: var(--doctor-text); font-size: 14px; }
+.ai-gold-status { padding: 5px 8px; border-radius: var(--doctor-radius-pill); background: #fff0c2; color: #795500; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.ai-gold-comparison-values, .ai-gold-card-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.ai-gold-value, .ai-gold-card-values > div { min-width: 0; padding: 10px; border: 1px solid var(--doctor-border-soft); border-radius: var(--doctor-radius-sm); background: var(--doctor-surface); }
+.ai-gold-value-ai { border-color: color-mix(in srgb, var(--doctor-primary) 42%, var(--doctor-border)); }
+.ai-gold-value strong, .ai-gold-card-values strong { color: var(--doctor-text); font-size: 18px; line-height: 1.2; }
+.ai-gold-value-ai strong, .ai-gold-card-values > div:first-child strong { color: var(--doctor-primary-dark); }
+.ai-gold-value small, .ai-gold-card-result > small { color: var(--doctor-muted); font-size: 10px; }
+.ai-gold-comparison > p { margin: 0; color: var(--doctor-text-soft); font-size: 11px; line-height: 1.45; }
+.ai-gold-card-result { display: flex; flex-direction: column; gap: 8px; }
+.ai-gold-card-values span { display: block; margin-bottom: 5px; color: var(--doctor-muted); font-size: 9px; font-weight: 700; }
+.ai-gold-card-values strong { font-size: 15px; }
+.ai-gold-validation-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-gold-validation-status { font-size: 10px; font-weight: 700; }
+.ai-gold-validation-status.success { color: #18794e; }
+.ai-gold-validation-status.incorrect { color: #b42318; }
+.ai-validation-chart-empty { grid-column: 1 / -1; margin: 0; padding: 14px; color: var(--doctor-muted); font-size: 11px; }
+.ai-model-availability { display: flex; flex-direction: column; gap: 5px; padding: 11px 13px; border: 1px solid var(--doctor-warning-200); border-left: 3px solid var(--doctor-warning); border-radius: var(--doctor-radius-sm); background: var(--doctor-warning-50); color: var(--doctor-text-soft); }
+.ai-model-availability strong { color: var(--doctor-warning-dark); font-size: 12px; }
+.ai-model-availability p { margin: 0; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.ai-model-availability small { color: var(--doctor-muted); font-size: 10px; line-height: 1.4; }
+.ai-model-availability.is-error { border-color: var(--doctor-red-200); border-left-color: var(--doctor-red); background: var(--doctor-red-50); }
+.ai-model-availability.is-error strong { color: var(--doctor-red-dark); }
+.ai-gold-status.is-unavailable { background: var(--doctor-red-soft); color: var(--doctor-red-dark); white-space: normal; }
+
+@media (max-width: 520px) {
+  .ai-gold-comparison-header { align-items: flex-start; flex-direction: column; }
+  .ai-gold-comparison-values, .ai-gold-card-values { grid-template-columns: 1fr; }
+}
+
 /* ============================================================
    AI PREDICTIONS — REFINED READING / TEMPORAL COVERAGE
 ============================================================ */
@@ -1500,4 +1534,173 @@
   .ai-validation-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ai-validation-chart-footnote { flex-direction: column; }
   .ai-validation-chart-footnote .is-limited { text-align: left; }
+}
+
+@media (max-width: 600px) {
+  .ai-validation-widget,
+  .ai-single-prediction-widget {
+    gap: 10px;
+  }
+
+  .ai-validation-header {
+    align-items: stretch;
+    gap: 8px;
+    padding: 13px;
+  }
+
+  .ai-validation-header h3 {
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .ai-validation-header p,
+  .ai-validation-disclaimer p {
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .ai-validation-badge {
+    align-self: flex-start;
+  }
+
+  .ai-validation-grid,
+  .ai-validation-charts-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .ai-validation-card,
+  .ai-validation-chart-card {
+    padding: 12px;
+  }
+
+  .ai-validation-card-head {
+    gap: 8px;
+  }
+
+  .ai-validation-card-title strong,
+  .ai-validation-chart-card header strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ai-validation-actions,
+  .ai-gold-validation-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ai-validation-button {
+    width: 100%;
+    min-height: 44px;
+    padding: 7px 10px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .ai-validation-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+  }
+
+  .ai-validation-tabs button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 10px;
+  }
+
+  .ai-validation-summary-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-validation-summary-hero {
+    padding: 14px;
+  }
+
+  .ai-validation-summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 9px;
+  }
+
+  .ai-validation-summary-metrics div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .ai-validation-chart-card header {
+    flex-direction: column;
+  }
+
+  .ai-validation-chart-card header .ai-validation-chart-risk {
+    align-items: flex-start;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .ai-validation-chart-footnote {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-validation-chart-footnote .is-limited {
+    text-align: left;
+  }
+
+  .ai-gold-comparison {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .ai-gold-comparison-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-gold-status {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .ai-gold-comparison-values,
+  .ai-gold-card-values {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-gold-value strong,
+  .ai-gold-card-values strong {
+    font-size: 17px;
+    overflow-wrap: anywhere;
+  }
+
+  .ai-gold-comparison > p {
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .ai-model-availability {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .ai-validation-summary-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-validation-summary-metrics div:last-child {
+    grid-column: auto;
+  }
+
+  .ai-validation-risk strong {
+    font-size: 24px;
+  }
+
+  .ai-validation-point {
+    padding: 6px 4px;
+  }
 }
