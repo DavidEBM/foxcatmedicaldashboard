@@ -5,6 +5,31 @@ import { resolvePythonCommand } from "@/lib/server/python-runtime";
 
 export const runtime = "nodejs";
 
+async function proxyToVercelPython(request: Request, patient: unknown): Promise<Response> {
+  const target = new URL("/api/ai-predict-vercel", request.url);
+  const headers = new Headers({ "content-type": "application/json" });
+
+  for (const name of ["authorization", "cookie"]) {
+    const value = request.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+
+  const response = await fetch(target, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(patient),
+    cache: "no-store",
+  });
+
+  return new NextResponse(await response.text(), {
+    status: response.status,
+    headers: {
+      "Content-Type": response.headers.get("content-type") ?? "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 export async function POST(request: Request) {
   let patient: unknown;
   try {
@@ -12,6 +37,20 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "El cuerpo de la solicitud debe ser JSON válido." }, { status: 400 });
   }
+  // Vercel runs the compact Python model as a separate Function. The Node
+  // route remains available for local development, where it can use the
+  // project's configured Python interpreter.
+  if (process.env.VERCEL === "1") {
+    try {
+      return await proxyToVercelPython(request, patient);
+    } catch (cause) {
+      return NextResponse.json(
+        { error: cause instanceof Error ? cause.message : "No se pudo contactar el motor IA." },
+        { status: 503 },
+      );
+    }
+  }
+
   let child;
   try {
     const python = resolvePythonCommand();
