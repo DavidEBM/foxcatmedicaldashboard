@@ -5,6 +5,7 @@ api/ml-train-vercel.py
 ml/datasets/
 ml/tests/
 ml/outputs/SavedModels/Models_All/
-ml/outputs/SavedModels/Model_Reports/
+# Los PNG de Model_Reports se muestran en el panel de administración.
+ml/outputs/SavedModels/Model_Reports/**/*.csv
 ml/outputs/SavedModels/training_metrics_report.xlsx
 ml/outputs/SavedModels/*.joblib

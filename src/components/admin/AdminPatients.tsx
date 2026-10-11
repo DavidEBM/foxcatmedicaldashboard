@@ -17,6 +17,10 @@ import {
   normalizeDocumentId,
   normalizeText,
 } from "@/lib/admin-utils";
+import {
+  subscribeToAdminValidationAnalytics,
+} from "@/services/firebase/ai-validation.service";
+import type { AdminValidationAnalytics } from "@/types/admin-validation";
 
 import PatientFilters, {
   type PatientFiltersState,
@@ -31,6 +35,8 @@ const EMPTY_FILTERS: PatientFiltersState = {
   status: "",
   doctor: "",
   location: "",
+  validationStatus: "",
+  validationDoctor: "",
 };
 
 type PatientGroup =
@@ -167,6 +173,12 @@ function getGroupPatients(
 export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [doctors, setDoctors] = useState<AdminUser[]>([]);
+  const [validationAnalytics, setValidationAnalytics] =
+    useState<AdminValidationAnalytics>({
+      patientSummaries: {},
+      predictionSummaries: {},
+      records: [],
+    });
   const [filters, setFilters] =
     useState<PatientFiltersState>(EMPTY_FILTERS);
   const [patientGroup, setPatientGroup] = useState<PatientGroup>("");
@@ -211,6 +223,15 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
     });
   }, []);
 
+  useEffect(() => subscribeToAdminValidationAnalytics({
+    onData: setValidationAnalytics,
+    onError: (firebaseError) =>
+      setFeedback({
+        type: "error",
+        message: getFirebaseErrorMessage(firebaseError),
+      }),
+  }), []);
+
   const statuses = useMemo(
     () =>
       Array.from(
@@ -247,10 +268,27 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
     [doctors]
   );
 
+  const validationDoctorOptions = useMemo(() => {
+    const options = new Map(doctorOptions.map((doctor) => [doctor.id, doctor]));
+    validationAnalytics.records.forEach((record) => {
+      if (!options.has(record.doctorUid)) {
+        options.set(record.doctorUid, {
+          id: record.doctorUid,
+          displayName: `Médico ${record.doctorUid}`,
+        });
+      }
+    });
+    return Array.from(options.values()).sort((left, right) =>
+      left.displayName.localeCompare(right.displayName, "es", { sensitivity: "base" }),
+    );
+  }, [doctorOptions, validationAnalytics.records]);
+
   const filteredPatients = useMemo(() => {
     const search = normalizeText(filters.search);
     const status = normalizeText(filters.status);
     const location = normalizeText(filters.location);
+    const validationStatus = filters.validationStatus;
+    const validationDoctor = filters.validationDoctor;
 
     return patients.filter((patient) => {
       const name = normalizeText(getPatientName(patient));
@@ -258,6 +296,13 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
       const patientStatus = normalizeText(getPatientStatus(patient));
       const patientLocation = normalizeText(getPatientLocation(patient));
       const assignedDoctorIds = getAssignedDoctorIds(patient);
+      const validationSummary = validationAnalytics.patientSummaries[patient.id];
+      const patientValidationStatus = validationSummary?.status ?? "missing";
+      const hasValidationByDoctor = validationDoctor
+        ? validationAnalytics.records.some((record) =>
+          record.patientId === patient.id && record.doctorUid === validationDoctor,
+        )
+        : true;
 
       if (search && !name.includes(search) && !document.includes(search)) {
         return false;
@@ -278,10 +323,16 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
       ) {
         return false;
       }
+      if (validationStatus && patientValidationStatus !== validationStatus) {
+        return false;
+      }
+      if (!hasValidationByDoctor) {
+        return false;
+      }
 
       return true;
     });
-  }, [filters, patients]);
+  }, [filters, patients, validationAnalytics]);
 
   const groupedPatients = useMemo(
     () => getGroupPatients(patientGroup, filteredPatients),
@@ -476,6 +527,7 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
       <PatientFilters
         filters={filters}
         doctors={doctorOptions}
+        validationDoctors={validationDoctorOptions}
         statuses={statuses}
         locations={locations}
         onChange={setFilters}
@@ -682,12 +734,20 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
                 <th>Documento</th>
                 <th>Estado</th>
                 <th>Ubicación</th>
+                <th>Validación IA</th>
+                <th>Validado por</th>
                 <th>Médicos asignados</th>
               </tr>
             </thead>
             <tbody>
               {groupedPatients.map((patient) => {
                 const doctorIds = getAssignedDoctorIds(patient);
+                const validationSummary = validationAnalytics.patientSummaries[patient.id];
+                const validatingDoctorIds = Array.from(new Set(
+                  validationAnalytics.records
+                    .filter((record) => record.patientId === patient.id)
+                    .map((record) => record.doctorUid),
+                ));
                 const selected = selectedPatientIds.includes(patient.id);
 
                 return (
@@ -713,6 +773,29 @@ export default function AdminPatients({ currentAdmin }: AdminPatientsProps) {
                     <td>{getPatientDocument(patient) || "—"}</td>
                     <td>{getPatientStatus(patient) || "Sin estado"}</td>
                     <td>{getPatientLocation(patient) || "Sin ubicación"}</td>
+                    <td>
+                      {validationSummary?.status === "validated"
+                        ? "Validado"
+                        : validationSummary?.status === "not-validated"
+                          ? "No validado"
+                          : validationSummary?.status === "partial"
+                            ? "Parcial"
+                            : "Sin validar"}
+                    </td>
+                    <td>
+                      {validatingDoctorIds.length === 0 ? (
+                        "—"
+                      ) : (
+                        <div className="assignment-doctor-badges">
+                          {validatingDoctorIds.map((doctorId) => (
+                            <span className="soft-badge" key={doctorId}>
+                              {validationDoctorOptions.find((doctor) => doctor.id === doctorId)
+                                ?.displayName || doctorId}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       {doctorIds.length === 0 ? (
                         <span className="soft-badge assignment-unassigned-badge">

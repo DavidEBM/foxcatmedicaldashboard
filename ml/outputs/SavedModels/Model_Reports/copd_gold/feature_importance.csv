@@ -1,31 +1,31 @@
 ﻿feature,importance,importanceStd,method,model,target,algorithm
-FEV1,0.4666666666666666,0.09428090415820634,permutation_importance,CatBoost,copd_gold,CatBoost
-Location,0.06666666666666665,0.05443310539518172,permutation_importance,CatBoost,copd_gold,CatBoost
-PackHistory,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-MWT1Best,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-MWT1,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-FVC,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-Genero Sexo,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-HAD,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-smoking,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-FVCPRED,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-CAT,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-Respiratory Rate,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-Heart Rate,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-mMRC,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-FEV1PRED,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-OCUPACION,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-Altura_MSNM,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-PESO,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-AtrialFib,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-DISCAPACIDAD,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-TIPODISCAPAC,0.0,0.0,permutation_importance,CatBoost,copd_gold,CatBoost
-MWT2,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
-SGRQ,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
-Oxygen Saturation,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
-Temperature,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
-Blood pressure,-0.022222222222222254,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
-EDAD,-0.04444444444444451,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
-status of smoking,-0.04444444444444451,0.031426968052735496,permutation_importance,CatBoost,copd_gold,CatBoost
-Sputum,-0.04444444444444451,0.031426968052735496,permutation_importance,CatBoost,copd_gold,CatBoost
-"BMI,kg/m2 (IMC)",-0.04444444444444451,0.03142696805273549,permutation_importance,CatBoost,copd_gold,CatBoost
+FEV1,0.48888888888888893,0.06285393610547094,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+"BMI,kg/m2 (IMC)",0.04444444444444443,0.03142696805273544,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+status of smoking,0.022222222222222216,0.03142696805273544,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Temperature,0.022222222222222216,0.03142696805273544,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Location,0.022222222222222216,0.03142696805273544,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+PackHistory,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Genero Sexo,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+MWT1Best,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+FEV1PRED,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+FVCPRED,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+FVC,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+CAT,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+MWT1,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+MWT2,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+EDAD,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+smoking,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+SGRQ,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+HAD,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+mMRC,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+AtrialFib,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+TALLA(altura ó Height/m),0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Respiratory Rate,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Oxygen Saturation,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+DISCAPACIDAD,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+TIPODISCAPAC,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+OCUPACION,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+PESO,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Altura_MSNM,0.0,0.0,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Sputum,-0.022222222222222216,0.03142696805273544,permutation_importance,ExtraTrees,copd_gold,ExtraTrees
+Heart Rate,-0.022222222222222216,0.03142696805273544,permutation_importance,ExtraTrees,copd_gold,ExtraTrees

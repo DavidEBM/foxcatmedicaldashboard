@@ -73,6 +73,10 @@ BIAS_CURVE_METRICS = [
 
 CSV_ENCODING = "utf-8-sig"
 
+# Paleta de colores verde secuencial para matrices de confusión - usa una sola
+# paleta de color con variación en luminosidad desde oscuro hasta claro.
+CONFUSION_GREEN_CMAP = plt.get_cmap("Greens")
+
 
 # ============================================================
 # UTILIDADES
@@ -89,6 +93,14 @@ def _safe(value: Any) -> float:
         return np.nan
 
     return result if np.isfinite(result) else np.nan
+
+
+def _confusion_text_color(image: Any, value: float) -> str:
+    """Devuelve un color de texto con contraste sobre una celda."""
+    red, green, blue, _ = image.cmap(image.norm(value))
+    luminance = 0.299 * red + 0.587 * green + 0.114 * blue
+    # Con viridis, el lado alto es amarillo/verde claro; usamos negro más oscuro para mejor contraste
+    return "#FFFFFF" if luminance < 0.4 else "#000000"
 
 
 def _get_model(pipeline: Any) -> Any:
@@ -1127,6 +1139,7 @@ def _clear_generated_diagnostic_images(base: Path) -> None:
         "learning_curve_*.png",
         "validacion_modelos_elegibilidad.png",
         "validacion_modelos_mcc.png",
+        "validacion_comparativa_*.png",
     )
 
     for pattern in patterns:
@@ -1557,6 +1570,7 @@ def _plot_confusion_matrices(
             cm,
             interpolation="nearest",
             aspect="auto",
+            cmap=CONFUSION_GREEN_CMAP,
         )
 
         ax.set_title(
@@ -1605,6 +1619,7 @@ def _plot_confusion_matrices(
                 ha="center",
                 va="center",
                 fontsize=9,
+                color=_confusion_text_color(image, value),
             )
 
         fig.colorbar(
@@ -1632,6 +1647,7 @@ def _plot_confusion_matrices(
             aspect="auto",
             vmin=0,
             vmax=1,
+            cmap=CONFUSION_GREEN_CMAP,
         )
 
         ax.set_title(
@@ -1674,6 +1690,7 @@ def _plot_confusion_matrices(
                 ha="center",
                 va="center",
                 fontsize=9,
+                color=_confusion_text_color(image, value),
             )
 
         fig.colorbar(
@@ -1825,6 +1842,15 @@ def _safe_model_filename(value: Any) -> str:
     return safe.strip("_") or "modelo"
 
 
+def _candidate_name(candidate: Mapping[str, Any]) -> str:
+    """Obtiene un nombre estable incluso cuando el entrenamiento falló."""
+    return str(
+        candidate.get("model")
+        or candidate.get("algorithm")
+        or "Modelo"
+    )
+
+
 def _candidate_passes_threshold(
     candidate: Mapping[str, Any],
     thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
@@ -1855,7 +1881,7 @@ def _export_validation_quality_history(
             continue
         if value > 1.0:
             value /= 100.0
-        records.append((str(candidate.get("model") or "Modelo"), float(np.clip(value, 0, 1))))
+        records.append((_candidate_name(candidate), float(np.clip(value, 0, 1))))
 
     if not records:
         return
@@ -1904,14 +1930,14 @@ def _export_validation_model_comparisons(
         ("kappa", "Kappa", thresholds["kappa"]),
         ("auc", "ROC-AUC", thresholds["auc"]),
     )
-    available = [candidate for candidate in candidates if candidate.get("available") is not False]
+    available = list(candidates)
     if not available:
         return
 
-    model_names = [str(candidate.get("model") or "Modelo") for candidate in available]
+    model_names = [_candidate_name(candidate) for candidate in available]
     matrix = np.full((len(available), len(requirements)), np.nan, dtype=float)
     eligible_names = {
-        str(candidate.get("model"))
+        _candidate_name(candidate)
         for candidate in available
         if _candidate_passes_threshold(candidate, thresholds)
     }
@@ -1921,9 +1947,11 @@ def _export_validation_model_comparisons(
         key=lambda candidate: selection_key(candidate.get("validationMetrics") or candidate.get("validation") or {}),
         default=None,
     )
-    winner_name = str(winner.get("model")) if winner else None
+    winner_name = _candidate_name(winner) if winner else None
     for row_index, candidate in enumerate(available):
         validation_metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
+        if not isinstance(validation_metrics, Mapping):
+            continue
         for column_index, (metric_key, _label, _threshold) in enumerate(requirements):
             try:
                 value = float(validation_metrics.get(metric_key))
@@ -1988,6 +2016,93 @@ def _export_validation_model_comparisons(
             text_x, alignment = value - 0.025, "right"
         ax.text(text_x, bar.get_y() + bar.get_height() / 2, text, va="center", ha=alignment, fontsize=8, fontweight="bold")
     _save_figure(fig, base / "validacion_modelos_mcc.png", dpi=190)
+    _export_validation_quality_metric_comparisons(
+        available,
+        base,
+        target_label,
+    )
+
+
+def _export_validation_quality_metric_comparisons(
+    candidates: Sequence[Mapping[str, Any]],
+    base: Path,
+    target_label: str,
+) -> None:
+    """Exporta una comparación PNG independiente para cada métrica de calidad."""
+    metrics = (
+        ("accuracy", "Accuracy", 0.0, 1.0),
+        ("f1", "F1-Score", 0.0, 1.0),
+        ("mcc", "MCC", -1.0, 1.0),
+        ("kappa", "Kappa", -1.0, 1.0),
+        ("precision", "Precision", 0.0, 1.0),
+        ("recallSensitivity", "Sensibilidad", 0.0, 1.0),
+        ("auc", "AUC", 0.0, 1.0),
+    )
+
+    if not candidates:
+        return
+
+    for metric_key, metric_label, lower, upper in metrics:
+        names: list[str] = []
+        values: list[float] = []
+        for candidate in candidates:
+            validation_metrics = (
+                candidate.get("validationMetrics")
+                or candidate.get("validation")
+                or {}
+            )
+            raw_value = (
+                validation_metrics.get(metric_key)
+                if isinstance(validation_metrics, Mapping)
+                else None
+            )
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError, OverflowError):
+                value = np.nan
+            names.append(_candidate_name(candidate))
+            values.append(value if np.isfinite(value) else np.nan)
+
+        fig, ax = plt.subplots(figsize=(11, max(4.5, len(names) * 0.48)))
+        plot_values = np.nan_to_num(values, nan=lower)
+        colors = [
+            "#4575b4" if np.isfinite(value) else "#c7cbd1"
+            for value in values
+        ]
+        bars = ax.barh(names, plot_values, color=colors, alpha=0.88)
+        ax.invert_yaxis()
+        ax.set_xlim(lower, upper)
+        ax.set_xlabel("Valor")
+        ax.set_title(
+            f"{metric_label} de todos los modelos · {target_label}\n"
+            "Métricas de VALIDATION; no se excluyen modelos"
+        )
+        ax.grid(axis="x", alpha=0.2)
+
+        offset = (upper - lower) * 0.02
+        for bar, value in zip(bars, values):
+            if np.isfinite(value):
+                text_x = value + offset if value >= 0 else value - offset
+                alignment = "left" if value >= 0 else "right"
+                text = f"{value:.3f}"
+            else:
+                text_x = lower + offset
+                alignment = "left"
+                text = "Sin dato"
+            ax.text(
+                text_x,
+                bar.get_y() + bar.get_height() / 2,
+                text,
+                va="center",
+                ha=alignment,
+                fontsize=8,
+            )
+
+        _save_figure(
+            fig,
+            base / f"validacion_comparativa_{_safe_model_filename(metric_key)}.png",
+            dpi=190,
+        )
 
 
 def _build_majority_bias_resamples(
@@ -2047,20 +2162,20 @@ def _plot_real_mcc_comparison(
     candidates: Sequence[Mapping[str, Any]],
     thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
 ) -> None:
-    """Generate raw validation MCC for every available candidate."""
+    """Generate raw validation MCC for every trained candidate."""
     rows: list[tuple[str, float]] = []
 
     for candidate in candidates:
-        if not _candidate_passes_threshold(candidate, thresholds):
-            continue
         metrics = (
             candidate.get("validationMetrics")
             or candidate.get("validation")
             or {}
         )
+        if not isinstance(metrics, Mapping):
+            continue
         value = _safe(metrics.get("mcc"))
         if np.isfinite(value):
-            rows.append((str(candidate.get("model", "Modelo")), value))
+            rows.append((_candidate_name(candidate), value))
 
     if not rows:
         return
@@ -2111,7 +2226,7 @@ def _plot_model_bias_curve(
 ) -> None:
     """Plot raw metrics while increasing majority-class bias."""
     pipeline = candidate.get("trainedPipeline")
-    model_name = str(candidate.get("model", "Modelo"))
+    model_name = _candidate_name(candidate)
 
     if pipeline is None or not resamples:
         return
@@ -3333,15 +3448,16 @@ def export_target_diagnostics(
     # ---------------------------------------------------------
     # 10. Distribución de clases
     # ---------------------------------------------------------
+    all_candidates = list(candidates)
     _plot_real_mcc_comparison(
         base,
         target_label,
-        eligible_candidates,
+        all_candidates,
     )
 
     if X_validation is not None and y_validation is not None:
         bias_resamples = _build_majority_bias_resamples(y_validation)
-        for candidate in eligible_candidates:
+        for candidate in all_candidates:
             _plot_model_bias_curve(
                 base,
                 target_label,

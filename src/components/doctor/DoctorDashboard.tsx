@@ -305,11 +305,13 @@ export default function DoctorDashboard() {
   const [doctorAuthError, setDoctorAuthError] = useState<string | null>(null);
   const [doctorName, setDoctorName] = useState("Médico");
   const [doctorEmail, setDoctorEmail] = useState("Cuenta médica");
+  const [autoValidationEnabled, setAutoValidationEnabled] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setDoctorAuthLoading(true);
       setDoctorId(null);
+      setAutoValidationEnabled(false);
 
       if (!user) {
         setDoctorName("Médico");
@@ -331,6 +333,7 @@ export default function DoctorDashboard() {
           setDoctorAuthError(null);
           setDoctorName(userDocument.displayName || user.displayName || "Médico");
           setDoctorEmail(user.email || "Cuenta médica");
+          setAutoValidationEnabled(userDocument.autoValidation === true);
           setDoctorId(user.uid);
         })
         .catch(() => {
@@ -1730,6 +1733,7 @@ export default function DoctorDashboard() {
                 error={doctorAuthError ?? patientsError}
                 onSelectPatient={handleSelectAssignedPatient}
                 onRefresh={() => reloadPatients()}
+                autoValidationEnabled={autoValidationEnabled}
               />
             ) : activeItem === "appointments" ? (
               <DoctorAgendaWorkspace patients={patients} />

@@ -21,6 +21,7 @@ export interface UserDocument {
   status: UserStatus;
   displayName: string;
   email?: string;
+  autoValidation?: boolean;
   createdAt?: unknown;
 }
 

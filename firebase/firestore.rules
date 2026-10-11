@@ -318,6 +318,9 @@ service cloud.firestore {
         return values is map
           && values.keys().hasOnly([
             "risk",
+            "predictedValue",
+            "clinicalValue",
+            "confidence",
             "horizonHours",
             "timeline",
             "source",
@@ -337,6 +340,16 @@ service cloud.firestore {
           && values.risk is number
           && values.risk >= 0
           && values.risk <= 100
+          && (!values.keys().hasAny(["predictedValue"])
+            || (values.predictedValue is string
+              && values.predictedValue.size() <= 40))
+          && (!values.keys().hasAny(["clinicalValue"])
+            || (values.clinicalValue is string
+              && values.clinicalValue.size() <= 40))
+          && (!values.keys().hasAny(["confidence"])
+            || (values.confidence is number
+              && values.confidence >= 0
+              && values.confidence <= 100))
           && values.horizonHours is number
           && values.horizonHours >= 0
           && values.timeline is list

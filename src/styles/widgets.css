@@ -994,6 +994,7 @@
 .ai-validation-button:hover, .ai-validation-button.selected { border-color: var(--doctor-primary); }
 .ai-validation-button-valid.selected { background: var(--doctor-green-soft); color: var(--doctor-green-dark); }
 .ai-validation-button-incorrect.selected { background: var(--doctor-red-soft); color: var(--doctor-red-dark); }
+.ai-validation-button-auto { border-color: var(--doctor-primary); color: var(--doctor-primary-dark); }
 .ai-validation-result { font-size: 10px; font-weight: 700; }
 .ai-validation-result.success { color: var(--doctor-green-dark); }
 .ai-validation-result.incorrect { color: var(--doctor-red-dark); }

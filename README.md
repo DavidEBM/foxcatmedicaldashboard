@@ -10,6 +10,7 @@ Dashboard médico construido con Next.js, React, Firebase y un pipeline de apren
 - [Puesta en marcha](#puesta-en-marcha)
 - [Variables de entorno](#variables-de-entorno)
 - [Funcionamiento de la aplicación](#funcionamiento-de-la-aplicación)
+- [Roles y validación clínica](#roles-y-validación-clínica)
 - [Pipeline de aprendizaje automático](#pipeline-de-aprendizaje-automático)
 - [Targets y algoritmos](#targets-y-algoritmos)
 - [Umbrales y publicación](#umbrales-y-publicación)
@@ -51,6 +52,8 @@ Componentes principales:
 - `ml/datasets/`: datasets locales y snapshots temporales de Firebase.
 - `ml/outputs/SavedModels/`: modelos, manifest y reportes generados.
 - `public/`: recursos estáticos de la aplicación.
+- `api/ai-predict-vercel.py`: función Python nativa de Vercel para inferencia.
+- `vercel.json`: rewrite de predicción, duración de la función y archivos de modelos incluidos.
 
 ## Puesta en marcha
 
@@ -146,10 +149,22 @@ Estas variables solo deben existir en el servidor, Vercel o el entorno de despli
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | Cuenta de servicio |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | Clave privada con saltos de línea escapados como `\\n` |
 | `FIREBASE_ADMIN_CREDENTIALS_JSON` | JSON completo de la cuenta de servicio, como alternativa a las tres variables anteriores |
-| `FIREBASE_ADMIN_CREDENTIALS` | Ruta alternativa a un JSON de cuenta de servicio; también acepta el JSON completo |
+| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | Alias compatible para el JSON completo de la cuenta de servicio |
+| `FIREBASE_ADMIN_CREDENTIALS` | Ruta local a un JSON de cuenta de servicio; también acepta el JSON completo |
+| `FIREBASE_ADMIN_STORAGE_BUCKET` | Bucket usado para publicar modelos y reportes ML; si falta, usa `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` | Alias heredados aceptados por el servidor; se recomienda usar los nombres `FIREBASE_ADMIN_*` |
 | `SESSION_COOKIE_DAYS` | Duración de la cookie de sesión; por defecto, 5 días |
 
 No utilizar el prefijo `NEXT_PUBLIC_` para ninguna credencial administrativa.
+
+En Vercel no se debe configurar `ML_PYTHON_EXECUTABLE`: la inferencia usa `api/ai-predict-vercel.py` y `requirements.txt`. Las variables `ML_RANDOM_STATE`, `ML_TRAIN_SIZE`, `ML_VALIDATION_SIZE`, `ML_TEST_SIZE`, `CV_FOLDS`, `HARMONIZED_DATASET_PATH` y `AI_OUTPUT_DIR` son principalmente para entrenamiento local; no sustituyen los modelos publicados.
+
+#### Configuración recomendada en Vercel
+
+1. Copiar las variables públicas de Firebase desde la configuración de la aplicación web de Firebase.
+2. Añadir como variables **Sensitive** las credenciales Admin SDK. La opción recomendada es `FIREBASE_ADMIN_CREDENTIALS_JSON` con el JSON completo de la cuenta de servicio. Como alternativa, usar `FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY` y `FIREBASE_ADMIN_STORAGE_BUCKET`.
+3. Configurar las variables para `Production`, `Preview` y `Development` según corresponda; no reutilizar credenciales de producción en entornos de prueba sin autorización.
+4. No subir `.env.local`, el JSON de la cuenta de servicio, tokens de Vercel ni snapshots clínicos.
 
 ### Configuración del pipeline ML
 
@@ -163,6 +178,7 @@ No utilizar el prefijo `NEXT_PUBLIC_` para ninguna credencial administrativa.
 | `HARMONIZED_DATASET_PATH` | `ml/datasets/dataset_final_armonizado.csv` | Dataset local |
 | `AI_OUTPUT_DIR` | `ml/outputs/SavedModels` | Carpeta de modelos y reportes |
 | `ML_PYTHON_EXECUTABLE` | Python del sistema | Intérprete compartido por inferencia y entrenamiento; opcional, admite ruta absoluta |
+| `ML_STORAGE_MODE` | `local` | `local` usa archivos del repositorio; `remote` usa Firebase Storage. En Vercel el código activa el modo remoto automáticamente |
 
 Umbrales de elegibilidad fijos:
 
@@ -184,6 +200,26 @@ Los cinco umbrales son obligatorios y no configurables; deben cumplirse simultá
 - Las rutas administrativas verifican el token y exigen permisos de administrador.
 - Firestore almacena pacientes y datos operativos.
 - Las credenciales Admin SDK se cargan exclusivamente en el servidor.
+
+### Roles y validación clínica
+
+El sistema conserva tres roles operativos:
+
+- **Paciente**: consulta la información que se le habilite y mantiene sus datos clínicos.
+- **Médico**: revisa pacientes asignados, consulta predicciones y registra validaciones manuales.
+- **Administrador**: gestiona usuarios y asignaciones, ejecuta entrenamientos y revisa los reportes.
+
+En administración de usuarios, `AutoValidación` es un permiso independiente del rol. Solo puede estar activo para una cuenta con rol médico; si el rol cambia a paciente o administrador, la API lo desactiva.
+
+En **Pacientes a mi cargo**, un médico con ese permiso ve el botón **Validación automática**. La acción procesa secuencialmente todos sus pacientes:
+
+1. Omite sin guardar nada a los pacientes que no tienen `copdGold` clínico registrado.
+2. Solicita la predicción actual a `/api/ai-predict` y busca el target `copd_gold`.
+3. Guarda `valid` cuando el GOLD predicho coincide con `patient.copdGold`.
+4. Guarda `incorrect` cuando existe GOLD clínico pero el valor predicho es diferente.
+5. Deja el caso pendiente si no hay predicción GOLD disponible y muestra un resumen de correctas, incorrectas, pendientes y errores.
+
+La validación manual continúa disponible en el detalle de predicciones. El dashboard muestra el **modelo activo** utilizado por la respuesta de IA. Los registros se almacenan en Firestore mediante `saveAiPredictionValidation`, y el panel administrativo permite filtrar pacientes por estado de validación y por médico validador. La validación automática no reemplaza la revisión clínica ni crea un GOLD cuando el paciente no tiene un valor registrado por un médico.
 
 ### Área de administradores
 
@@ -342,8 +378,9 @@ ml/outputs/SavedModels/
 - `boxplot_tiempos_prediccion.png`: comportamiento de latencia.
 - `mcc_real_comparativa.png`: MCC real, sin normalizar, por modelo y target.
 - `metricas_sesgo_<modelo>.png`: métricas frente al sesgo controlado hacia la clase mayoritaria.
+- `validacion_comparativa_accuracy.png`, `validacion_comparativa_f1.png`, `validacion_comparativa_mcc.png`, `validacion_comparativa_kappa.png`, `validacion_comparativa_precision.png`, `validacion_comparativa_recallSensitivity.png` y `validacion_comparativa_auc.png`: una comparativa de cada métrica de VALIDATION con todos los candidatos entrenados, incluidos los que no fueron elegibles o no tienen dato.
 
-Las imágenes administradas por el pipeline se limpian y regeneran por target. Las gráficas de calidad, MCC y sesgo se producen únicamente para candidatos que superaron el umbral mínimo. Si ningún modelo es elegible, es correcto que no se genere una gráfica de modelos aprobados.
+Las imágenes administradas por el pipeline se limpian y regeneran por target. Las gráficas individuales de calidad y las comparativas `validacion_comparativa_*.png` incluyen todos los modelos candidatos; los valores ausentes se muestran como `Sin dato`. Esto permite una investigación comparativa sin confundir un candidato con un modelo aprobado. Las gráficas de publicación o de modelos elegibles siguen dependiendo de los umbrales y pueden quedar vacías si ningún candidato los cumple.
 
 ## Sección investigativa: predicción de GOLD 1–4
 
@@ -454,6 +491,33 @@ ROC/AUC evalúa la capacidad de ordenar las clases mediante scores o probabilida
 10. No publicar ni utilizar clínicamente un target que indique **Requiere revisión**.
 
 ## Producción y solución de problemas
+
+### Despliegue en Vercel
+
+La URL de producción configurada para el proyecto es [https://foxcatmedicaldashboard.vercel.app](https://foxcatmedicaldashboard.vercel.app). El despliegue web sirve Next.js y redirige `/api/ai-predict` a la función Python `api/ai-predict-vercel.py`.
+
+Antes de desplegar:
+
+```bash
+vercel link
+vercel pull --environment=production
+npm ci
+npm run build
+vercel deploy --prod
+```
+
+El comando de build de Vercel es `npm run build` (o `pnpm build` si el proyecto está configurado para pnpm). `vercel.json` incluye solo los artefactos publicados necesarios para inferencia (`*.cbm`, `training-manifest.json` y `vercel-models.json`); los reportes PNG, CSV y XLSX no se empaquetan en la función de predicción.
+
+El filesystem de las funciones es efímero. Por ello, el entrenamiento y la generación de reportes se realizan localmente o en un worker persistente; después se publican los modelos y el manifest en Firebase Storage. En Vercel, `ML_STORAGE_MODE` se considera remoto y las rutas de consulta de reportes leen desde ese almacenamiento.
+
+Checklist mínimo:
+
+- Authentication y Firestore están habilitados en el proyecto Firebase.
+- Las reglas de Firestore y Storage están desplegadas y permiten solo las operaciones previstas.
+- La cuenta de servicio usada en Vercel tiene permisos mínimos para Authentication, Firestore y Storage.
+- `FIREBASE_ADMIN_STORAGE_BUCKET` apunta al bucket correcto si no coincide con `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`.
+- Existe un `ml-published/current.json` y una corrida publicada con los artefactos requeridos antes de probar predicciones en producción.
+- Se prueba inicio de sesión, una ruta administrativa, una predicción y la lectura de reportes después del despliegue.
 
 ### Error `api/admin/ml: 500`
 

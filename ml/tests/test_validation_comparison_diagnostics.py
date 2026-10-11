@@ -37,3 +37,15 @@ def test_validation_comparison_exports_all_candidates_when_one_is_eligible(tmp_p
     mcc_chart = tmp_path / "validacion_modelos_mcc.png"
     assert eligibility_chart.is_file() and eligibility_chart.stat().st_size > 0
     assert mcc_chart.is_file() and mcc_chart.stat().st_size > 0
+
+    for metric in (
+        "accuracy",
+        "f1",
+        "mcc",
+        "kappa",
+        "precision",
+        "recallSensitivity",
+        "auc",
+    ):
+        chart = tmp_path / f"validacion_comparativa_{metric}.png"
+        assert chart.is_file() and chart.stat().st_size > 0

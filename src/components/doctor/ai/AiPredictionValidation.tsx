@@ -191,6 +191,12 @@ export default function AiPredictionValidation({
     ...patientBackendPredictions,
     ...localPredictionsNotCovered,
   ];
+  const activeModelName =
+    patientBackendPredictions.find((prediction) => prediction.modelName)?.modelName
+    ?? trainingManifest?.activeModel?.name
+    ?? trainingProfile.selectedModelName
+    ?? predictions.find((prediction) => prediction.modelName)?.modelName
+    ?? "Modelo no identificado";
   const goldPrediction = patientBackendPredictions.find((prediction) => prediction.target === "copd_gold");
   const riskPredictions = predictions.filter((prediction) =>
     prediction.target !== "copd_gold" && !prediction.predictedValue,
@@ -250,6 +256,9 @@ export default function AiPredictionValidation({
             para {patient.name} y registra si
             consideras que son correctas o
             incorrectas.
+          </p>
+          <p className="ai-validation-active-model">
+            <strong>Modelo activo:</strong> {activeModelName}
           </p>
         </div>
 

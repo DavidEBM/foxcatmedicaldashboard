@@ -150,7 +150,8 @@ export default function AdminUsers({
     const confirmed = window.confirm(
       `¿Confirmas actualizar esta cuenta?\n\n` +
         `Rol: ${role}\n` +
-        `Estado: ${userStatus}`
+        `Estado: ${userStatus}\n` +
+        `AutoValidación: ${user.autoValidation === true ? "Activada" : "Desactivada"}`
     );
 
     if (!confirmed) {
@@ -163,6 +164,7 @@ export default function AdminUsers({
       await updateUser(user.id, {
         role,
         status: userStatus,
+        autoValidation: user.autoValidation === true,
       });
 
       setStatus(
@@ -198,8 +200,8 @@ export default function AdminUsers({
 
   function updateLocalUser(
     uid: string,
-    field: "role" | "status",
-    value: string
+    field: "role" | "status" | "autoValidation",
+    value: string | boolean
   ) {
     setUsers((currentUsers) =>
       currentUsers.map((user) => {
@@ -211,6 +213,14 @@ export default function AdminUsers({
           return {
             ...user,
             role: value as AdminUserRole,
+            autoValidation: value === "doctor" ? user.autoValidation : false,
+          };
+        }
+
+        if (field === "autoValidation") {
+          return {
+            ...user,
+            autoValidation: value === true,
           };
         }
 
@@ -277,6 +287,7 @@ export default function AdminUsers({
               <th>Usuario</th>
               <th>Correo</th>
               <th>Rol</th>
+              <th>Función especial</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -286,7 +297,7 @@ export default function AdminUsers({
             {loading ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="empty-users"
                 >
                   Cargando usuarios...
@@ -295,7 +306,7 @@ export default function AdminUsers({
             ) : sortedUsers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="empty-users"
                 >
                   No existen usuarios registrados.
@@ -362,6 +373,24 @@ export default function AdminUsers({
                           Administrador
                         </option>
                       </select>
+                    </td>
+
+                    <td>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={user.autoValidation === true}
+                          disabled={role !== "doctor" || isCurrentAdmin || isSaving}
+                          onChange={(event) =>
+                            updateLocalUser(
+                              user.id,
+                              "autoValidation",
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        {" "}AutoValidación
+                      </label>
                     </td>
 
                     <td>

@@ -22,6 +22,7 @@ export interface AdminUser {
   displayName: string;
   role: AdminUserRole;
   status: AdminUserStatus;
+  autoValidation?: boolean;
   createdAt?: unknown;
 }
 
@@ -47,6 +48,7 @@ function mapUser(
         : "",
     role: data.role as AdminUserRole,
     status: data.status as AdminUserStatus,
+    autoValidation: data.autoValidation === true,
     createdAt: data.createdAt,
   };
 }
@@ -161,7 +163,7 @@ export async function updateUserRole(
 export async function updateUser(
   uid: string,
   data: Partial<
-    Pick<AdminUser, "displayName" | "email" | "role" | "status">
+    Pick<AdminUser, "displayName" | "email" | "role" | "status" | "autoValidation">
   >
 ): Promise<void> {
   const currentUser = auth.currentUser;

@@ -20,7 +20,7 @@ export async function PATCH(
     const { uid: adminUid } = await requireAdmin(request);
     const { uid } = await context.params;
     const body = await request.json() as Record<string, unknown>;
-    const updates: Record<string, string> = {};
+    const updates: Record<string, string | boolean> = {};
 
     if (body.role !== undefined) {
       if (typeof body.role !== "string" || !ROLES.has(body.role)) {
@@ -34,6 +34,13 @@ export async function PATCH(
         return NextResponse.json({ error: "El estado no es válido." }, { status: 400 });
       }
       updates.status = body.status;
+    }
+
+    if (body.autoValidation !== undefined) {
+      if (typeof body.autoValidation !== "boolean") {
+        return NextResponse.json({ error: "La función de autovalidación no es válida." }, { status: 400 });
+      }
+      updates.autoValidation = body.autoValidation;
     }
 
     if (body.displayName !== undefined) {
@@ -62,6 +69,20 @@ export async function PATCH(
     const profile = await profileRef.get();
     if (!profile.exists) {
       return NextResponse.json({ error: "El perfil de usuario no existe." }, { status: 404 });
+    }
+
+    const currentRole = profile.data()?.role;
+    if (
+      updates.autoValidation === true &&
+      (updates.role ?? currentRole) !== "doctor"
+    ) {
+      return NextResponse.json(
+        { error: "La función AutoValidación sólo puede asignarse a médicos." },
+        { status: 400 },
+      );
+    }
+    if (updates.role && updates.role !== "doctor") {
+      updates.autoValidation = false;
     }
 
     const previousStatus = profile.data()?.status;

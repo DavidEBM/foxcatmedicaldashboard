@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { Patient } from "@/types/doctor-patients";
 import type { AiPatientValidationSummary } from "@/types/doctor-ai-validation";
-import { subscribeToDoctorValidationSummaries } from "@/services/firebase/ai-validation.service";
+import type { AiPrediction } from "@/types/doctor-ai-validation";
+import {
+  saveAiPredictionValidation,
+  subscribeToDoctorValidationSummaries,
+} from "@/services/firebase/ai-validation.service";
 import { EXPECTED_PREDICTIONS_PER_PATIENT } from "@/lib/doctor/ai-validation/constants";
 import PatientCrudModal from "@/components/doctor/patients/PatientCrudModal";
 
@@ -16,6 +20,7 @@ interface DoctorPatientsWorkspaceProps {
   error: string | null;
   onSelectPatient: (patientId: string) => void;
   onRefresh: () => void;
+  autoValidationEnabled: boolean;
 }
 
 interface DoctorAgendaWorkspaceProps {
@@ -157,6 +162,7 @@ export function DoctorPatientsWorkspace({
   error,
   onSelectPatient,
   onRefresh,
+  autoValidationEnabled,
 }: DoctorPatientsWorkspaceProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -168,6 +174,8 @@ export function DoctorPatientsWorkspace({
   >({});
   const [patientModalOpen, setPatientModalOpen] = useState(false);
   const [patientFormStatus, setPatientFormStatus] = useState<string | null>(null);
+  const [autoValidationRunning, setAutoValidationRunning] = useState(false);
+  const [autoValidationMessage, setAutoValidationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     return subscribeToDoctorValidationSummaries(doctorUid, {
@@ -241,6 +249,72 @@ export function DoctorPatientsWorkspace({
     setValidationFilter("");
   };
 
+  const runAutomaticGoldValidation = async () => {
+    if (!doctorUid || autoValidationRunning) return;
+
+    setAutoValidationRunning(true);
+    setAutoValidationMessage(null);
+    let validated = 0;
+    let incorrect = 0;
+    let pending = 0;
+    let failed = 0;
+
+    try {
+      for (const patient of patients) {
+        if (patient.copdGold <= 0) {
+          pending += 1;
+          continue;
+        }
+
+        try {
+          const response = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(patient),
+          });
+          const payload = await response.json() as {
+            predictions?: Array<Record<string, unknown>>;
+          };
+          if (!response.ok) throw new Error("No se pudo obtener la predicción GOLD.");
+
+          const result = payload.predictions?.find((item) => String(item.key ?? "") === "copd_gold");
+          const predictedValue = result?.prediction;
+          if (predictedValue === undefined || predictedValue === null || predictedValue === "") {
+            pending += 1;
+            continue;
+          }
+
+          const prediction: AiPrediction = {
+            key: "copd_gold",
+            label: String(result?.label ?? "COPD GOLD"),
+            risk: Number(result?.risk ?? 0),
+            predictedValue: String(predictedValue),
+            clinicalValue: String(patient.copdGold),
+            confidence: Number.isFinite(Number(result?.confidence)) ? Number(result?.confidence) : undefined,
+            horizonHours: 24,
+            timeline: [{ hours: 24, label: "24 h", risk: Number(result?.risk ?? 0) }],
+            source: "backend",
+            modelName: String(result?.modelName ?? "Modelo ML"),
+            artifact: String(result?.artifact ?? ""),
+            target: "copd_gold",
+          };
+          const verdict = prediction.predictedValue === String(patient.copdGold) ? "valid" : "incorrect";
+          await saveAiPredictionValidation({ patient, prediction, verdict }, doctorUid);
+          if (verdict === "valid") validated += 1;
+          else incorrect += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      setAutoValidationMessage(
+        `Validación automática completada: ${validated} correctas, ${incorrect} incorrectas, ${pending} pendientes${failed ? ` y ${failed} con error` : ""}.`,
+      );
+    } finally {
+      setAutoValidationRunning(false);
+    }
+  };
+
   return (
     <section className="doctor-sidebar-workspace" aria-labelledby="doctor-patients-title">
       <header className="doctor-sidebar-workspace-header">
@@ -277,8 +351,21 @@ export function DoctorPatientsWorkspace({
             <span aria-hidden="true">↻</span>
             {loading ? "Actualizando..." : "Actualizar"}
           </button>
+          {autoValidationEnabled && (
+            <button
+              type="button"
+              className="doctor-patient-refresh"
+              onClick={() => void runAutomaticGoldValidation()}
+              disabled={autoValidationRunning || loading || patients.length === 0}
+            >
+              {autoValidationRunning ? "Validando GOLD..." : "Validación automática"}
+            </button>
+          )}
         </div>
       </header>
+      {autoValidationMessage && (
+        <p className="doctor-patient-form-status" role="status">{autoValidationMessage}</p>
+      )}
 
       <label className="doctor-patient-search">
         <span aria-hidden="true">⌕</span>

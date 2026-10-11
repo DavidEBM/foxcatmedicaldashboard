@@ -1,2 +1,2 @@
 ﻿target,targetLabel,algorithm,family,hyperparameters
-copd_gold,COPD GOLD (1–4),CatBoost,ML,"{""iterations"": 200, ""depth"": 6, ""learning_rate"": 0.05, ""l2_leaf_reg"": 3.0, ""random_strength"": 1.0, ""cat_features"": null}"
+copd_gold,COPD GOLD (1–4),ExtraTrees,ML,"{""bootstrap"": false, ""ccp_alpha"": 0.0, ""class_weight"": ""balanced"", ""criterion"": ""gini"", ""max_depth"": null, ""max_features"": ""sqrt"", ""max_leaf_nodes"": null, ""max_samples"": null, ""min_impurity_decrease"": 0.0, ""min_samples_leaf"": 2, ""min_samples_split"": 2, ""min_weight_fraction_leaf"": 0.0, ""monotonic_cst"": null, ""n_estimators"": 200, ""n_jobs"": -1, ""oob_score"": false, ""random_state"": 42, ""verbose"": 0, ""warm_start"": false}"

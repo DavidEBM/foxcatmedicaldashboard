@@ -7,11 +7,17 @@ export interface PatientFiltersState {
   status: string;
   doctor: string;
   location: string;
+  validationStatus: string;
+  validationDoctor: string;
 }
 
 interface PatientFiltersProps {
   filters: PatientFiltersState;
   doctors?: Array<{
+    id: string;
+    displayName: string;
+  }>;
+  validationDoctors?: Array<{
     id: string;
     displayName: string;
   }>;
@@ -28,6 +34,7 @@ const UNASSIGNED_DOCTOR_VALUE =
 export default function PatientFilters({
   filters,
   doctors = [],
+  validationDoctors = doctors,
   statuses = [],
   locations = [],
   onChange,
@@ -51,6 +58,8 @@ export default function PatientFilters({
       status: "",
       doctor: "",
       location: "",
+      validationStatus: "",
+      validationDoctor: "",
     });
   }
 
@@ -162,6 +171,44 @@ export default function PatientFilters({
                 value={location}
               >
                 {location}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="patient-validation-status">
+            Validación IA
+          </label>
+
+          <select
+            id="patient-validation-status"
+            value={filters.validationStatus}
+            onChange={handleChange("validationStatus")}
+          >
+            <option value="">Todos</option>
+            <option value="validated">Validados</option>
+            <option value="not-validated">No validados</option>
+            <option value="partial">Parcialmente validados</option>
+            <option value="missing">Sin validar</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="patient-validation-doctor">
+            Médico validador
+          </label>
+
+          <select
+            id="patient-validation-doctor"
+            value={filters.validationDoctor}
+            onChange={handleChange("validationDoctor")}
+            disabled={!validationDoctors.length}
+          >
+            <option value="">Cualquier médico</option>
+            {validationDoctors.map((doctor) => (
+              <option key={doctor.id} value={doctor.id}>
+                {doctor.displayName}
               </option>
             ))}
           </select>

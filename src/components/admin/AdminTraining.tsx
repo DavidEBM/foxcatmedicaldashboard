@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { auth } from "@/services/firebase/firebase-config";
 import {
@@ -64,6 +64,8 @@ interface TrainingJob {
 }
 
 interface TrainingStatusResponse {
+  algorithms: string[];
+  targets: string[];
   manifest: TrainingManifest | null;
   images: TrainingImage[];
   latestRun: TrainingJob | null;
@@ -420,7 +422,7 @@ export default function AdminTraining() {
   const [includeFirebasePatients, setIncludeFirebasePatients] = useState(true);
   const [runId, setRunId] = useState<string | null>(null);
   const [job, setJob] = useState<TrainingJob | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [downloadingTarget, setDownloadingTarget] = useState<string | null>(null);
@@ -432,6 +434,9 @@ export default function AdminTraining() {
     if (!user) throw new Error("La sesión administrativa no está disponible.");
     return user.getIdToken();
   }, []);
+
+  // Referencia persistente para cancelar operaciones asíncronas
+  const cancelledRef = useRef(false);
 
   const loadStatus = useCallback(async (syncLatestJob = true) => {
     const token = await getToken();
@@ -447,56 +452,73 @@ export default function AdminTraining() {
     }
   }, [getToken]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchManifest = useCallback(async (syncLatestJob = true) => {
+    setRefreshing(true);
+    setError("");
+    try {
+      await loadStatus(syncLatestJob);
+    } catch (cause: unknown) {
+      if (!cancelledRef.current) {
+        setError(cause instanceof Error ? cause.message : "No se pudo actualizar el manifiesto de entrenamiento.");
+      }
+    } finally {
+      if (!cancelledRef.current) setRefreshing(false);
+    }
+  }, [loadStatus, cancelledRef]);
 
+  useEffect(() => {
     async function loadInitialStatus() {
       try {
         await loadStatus();
       } catch (cause: unknown) {
-        if (!cancelled) {
+        if (!cancelledRef.current) {
           setError(cause instanceof Error ? cause.message : "No se pudo cargar el módulo ML.");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelledRef.current) setLoading(false);
       }
     }
 
     void loadInitialStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [loadStatus]);
+  }, [loadStatus, cancelledRef]);
+
+  useEffect(() => {
+    // Re-renderizar galería de imágenes cuando status cambie
+    if (status?.images) {
+      // Galería actualizada automáticamente por React
+    }
+  }, [status]);
 
   useEffect(() => {
     if (!runId) return;
-    let cancelled = false;
 
-    const poll = async () => {
+    async function poll() {
       try {
         const token = await getToken();
-        const response = await fetch(`/api/admin/ml/train?runId=${encodeURIComponent(runId)}`, {
+        const response = await fetch(`/api/admin/ml/train?runId=${encodeURIComponent(runId ?? "")}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
         const payload = await response.json() as { job?: TrainingJob; error?: string };
         if (!response.ok) throw new Error(payload.error || "No se pudo consultar el entrenamiento.");
-        if (cancelled || !payload.job) return;
-        setJob(payload.job);
+        if (cancelledRef.current === true) return;
 
-        if (payload.job.status === "succeeded" || payload.job.status === "failed") {
+        const updatedJob = payload.job ?? null;
+        setJob(updatedJob);
+
+        if (updatedJob?.status === "succeeded" || updatedJob?.status === "failed") {
           setRunId(null);
           await loadStatus(false);
         }
       } catch (cause: unknown) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : "Falló la consulta del entrenamiento.");
+        if (!cancelledRef.current) setError(cause instanceof Error ? cause.message : "Falló la consulta del entrenamiento.");
       }
-    };
+    }
 
     void poll();
     const interval = window.setInterval(() => void poll(), 1500);
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       window.clearInterval(interval);
     };
   }, [getToken, loadStatus, runId]);
@@ -549,7 +571,7 @@ export default function AdminTraining() {
       setError("");
       await loadStatus(false);
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : "No se pudieron actualizar los resultados.");
+      setError(cause instanceof Error ? cause.message : "No se pudieron actualizar las imágenes de métricas de calidad.");
     } finally {
       setRefreshing(false);
     }
@@ -619,9 +641,9 @@ export default function AdminTraining() {
           type="button"
           className="btn btn-secondary"
           onClick={() => void refreshTrainingData()}
-          disabled={refreshing || running || loading}
+          disabled={running}
         >
-          {refreshing ? "Actualizando..." : "Actualizar resultados"}
+          {refreshing ? "Actualizando..." : "Actualizar imágenes de métricas de calidad"}
         </button>
       </div>
 
@@ -958,10 +980,23 @@ export default function AdminTraining() {
             <h3 className="panel-title">Imágenes de diagnóstico</h3>
             <p className="panel-subtitle">Matrices de confusión, ROC, importancia de variables y calidad normalizada informativa (sin participación en selección).</p>
           </div>
-          <span className="admin-patients-count">{status?.images.length ?? 0} archivos</span>
+          <span className="admin-patients-count">{status?.images?.length ?? 0} archivos</span>
+          <button
+            type="button"
+            className="btn btn-secondary admin-training-refresh-images"
+            onClick={() => void fetchManifest(false)}
+            disabled={refreshing || running}
+            title="Recargar gráficas con el último manifiesto de los mejores modelos"
+          >
+            {refreshing ? (
+              <span>🔄 Actualizando...</span>
+            ) : (
+              <span>📊 Actualizar imágenes de métricas de calidad</span>
+            )}
+          </button>
         </div>
 
-        {status?.images.length ? (
+        {status?.images && status.images.length > 0 ? (
           <div className="admin-training-gallery">
             {status.images.map((image) => (
               <figure className="admin-training-image-card" key={image.path}>
