@@ -234,6 +234,26 @@ El panel permite:
 7. Descargar o visualizar imágenes y archivos de diagnóstico.
 8. Ver la comparación MCC específica por target.
 
+Cada entrenamiento se etiqueta por origen de datos:
+
+- **Solo Firebase**: utiliza exclusivamente el snapshot de pacientes de Firestore.
+- **Firebase + dataset**: fusiona el snapshot de Firestore con el dataset histórico y deduplica los registros.
+- **Solo dataset**: utiliza únicamente el dataset local.
+
+En los registros de Firebase, `importMetadata` identifica los pacientes importados desde un archivo; si ese mapa no existe, se consideran pacientes creados desde la web. El manifest conserva el modo en `dataSources.sourceMode` y los conteos `firebaseImportedRows`/`firebaseWebRows`. El panel de entrenamiento y el de validaciones permiten filtrar por ese origen y solo presentan como utilizables los candidatos que cumplen los umbrales de selección.
+
+### Factores clínicos de la predicción
+
+La altura sobre el nivel del mar y la profesión sí están contempladas como variables predictoras cuando el modelo entrenado contiene esas columnas. Para GOLD, el conjunto de features incluye `Altura_MSNM` y `OCUPACION`; la primera llega desde `locationElevationM` y la segunda desde `occupation` (con `profession` como alias en inferencia). La misma transformación se aplica en inferencia local y Vercel, por lo que la altitud y la exposición ocupacional pueden influir en la predicción y sus métricas de riesgo cuando existen datos de entrenamiento suficientes y el valor del paciente está registrado. No se debe interpretar esto como causalidad clínica individual: el modelo estima asociaciones del conjunto de entrenamiento y requiere validación médica.
+
+En la validación reportada por el practicante médico se obtuvo un **54% de acierto sobre 457 pacientes registrados**. El practicante ubicó un paciente adicional que fue predicho positivamente para GOLD; después se realizó un nuevo entrenamiento incorporando ese paciente y mejoraron las métricas de las IAs. Este resultado debe conservarse como evidencia del proceso de validación y reentrenamiento, no como una garantía de rendimiento clínico futuro.
+
+En **Administración → Modelos de IA**, cada entrenamiento exitoso registra sus ganadores elegibles en `aiModels`, incluyendo target, algoritmo, origen y métricas de `VALIDATION`. El administrador puede filtrar por `Solo Firebase`, `Firebase + dataset` o `Solo dataset` y activar un ganador por target y origen. La selección activa se incorpora al manifest que consume el dashboard médico y se envía al motor de inferencia; si el artefacto alternativo no está publicado en el paquete de ejecución, el motor lo informa como bloqueado en lugar de usar silenciosamente otro modelo.
+
+El log de cada ejecución muestra el tiempo de captura de Firebase, la cantidad de pacientes importados desde dataset, creados desde la web y el total, además del tiempo de cada algoritmo, preparación de datos y exportación de reportes. La lectura de Firebase es una sola consulta; normalmente el tiempo dominante es la validación cruzada y el entrenamiento de los algoritmos seleccionados. Para ejecuciones exploratorias más rápidas se pueden seleccionar menos algoritmos y reducir `CV_FOLDS` (por ejemplo, de `3` a `2`); para resultados comparativos finales se recomienda conservar los ocho algoritmos y tres folds.
+
+En el modo `dataset`, la aplicación también consulta Firebase para mantener el mismo conjunto de datos actualizado, pero crea el snapshot con solo los pacientes importados mediante `importMetadata`; los pacientes creados directamente en Firebase/web se excluyen antes del entrenamiento. El log muestra cuántos fueron capturados, cuántos pertenecen al dataset, cuántos fueron excluidos y cuántos se incluyeron finalmente.
+
 ### API administrativa ML
 
 | Método | Ruta | Función |
