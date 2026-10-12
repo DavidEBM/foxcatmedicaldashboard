@@ -184,13 +184,15 @@ Umbrales de elegibilidad fijos:
 
 | Métrica | Umbral | Definición |
 |---|---:|---|
-| Accuracy | `0.70` | Accuracy |
-| F1-Score | `0.70` | F1 macro para GOLD multiclase; F1 de `SI` para insuficiencia binaria |
+| Sensibilidad (macro) | `0.70` | Recall macro en multiclase y recall de la clase positiva en binario |
+| Sensibilidad mínima por clase | `0.50` | Ninguna clase puede quedar por debajo de este recall |
+| Especificidad | `0.70` | Promedio de especificidad one-vs-rest por clase |
+| ROC-AUC | `0.70` | AUC multiclase OVR o binario |
 | MCC | `0.40` | Matthews Correlation Coefficient |
-| Kappa | `0.40` | Cohen's Kappa |
-| ROC-AUC | `0.70` | AUC multiclase OVR para GOLD; binario para insuficiencia |
+| Balanced Accuracy | `0.70` | Promedio del recall por clase |
+| F1-Score | `0.60` | F1 macro para multiclase; F1 de la clase positiva en binario |
 
-Los cinco umbrales son obligatorios y no configurables; deben cumplirse simultáneamente. La calidad normalizada se conserva únicamente como dato informativo e histórico y su gráfico está en Imágenes de diagnóstico.
+Los filtros obligatorios son Sensibilidad macro, Sensibilidad mínima por clase, Especificidad, MCC, Balanced Accuracy, ROC-AUC y F1 macro. Precisión/VPP, Kappa y Accuracy tienen mínimo informativo `0.00`: se registran, pueden participar en el desempate, pero no bloquean la publicación. La prioridad de selección es: **Sensibilidad macro, Sensibilidad mínima por clase, Especificidad, MCC, Balanced Accuracy, ROC-AUC, F1 macro, Precisión, Kappa y Accuracy**. La calidad normalizada se conserva únicamente como dato informativo e histórico.
 
 ## Funcionamiento de la aplicación
 
@@ -252,7 +254,7 @@ En **Administración → Modelos de IA**, cada entrenamiento exitoso registra su
 
 El log de cada ejecución muestra el tiempo de captura de Firebase, la cantidad de pacientes importados desde dataset, creados desde la web y el total, además del tiempo de cada algoritmo, preparación de datos y exportación de reportes. La lectura de Firebase es una sola consulta; normalmente el tiempo dominante es la validación cruzada y el entrenamiento de los algoritmos seleccionados. Para ejecuciones exploratorias más rápidas se pueden seleccionar menos algoritmos y reducir `CV_FOLDS` (por ejemplo, de `3` a `2`); para resultados comparativos finales se recomienda conservar los ocho algoritmos y tres folds.
 
-En el modo `dataset`, la aplicación también consulta Firebase para mantener el mismo conjunto de datos actualizado, pero crea el snapshot con solo los pacientes importados mediante `importMetadata`; los pacientes creados directamente en Firebase/web se excluyen antes del entrenamiento. El log muestra cuántos fueron capturados, cuántos pertenecen al dataset, cuántos fueron excluidos y cuántos se incluyeron finalmente.
+En el modo `dataset`, la aplicación no consulta Firebase: entrena exclusivamente con el archivo local seleccionado desde `ml/datasets/`. En `firebase_dataset` sí combina ambos orígenes y conserva el registro del archivo utilizado, los conteos de cada fuente, duplicados y conflictos. Cada corrida anterior se archiva bajo `ml/outputs/SavedModels/history/<run-id>/` para auditoría; los modelos viejos no se borran.
 
 ### API administrativa ML
 
@@ -309,9 +311,28 @@ Manifest + modelos + tablas + gráficas
 - Cuando existe una clave de paciente, se evita que el mismo grupo aparezca en particiones diferentes.
 - La validación cruzada usa `StratifiedGroupKFold` cuando hay grupos y `StratifiedKFold` cuando no los hay.
 
+### Deduplicación y desbalance de clases
+
+El entrenamiento local aplica deduplicación antes de construir los splits:
+
+- Las filas locales idénticas se eliminan una sola vez.
+- Al combinar con Firebase, se conservan las filas más completas y se cotejan duplicados entre fuentes mediante la identidad del paciente y firmas clínicas conservadoras.
+- El manifest registra `duplicatesRemoved`, `localDuplicatesRemoved`, `matchedExistingPatients` y `targetConflicts`.
+- La deduplicación ocurre antes de TRAIN/VALIDATION/TEST para que un duplicado no aparezca en particiones distintas.
+
+Para evitar que las clases mayoritarias dominen el ajuste:
+
+- TRAIN y cada fold de CV usan sobremuestreo aleatorio reproducible hasta igualar el número de ejemplos por clase.
+- VALIDATION y TEST no se sobremuestrean ni se modifican; conservan la distribución clínica observada.
+- LightGBM y CatBoost usan ponderación balanceada nativa.
+- RandomForest, ExtraTrees, LogisticRegression y SVM ya utilizan `class_weight="balanced"`.
+- El detalle `imbalanceHandling` queda registrado en cada candidato del manifest, incluyendo conteos antes y después.
+
+Este tratamiento no fabrica pacientes nuevos ni altera las métricas de evaluación. Solo replica filas de TRAIN durante el ajuste y mantiene la evaluación aislada para medir el comportamiento real frente al desbalance.
+
 ### Selección y publicación
 
-La elegibilidad se determina solo con las cinco métricas anteriores de VALIDATION. Entre modelos elegibles se elige el F1-Score más alto; los empates se resuelven, en orden, por ROC-AUC, MCC, Kappa y Accuracy. CV, TEST y calidad normalizada no alteran ese orden. Si no hay modelos elegibles, no se elige ni se publica un ganador nuevo; un modelo previamente publicado se conserva únicamente si sus métricas de VALIDATION verifican los cinco umbrales actuales.
+La elegibilidad se determina con las métricas clínicas de VALIDATION anteriores. Entre modelos elegibles se aplica el orden lexicográfico indicado, sin usar CV, TEST ni calidad normalizada para alterar la decisión. El panel muestra un único heatmap rojo/verde con las métricas en ese mismo orden. Si no hay modelos elegibles, no se elige ni se publica un ganador nuevo; un modelo previamente publicado se conserva únicamente si sus métricas de VALIDATION verifican los requisitos actuales.
 
 ## Targets y algoritmos
 
@@ -356,7 +377,7 @@ El estado se interpreta así:
 - **Umbrales cumplidos**: el candidato superó VALIDATION y puede participar en publicación/diagnóstico.
 - **Requiere revisión**: al menos una métrica no alcanzó el mínimo, o no hay evidencia suficiente para publicarlo.
 - **Publicado**: el artefacto fue seleccionado y quedó disponible para inferencia.
-- **Conservado**: no hubo un nuevo candidato elegible (o falló el ajuste final) y se mantuvo un artefacto anterior que sí cumple los cinco requisitos actuales.
+- **Conservado**: no hubo un nuevo candidato elegible (o falló el ajuste final) y se mantuvo un artefacto anterior que sí cumple los requisitos clínicos actuales.
 
 Nunca se debe interpretar un modelo de diagnóstico con `thresholdMet=false` como un modelo aprobado para entorno real.
 
