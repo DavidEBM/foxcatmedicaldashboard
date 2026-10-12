@@ -264,6 +264,43 @@ function truncateLabel(value: string, maxLength: number): string {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
 }
 
+function wrapSvgText(value: string, maxChars: number): string[] {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [""];
+
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (current && next.length > maxChars) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
+}
+
+function multilineSvgText(
+  x: number,
+  y: number,
+  value: string,
+  maxChars: number,
+  className: string,
+  lineHeight = 16,
+): string {
+  const lines = wrapSvgText(value, maxChars);
+  const tspans = lines.map((line, index) => (
+    `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`
+  )).join("");
+
+  return `<text x="${x}" y="${y}" text-anchor="middle" class="${className}">${tspans}</text>`;
+}
+
 async function downloadSvgAsPng(svg: string, target: string, graphId: number): Promise<void> {
   const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
   try {
@@ -351,17 +388,24 @@ function eligibilityChartSvg(
   const selectionMetrics = SELECTION_METRICS.map((item) => ({ ...item, threshold: thresholds[item.key] }));
   const metricWidth = (width - margin * 2 - modelWidth - statusWidth) / selectionMetrics.length;
   const headerY = 126;
+  const headerMaxChars = Math.max(8, Math.floor(metricWidth / 7));
+  const maxHeaderLines = Math.max(
+    1,
+    ...selectionMetrics.map((metric) => wrapSvgText(metric.label, headerMaxChars).length),
+  );
+  const headerHeight = Math.max(76, maxHeaderLines * 16 + 40);
   const rowHeight = 52;
-  const height = headerY + 45 + candidates.length * rowHeight + 75;
+  const height = headerY + headerHeight + candidates.length * rowHeight + 75;
   const winner = [...candidates].filter((candidate) => isCandidateEligible(candidate, thresholds)).sort(compareCandidatesBySelection)[0]
     ?? [...candidates].sort(compareCandidatesBySelection)[0];
   const headers = selectionMetrics.map((metric, index) => {
     const x = margin + modelWidth + index * metricWidth;
-    return `<text x="${x + metricWidth / 2}" y="${headerY + 24}" text-anchor="middle" class="header">${escapeXml(metric.label)}</text>
-      <text x="${x + metricWidth / 2}" y="${headerY + 41}" text-anchor="middle" class="note">mín. ${(metric.threshold * 100).toFixed(0)}%</text>`;
+    const centerX = x + metricWidth / 2;
+    return `${multilineSvgText(centerX, headerY + 16, metric.label, headerMaxChars, "header")}
+      <text x="${centerX}" y="${headerY + headerHeight - 16}" text-anchor="middle" class="note">mín. ${(metric.threshold * 100).toFixed(0)}%</text>`;
   }).join("");
   const rows = candidates.map((candidate, rowIndex) => {
-    const y = headerY + 52 + rowIndex * rowHeight;
+    const y = headerY + headerHeight + rowIndex * rowHeight;
     const eligible = isCandidateEligible(candidate, thresholds);
     const cells = selectionMetrics.map((metric, metricIndex) => {
       const value = rawCandidateMetric(candidate, metric.key);
@@ -378,9 +422,9 @@ function eligibilityChartSvg(
       <text x="${statusX + statusWidth / 2}" y="${y + 29}" fill="${eligible ? "#17633a" : "#a33838"}" font-family="Arial,sans-serif" font-size="12" font-weight="700">${eligible ? "ELEGIBLE" : "NO ELEGIBLE"}</text>`;
   }).join("");
   return `${chartBase(width, height, "Heatmap · Cumplimiento de requisitos", `${label} · verde = umbral cumplido, rojo = no cumplido; requisitos clínicos obligatorios.`)}
-    <text x="${margin}" y="${headerY + 24}" class="header">Modelo</text>${headers}
-    <text x="${width - margin - statusWidth + statusWidth / 2}" y="${headerY + 24}" text-anchor="middle" class="header">Elegibilidad</text>${rows}
-    <text x="${margin}" y="${height - 24}" class="note">Elegible solo cuando Accuracy ≥ 0.70, F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70.</text></svg>`;
+    <text x="${margin}" y="${headerY + 16}" class="header">Modelo</text>${headers}
+    <text x="${width - margin - statusWidth + statusWidth / 2}" y="${headerY + 16}" text-anchor="middle" class="header">Elegibilidad</text>${rows}
+    <text x="${margin}" y="${height - 24}" class="note">Filtros: Sensibilidad ≥ 70% · mínima por clase ≥ 50% · especificidad ≥ 70% · MCC ≥ 0.40 · Balanced Accuracy ≥ 70% · ROC-AUC ≥ 70% · F1 macro ≥ 60%.</text></svg>`;
 }
 
 function mccChartSvg(
@@ -417,12 +461,25 @@ function fullMetricsHeatmapSvg(label: string, candidates: ModelCandidate[]): str
   const margin = 38;
   const modelWidth = 190;
   const metricWidth = (width - margin * 2 - modelWidth) / COMPARISON_METRICS.length;
-  const startY = 136;
+  const headerMaxChars = Math.max(8, Math.floor(metricWidth / 7));
+  const maxHeaderLines = Math.max(
+    1,
+    ...COMPARISON_METRICS.map((metric) => wrapSvgText(metric.label, headerMaxChars).length),
+  );
+  const headerTop = 96;
+  const headerHeight = Math.max(60, maxHeaderLines * 16 + 32);
+  const startY = headerTop + headerHeight;
   const rowHeight = 46;
   const height = startY + candidates.length * rowHeight + 74;
   const header = COMPARISON_METRICS.map((metric, index) => {
     const x = margin + modelWidth + index * metricWidth;
-    return `<text x="${x + metricWidth / 2}" y="${startY - 22}" text-anchor="middle" class="header">${escapeXml(metric.label)}</text>`;
+    return multilineSvgText(
+      x + metricWidth / 2,
+      headerTop + 16,
+      metric.label,
+      headerMaxChars,
+      "header",
+    );
   }).join("");
   const rows = candidates.map((candidate, rowIndex) => {
     const y = startY + rowIndex * rowHeight;
