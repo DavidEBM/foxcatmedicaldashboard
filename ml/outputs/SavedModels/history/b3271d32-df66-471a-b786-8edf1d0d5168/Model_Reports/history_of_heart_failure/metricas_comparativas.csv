@@ -1,0 +1,1 @@
+﻿target,targetLabel,algorithm,precision,accuracy,recallSensitivity,f1,auc,mcc,kappa,balancedAccuracy,normalizedQualityPercent,normalizedAccuracy,normalizedBalancedAccuracy,normalizedF1,normalizedPrecision,normalizedRecallSensitivity,normalizedAuc,normalizedMcc,normalizedKappa

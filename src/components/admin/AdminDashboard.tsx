@@ -12,6 +12,7 @@ import AdminImport from "@/components/admin/AdminImport";
 import AdminTraining from "@/components/admin/AdminTraining";
 import AdminValidations from "@/components/admin/AdminValidations";
 import AdminRegistrationControl from "@/components/admin/AdminRegistrationControl";
+import AdminTrainingModels from "@/components/admin/AdminTrainingModels";
 
 type AdminSection =
   | "profile"
@@ -155,42 +156,7 @@ export default function AdminDashboard({
         return <AdminValidations />;
 
       case "models":
-        return (
-          <section className="admin-module">
-            <div className="admin-module-header">
-              <div>
-                <span className="admin-eyebrow">
-                  INTELIGENCIA ARTIFICIAL
-                </span>
-
-                <h2>
-                  Modelos de IA
-                </h2>
-
-                <p>
-                  Administración de los modelos
-                  utilizados por Foxcat Medical.
-                </p>
-              </div>
-            </div>
-
-            <div className="admin-empty-state">
-              <div className="admin-empty-icon">
-                ◇
-              </div>
-
-              <h3>
-                Módulo pendiente de migración
-              </h3>
-
-              <p>
-                La administración de modelos de
-                inteligencia artificial estará
-                disponible en una siguiente etapa.
-              </p>
-            </div>
-          </section>
-        );
+        return <AdminTrainingModels currentAdmin={currentAdmin} />;
 
       case "training":
         return <AdminTraining />;

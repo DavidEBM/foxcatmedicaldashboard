@@ -1,14 +1,20 @@
 {
-  "generatedAt": "2026-10-11T15:29:51.536862+00:00",
+  "generatedAt": "2026-10-12T15:44:28.220792+00:00",
   "sourceDataset": "ml/datasets/dataset_final_armonizado.csv",
   "dataSources": {
+    "sourceMode": "firebase_dataset",
     "firebaseIncluded": true,
-    "localRows": 456,
+    "localRows": 365,
     "firebaseRows": 457,
-    "rowsAfterDeduplication": 366,
-    "duplicatesRemoved": 547,
-    "matchedExistingPatients": 456,
-    "targetConflicts": 2
+    "firebaseImportedRows": 456,
+    "firebaseWebRows": 1,
+    "rowsAfterDeduplication": 457,
+    "duplicatesRemoved": 365,
+    "localDuplicatesRemoved": 91,
+    "matchedExistingPatients": 365,
+    "targetConflicts": 2,
+    "datasetPath": "ml/datasets/dataset_final_armonizado.csv",
+    "datasetName": "dataset_final_armonizado.csv"
   },
   "randomState": 42,
   "methodology": {
@@ -16,9 +22,11 @@
     "finalFit": "TRAIN + VALIDATION",
     "testUsage": "TEST reserved exclusively for final evaluation of the selected model",
     "missingData": "Missing values are imputed inside each training pipeline/fold.",
+    "deduplication": "Exact duplicate local rows are removed before source merging and splitting; cross-source patient duplicates are resolved conservatively.",
+    "imbalanceHandling": "Random oversampling balances TRAIN and each CV fold only; VALIDATION and TEST retain their observed class distribution. Tree/linear estimators also use native balanced class weights where supported.",
     "selectionDoesNotUseTest": true,
-    "eligibility": "Per-target thresholds are recorded in minimumThresholdsByTarget; heart failure uses accuracy/f1/auc >= 0.60 and mcc/kappa >= 0.40.",
-    "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
+    "eligibility": "Mandatory filters are macro sensitivity >= 0.70, minimum class sensitivity >= 0.50, specificity >= 0.70, MCC >= 0.40, balanced accuracy >= 0.70, ROC-AUC >= 0.70 and macro F1 >= 0.60. Precision, Kappa and Accuracy are informational with a 0.00 floor.",
+    "selectionRanking": "Among eligible candidates: macro sensitivity, minimum class sensitivity, specificity, MCC, balanced accuracy, ROC-AUC, macro F1, precision, Kappa and Accuracy (descending); normalizedQuality and CV scores are informational only.",
     "selectionFallback": "If no candidate meets every required metric, no candidate is selected or published; an already-published model is retained only if its recorded validation metrics meet the current requirements."
   },
   "splitTotals": {
@@ -100,62 +108,87 @@
     ]
   },
   "minimumThresholds": {
-    "accuracy": 0.7,
-    "f1": 0.7,
+    "recallSensitivity": 0.7,
+    "minRecallByClass": 0.5,
+    "specificity": 0.7,
+    "precision": 0.0,
+    "auc": 0.7,
     "mcc": 0.4,
-    "kappa": 0.4,
-    "auc": 0.7
+    "balancedAccuracy": 0.7,
+    "f1": 0.6,
+    "kappa": 0.0,
+    "accuracy": 0.0
   },
   "minimumThresholdsByTarget": {
     "copd_gold": {
-      "accuracy": 0.7,
-      "f1": 0.7,
+      "recallSensitivity": 0.7,
+      "minRecallByClass": 0.5,
+      "specificity": 0.7,
+      "precision": 0.0,
+      "auc": 0.7,
       "mcc": 0.4,
-      "kappa": 0.4,
-      "auc": 0.7
+      "balancedAccuracy": 0.7,
+      "f1": 0.6,
+      "kappa": 0.0,
+      "accuracy": 0.0
     },
     "history_of_heart_failure": {
-      "accuracy": 0.6,
-      "f1": 0.6,
+      "recallSensitivity": 0.7,
+      "minRecallByClass": 0.5,
+      "specificity": 0.7,
+      "precision": 0.0,
+      "auc": 0.7,
       "mcc": 0.4,
-      "kappa": 0.4,
-      "auc": 0.6
+      "balancedAccuracy": 0.7,
+      "f1": 0.6,
+      "kappa": 0.0,
+      "accuracy": 0.0
     }
   },
   "models": {
     "copd_gold": {
       "targetColumn": "COPD GOLD(1 a 4) (Target)",
       "targetLabel": "COPD GOLD (1–4)",
-      "selectedModel": "ExtraTrees",
-      "runSelectedModel": "ExtraTrees",
+      "selectedModel": "CatBoost",
+      "runSelectedModel": "CatBoost",
       "publishedThisRun": true,
       "publicationReason": "highest_f1_eligible_candidate_published",
-      "currentQuality": {
-        "thresholdMet": true,
-        "f1": 0.8041666666666667,
-        "auc": 0.9170454545454545,
-        "mcc": 0.7153467767436237,
-        "kappa": 0.710344827586207,
-        "accuracy": 0.7857142857142857
-      },
+      "currentQuality": {},
       "candidateQuality": {
         "thresholdMet": true,
-        "f1": 0.8507936507936508,
-        "auc": 0.975,
+        "recallSensitivity": 0.8541666666666666,
+        "precision": 0.6666666666666666,
+        "auc": 0.9522727272727273,
         "mcc": 0.8195234918033747,
-        "kappa": 0.8082191780821918,
-        "accuracy": 0.8571428571428571
+        "balancedAccuracy": 0.8541666666666666,
+        "f1": 0.9535984848484849,
+        "kappa": 0.8507936507936508,
+        "accuracy": 0.8875
       },
-      "artifact": "ml\\outputs\\SavedModels\\copd_gold-extratrees.joblib",
+      "artifact": "ml\\outputs\\SavedModels\\copd_gold-catboost.joblib",
       "thresholdMet": true,
       "publishedValidationMetrics": {
         "accuracy": 0.8571428571428571,
         "f1": 0.8507936507936508,
         "mcc": 0.8195234918033747,
         "kappa": 0.8082191780821918,
-        "auc": 0.975,
+        "auc": 0.9535984848484849,
         "precision": 0.8875,
         "recallSensitivity": 0.8541666666666666,
+        "sensitivityByClass": [
+          0.75,
+          1.0,
+          0.6666666666666666,
+          1.0
+        ],
+        "minRecallByClass": 0.6666666666666666,
+        "specificityByClass": [
+          1.0,
+          0.9,
+          1.0,
+          0.9090909090909091
+        ],
+        "specificity": 0.9522727272727273,
         "balancedAccuracy": 0.8541666666666666,
         "classes": [
           "1",
@@ -196,11 +229,11 @@
           "f1": 0.8507936507936508,
           "precision": 0.8875,
           "recallSensitivity": 0.8541666666666666,
-          "auc": 0.975,
+          "auc": 0.9535984848484849,
           "mcc": 0.9097617459016873,
           "kappa": 0.904109589041096
         },
-        "normalizedQuality": 0.8865801470265781
+        "normalizedQuality": 0.8839049576326387
       },
       "split": {
         "train": 67,
@@ -214,14 +247,28 @@
         "4": 2
       },
       "testMetrics": {
-        "accuracy": 0.8666666666666667,
-        "f1": 0.8022727272727272,
-        "mcc": 0.8293797509006984,
-        "kappa": 0.8136645962732919,
-        "auc": 0.9549358974358975,
-        "precision": 0.875,
-        "recallSensitivity": 0.8333333333333334,
-        "balancedAccuracy": 0.8333333333333334,
+        "accuracy": 0.6666666666666666,
+        "f1": 0.6186507936507937,
+        "mcc": 0.5460225455922968,
+        "kappa": 0.5426829268292683,
+        "auc": 0.9283333333333333,
+        "precision": 0.6375,
+        "recallSensitivity": 0.6083333333333334,
+        "sensitivityByClass": [
+          0.8,
+          0.8,
+          0.3333333333333333,
+          0.5
+        ],
+        "minRecallByClass": 0.3333333333333333,
+        "specificityByClass": [
+          1.0,
+          0.9,
+          0.75,
+          0.9230769230769231
+        ],
+        "specificity": 0.8932692307692307,
+        "balancedAccuracy": 0.6083333333333334,
         "classes": [
           "1",
           "2",
@@ -231,15 +278,15 @@
         "positiveLabel": null,
         "confusionMatrix": [
           [
-            5,
+            4,
             0,
-            0,
+            1,
             0
           ],
           [
             0,
-            5,
-            0,
+            4,
+            1,
             0
           ],
           [
@@ -251,45 +298,59 @@
           [
             0,
             0,
-            0,
-            2
+            1,
+            1
           ]
         ],
         "normalizedMetrics": {
-          "accuracy": 0.8666666666666667,
-          "balancedAccuracy": 0.8333333333333334,
-          "f1": 0.8022727272727272,
-          "precision": 0.875,
-          "recallSensitivity": 0.8333333333333334,
-          "auc": 0.9549358974358975,
-          "mcc": 0.9146898754503492,
-          "kappa": 0.9068322981366459
+          "accuracy": 0.6666666666666666,
+          "balancedAccuracy": 0.6083333333333334,
+          "f1": 0.6186507936507937,
+          "precision": 0.6375,
+          "recallSensitivity": 0.6083333333333334,
+          "auc": 0.9283333333333333,
+          "mcc": 0.7730112727961485,
+          "kappa": 0.7713414634146342
         },
-        "normalizedQuality": 0.8733830164536192,
-        "normalizedQualityPercent": 87.33830164536191,
-        "predictionLatencyMs": 35.7316499999456,
-        "predictionLatencyStdMs": 6.5195181798020165,
-        "responseTimeMsPerRecord": 35.7316499999456,
-        "predictionsPerSecond": 27.986393015758367,
-        "predictionBatchLatencyMs": 34.1260874999989,
-        "batchPredictionsPerSecond": 439.54643203679535
+        "normalizedQuality": 0.7015212745660303,
+        "normalizedQualityPercent": 70.15212745660303,
+        "predictionLatencyMs": 4.615837499954978,
+        "predictionLatencyStdMs": 0.12028526711979201,
+        "responseTimeMsPerRecord": 4.615837499954978,
+        "predictionsPerSecond": 216.64540833808684,
+        "predictionBatchLatencyMs": 4.928487499910261,
+        "batchPredictionsPerSecond": 3043.5300891547604
       },
       "algorithmsTested": [
         {
           "model": "XGBoost",
           "available": true,
-          "validationScore": 0.8500668838883184,
-          "cvMeanScore": 0.41158217213124065,
-          "cvStdScore": 0.015794497801082812,
+          "validationScore": 0.8488168838883184,
+          "cvMeanScore": 0.5110939794031893,
+          "cvStdScore": 0.09256204388993668,
           "validationThresholdMet": true,
           "validationMetrics": {
             "accuracy": 0.8571428571428571,
             "f1": 0.8507936507936508,
             "mcc": 0.8195234918033747,
             "kappa": 0.8082191780821918,
-            "auc": 0.9348484848484848,
+            "auc": 0.9223484848484849,
             "precision": 0.8875,
             "recallSensitivity": 0.8541666666666666,
+            "sensitivityByClass": [
+              0.75,
+              1.0,
+              0.6666666666666666,
+              1.0
+            ],
+            "minRecallByClass": 0.6666666666666666,
+            "specificityByClass": [
+              1.0,
+              0.9,
+              1.0,
+              0.9090909090909091
+            ],
+            "specificity": 0.9522727272727273,
             "balancedAccuracy": 0.8541666666666666,
             "classes": [
               "1",
@@ -330,11 +391,11 @@
               "f1": 0.8507936507936508,
               "precision": 0.8875,
               "recallSensitivity": 0.8541666666666666,
-              "auc": 0.9348484848484848,
+              "auc": 0.9223484848484849,
               "mcc": 0.9097617459016873,
               "kappa": 0.904109589041096
             },
-            "normalizedQuality": 0.8815612076326387
+            "normalizedQuality": 0.8799987076326387
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -355,19 +416,33 @@
         {
           "model": "LightGBM",
           "available": true,
-          "validationScore": 0.1556070494634678,
-          "cvMeanScore": 0.23502310533652593,
-          "cvStdScore": 0.038857052931592834,
+          "validationScore": 0.4045325038432718,
+          "cvMeanScore": 0.3065710601865114,
+          "cvStdScore": 0.02443948915040315,
           "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.21428571428571427,
-            "f1": 0.18948412698412698,
-            "mcc": -0.06340544258104468,
-            "kappa": -0.06206896551724128,
-            "auc": 0.5200757575757575,
-            "precision": 0.175,
-            "recallSensitivity": 0.20833333333333331,
-            "balancedAccuracy": 0.20833333333333331,
+            "accuracy": 0.42857142857142855,
+            "f1": 0.4291666666666667,
+            "mcc": 0.2465767211485071,
+            "kappa": 0.23809523809523814,
+            "auc": 0.727840909090909,
+            "precision": 0.45,
+            "recallSensitivity": 0.43749999999999994,
+            "sensitivityByClass": [
+              0.0,
+              0.75,
+              0.6666666666666666,
+              0.3333333333333333
+            ],
+            "minRecallByClass": 0.0,
+            "specificityByClass": [
+              0.8,
+              0.8,
+              1.0,
+              0.6363636363636364
+            ],
+            "specificity": 0.8090909090909091,
+            "balancedAccuracy": 0.43749999999999994,
             "classes": [
               "1",
               "2",
@@ -377,48 +452,48 @@
             "positiveLabel": null,
             "confusionMatrix": [
               [
-                1,
-                2,
-                1,
-                0
-              ],
-              [
-                1,
-                1,
-                2,
-                0
-              ],
-              [
-                1,
                 0,
                 1,
+                0,
+                3
+              ],
+              [
+                1,
+                3,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                2,
                 1
               ],
               [
                 1,
-                2,
+                1,
                 0,
-                0
+                1
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.21428571428571427,
-              "balancedAccuracy": 0.20833333333333331,
-              "f1": 0.18948412698412698,
-              "precision": 0.175,
-              "recallSensitivity": 0.20833333333333331,
-              "auc": 0.5200757575757575,
-              "mcc": 0.4682972787094777,
-              "kappa": 0.46896551724137936
+              "accuracy": 0.42857142857142855,
+              "balancedAccuracy": 0.43749999999999994,
+              "f1": 0.4291666666666667,
+              "precision": 0.45,
+              "recallSensitivity": 0.43749999999999994,
+              "auc": 0.727840909090909,
+              "mcc": 0.6232883605742535,
+              "kappa": 0.6190476190476191
             },
-            "normalizedQuality": 0.3065968826828903
+            "normalizedQuality": 0.5191143729938597
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
           "testCI95": {},
           "hyperparameters": {
             "boosting_type": "gbdt",
-            "class_weight": null,
+            "class_weight": "balanced",
             "colsample_bytree": 0.9,
             "importance_type": "split",
             "learning_rate": 0.05,
@@ -443,18 +518,32 @@
         {
           "model": "CatBoost",
           "available": true,
-          "validationScore": 0.85345703540347,
-          "cvMeanScore": 0.6027497901740975,
-          "cvStdScore": 0.11003421518340045,
+          "validationScore": 0.8519418838883184,
+          "cvMeanScore": 0.4994790242966543,
+          "cvStdScore": 0.12667754868139788,
           "validationThresholdMet": true,
           "validationMetrics": {
             "accuracy": 0.8571428571428571,
             "f1": 0.8507936507936508,
             "mcc": 0.8195234918033747,
             "kappa": 0.8082191780821918,
-            "auc": 0.96875,
+            "auc": 0.9535984848484849,
             "precision": 0.8875,
             "recallSensitivity": 0.8541666666666666,
+            "sensitivityByClass": [
+              0.75,
+              1.0,
+              0.6666666666666666,
+              1.0
+            ],
+            "minRecallByClass": 0.6666666666666666,
+            "specificityByClass": [
+              1.0,
+              0.9,
+              1.0,
+              0.9090909090909091
+            ],
+            "specificity": 0.9522727272727273,
             "balancedAccuracy": 0.8541666666666666,
             "classes": [
               "1",
@@ -495,15 +584,103 @@
               "f1": 0.8507936507936508,
               "precision": 0.8875,
               "recallSensitivity": 0.8541666666666666,
-              "auc": 0.96875,
+              "auc": 0.9535984848484849,
               "mcc": 0.9097617459016873,
               "kappa": 0.904109589041096
             },
-            "normalizedQuality": 0.885798897026578
+            "normalizedQuality": 0.8839049576326387
           },
-          "testEvaluationAvailable": false,
-          "testMetrics": {},
-          "testCI95": {},
+          "testEvaluationAvailable": true,
+          "testMetrics": {
+            "accuracy": 0.6666666666666666,
+            "f1": 0.6186507936507937,
+            "mcc": 0.5460225455922968,
+            "kappa": 0.5426829268292683,
+            "auc": 0.9283333333333333,
+            "precision": 0.6375,
+            "recallSensitivity": 0.6083333333333334,
+            "sensitivityByClass": [
+              0.8,
+              0.8,
+              0.3333333333333333,
+              0.5
+            ],
+            "minRecallByClass": 0.3333333333333333,
+            "specificityByClass": [
+              1.0,
+              0.9,
+              0.75,
+              0.9230769230769231
+            ],
+            "specificity": 0.8932692307692307,
+            "balancedAccuracy": 0.6083333333333334,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                4,
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                4,
+                1,
+                0
+              ],
+              [
+                0,
+                1,
+                1,
+                1
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.6666666666666666,
+              "balancedAccuracy": 0.6083333333333334,
+              "f1": 0.6186507936507937,
+              "precision": 0.6375,
+              "recallSensitivity": 0.6083333333333334,
+              "auc": 0.9283333333333333,
+              "mcc": 0.7730112727961485,
+              "kappa": 0.7713414634146342
+            },
+            "normalizedQuality": 0.7015212745660303,
+            "normalizedQualityPercent": 70.15212745660303,
+            "predictionLatencyMs": 4.615837499954978,
+            "predictionLatencyStdMs": 0.12028526711979201,
+            "responseTimeMsPerRecord": 4.615837499954978,
+            "predictionsPerSecond": 216.64540833808684,
+            "predictionBatchLatencyMs": 4.928487499910261,
+            "batchPredictionsPerSecond": 3043.5300891547604
+          },
+          "testCI95": {
+            "recallSensitivityCI95Low": 0.31645833333333334,
+            "recallSensitivityCI95High": 0.8544791666666667,
+            "precisionCI95Low": 0.41666666666666663,
+            "precisionCI95High": 0.875,
+            "aucCI95Low": 0.804344696969697,
+            "aucCI95High": 1.0,
+            "mccCI95Low": 0.19245349856460658,
+            "mccCI95High": 0.8148433719935205,
+            "f1CI95Low": 0.35456168831168833,
+            "f1CI95High": 0.8122057748538013,
+            "accuracyCI95Low": 0.4,
+            "accuracyCI95High": 0.8666666666666667,
+            "bootstrapReplicates": 200.0
+          },
           "hyperparameters": {
             "iterations": 200,
             "depth": 6,
@@ -512,23 +689,37 @@
             "random_strength": 1.0,
             "cat_features": null
           },
-          "artifact": null
+          "artifact": "ml\\outputs\\SavedModels\\Models_All\\copd_gold\\catboost.joblib"
         },
         {
           "model": "RandomForest",
           "available": true,
-          "validationScore": 0.8494418838883184,
-          "cvMeanScore": 0.5436962099737888,
-          "cvStdScore": 0.06011531841385837,
+          "validationScore": 0.8468093081307426,
+          "cvMeanScore": 0.5329507875088133,
+          "cvStdScore": 0.1134807892240259,
           "validationThresholdMet": true,
           "validationMetrics": {
             "accuracy": 0.8571428571428571,
             "f1": 0.8507936507936508,
             "mcc": 0.8195234918033747,
             "kappa": 0.8082191780821918,
-            "auc": 0.9285984848484848,
+            "auc": 0.9022727272727273,
             "precision": 0.8875,
             "recallSensitivity": 0.8541666666666666,
+            "sensitivityByClass": [
+              0.75,
+              1.0,
+              0.6666666666666666,
+              1.0
+            ],
+            "minRecallByClass": 0.6666666666666666,
+            "specificityByClass": [
+              1.0,
+              0.9,
+              1.0,
+              0.9090909090909091
+            ],
+            "specificity": 0.9522727272727273,
             "balancedAccuracy": 0.8541666666666666,
             "classes": [
               "1",
@@ -569,11 +760,11 @@
               "f1": 0.8507936507936508,
               "precision": 0.8875,
               "recallSensitivity": 0.8541666666666666,
-              "auc": 0.9285984848484848,
+              "auc": 0.9022727272727273,
               "mcc": 0.9097617459016873,
               "kappa": 0.904109589041096
             },
-            "normalizedQuality": 0.8807799576326386
+            "normalizedQuality": 0.8774892379356689
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -604,18 +795,32 @@
         {
           "model": "ExtraTrees",
           "available": true,
-          "validationScore": 0.8540820354034699,
-          "cvMeanScore": 0.7158847833438595,
-          "cvStdScore": 0.04720807037516574,
+          "validationScore": 0.8495744596458942,
+          "cvMeanScore": 0.6440566031333915,
+          "cvStdScore": 0.09093369490703594,
           "validationThresholdMet": true,
           "validationMetrics": {
             "accuracy": 0.8571428571428571,
             "f1": 0.8507936507936508,
             "mcc": 0.8195234918033747,
             "kappa": 0.8082191780821918,
-            "auc": 0.975,
+            "auc": 0.9299242424242424,
             "precision": 0.8875,
             "recallSensitivity": 0.8541666666666666,
+            "sensitivityByClass": [
+              0.75,
+              1.0,
+              0.6666666666666666,
+              1.0
+            ],
+            "minRecallByClass": 0.6666666666666666,
+            "specificityByClass": [
+              1.0,
+              0.9,
+              1.0,
+              0.9090909090909091
+            ],
+            "specificity": 0.9522727272727273,
             "balancedAccuracy": 0.8541666666666666,
             "classes": [
               "1",
@@ -656,89 +861,15 @@
               "f1": 0.8507936507936508,
               "precision": 0.8875,
               "recallSensitivity": 0.8541666666666666,
-              "auc": 0.975,
+              "auc": 0.9299242424242424,
               "mcc": 0.9097617459016873,
               "kappa": 0.904109589041096
             },
-            "normalizedQuality": 0.8865801470265781
+            "normalizedQuality": 0.8809456773296084
           },
-          "testEvaluationAvailable": true,
-          "testMetrics": {
-            "accuracy": 0.8666666666666667,
-            "f1": 0.8022727272727272,
-            "mcc": 0.8293797509006984,
-            "kappa": 0.8136645962732919,
-            "auc": 0.9549358974358975,
-            "precision": 0.875,
-            "recallSensitivity": 0.8333333333333334,
-            "balancedAccuracy": 0.8333333333333334,
-            "classes": [
-              "1",
-              "2",
-              "3",
-              "4"
-            ],
-            "positiveLabel": null,
-            "confusionMatrix": [
-              [
-                5,
-                0,
-                0,
-                0
-              ],
-              [
-                0,
-                5,
-                0,
-                0
-              ],
-              [
-                0,
-                1,
-                1,
-                1
-              ],
-              [
-                0,
-                0,
-                0,
-                2
-              ]
-            ],
-            "normalizedMetrics": {
-              "accuracy": 0.8666666666666667,
-              "balancedAccuracy": 0.8333333333333334,
-              "f1": 0.8022727272727272,
-              "precision": 0.875,
-              "recallSensitivity": 0.8333333333333334,
-              "auc": 0.9549358974358975,
-              "mcc": 0.9146898754503492,
-              "kappa": 0.9068322981366459
-            },
-            "normalizedQuality": 0.8733830164536192,
-            "normalizedQualityPercent": 87.33830164536191,
-            "predictionLatencyMs": 35.7316499999456,
-            "predictionLatencyStdMs": 6.5195181798020165,
-            "responseTimeMsPerRecord": 35.7316499999456,
-            "predictionsPerSecond": 27.986393015758367,
-            "predictionBatchLatencyMs": 34.1260874999989,
-            "batchPredictionsPerSecond": 439.54643203679535
-          },
-          "testCI95": {
-            "precisionCI95Low": 0.5,
-            "precisionCI95High": 1.0,
-            "accuracyCI95Low": 0.7333333333333333,
-            "accuracyCI95High": 1.0,
-            "recallSensitivityCI95Low": 0.5,
-            "recallSensitivityCI95High": 1.0,
-            "f1CI95Low": 0.5,
-            "f1CI95High": 1.0,
-            "aucCI95Low": 0.8940683760683761,
-            "aucCI95High": 1.0,
-            "mccCI95Low": 0.6664290437405458,
-            "mccCI95High": 1.0,
-            "bootstrapReplicates": 200.0
-          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
           "hyperparameters": {
             "bootstrap": false,
             "ccp_alpha": 0.0,
@@ -760,24 +891,38 @@
             "verbose": 0,
             "warm_start": false
           },
-          "artifact": "ml\\outputs\\SavedModels\\Models_All\\copd_gold\\extratrees.joblib"
+          "artifact": null
         },
         {
           "model": "LogisticRegression",
           "available": true,
-          "validationScore": 0.7887133513336382,
-          "cvMeanScore": 0.30891270504647245,
-          "cvStdScore": 0.034680367572885076,
-          "validationThresholdMet": true,
+          "validationScore": 0.7095701838329893,
+          "cvMeanScore": 0.2953932089374938,
+          "cvStdScore": 0.07170579425199114,
+          "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.7857142857142857,
-            "f1": 0.7818181818181819,
-            "mcc": 0.7607674567748487,
-            "kappa": 0.7123287671232876,
-            "auc": 0.9174242424242424,
-            "precision": 0.8928571428571428,
-            "recallSensitivity": 0.8125,
-            "balancedAccuracy": 0.8125,
+            "accuracy": 0.7142857142857143,
+            "f1": 0.680952380952381,
+            "mcc": 0.6505977623497989,
+            "kappa": 0.6190476190476191,
+            "auc": 0.9424242424242424,
+            "precision": 0.7708333333333333,
+            "recallSensitivity": 0.7291666666666666,
+            "sensitivityByClass": [
+              0.25,
+              1.0,
+              0.6666666666666666,
+              1.0
+            ],
+            "minRecallByClass": 0.25,
+            "specificityByClass": [
+              1.0,
+              0.8,
+              0.9090909090909091,
+              0.9090909090909091
+            ],
+            "specificity": 0.9045454545454545,
+            "balancedAccuracy": 0.7291666666666666,
             "classes": [
               "1",
               "2",
@@ -788,8 +933,8 @@
             "confusionMatrix": [
               [
                 1,
-                3,
-                0,
+                2,
+                1,
                 0
               ],
               [
@@ -801,8 +946,8 @@
               [
                 0,
                 0,
-                3,
-                0
+                2,
+                1
               ],
               [
                 0,
@@ -812,16 +957,16 @@
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.7857142857142857,
-              "balancedAccuracy": 0.8125,
-              "f1": 0.7818181818181819,
-              "precision": 0.8928571428571428,
-              "recallSensitivity": 0.8125,
-              "auc": 0.9174242424242424,
-              "mcc": 0.8803837283874243,
-              "kappa": 0.8561643835616438
+              "accuracy": 0.7142857142857143,
+              "balancedAccuracy": 0.7291666666666666,
+              "f1": 0.680952380952381,
+              "precision": 0.7708333333333333,
+              "recallSensitivity": 0.7291666666666666,
+              "auc": 0.9424242424242424,
+              "mcc": 0.8252988811748995,
+              "kappa": 0.8095238095238095
             },
-            "normalizedQuality": 0.8424202455953651
+            "normalizedQuality": 0.7752064618784642
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -847,19 +992,33 @@
         {
           "model": "SVM",
           "available": true,
-          "validationScore": 0.4758587837125155,
-          "cvMeanScore": 0.32990503649266334,
-          "cvStdScore": 0.0752653091113273,
+          "validationScore": 0.5471859930698584,
+          "cvMeanScore": 0.28572024485974773,
+          "cvStdScore": 0.1168777119943346,
           "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.5,
-            "f1": 0.4083333333333333,
-            "mcc": 0.36864496266984065,
-            "kappa": 0.33783783783783794,
-            "auc": 0.8821969696969698,
-            "precision": 0.35,
-            "recallSensitivity": 0.5,
-            "balancedAccuracy": 0.5,
+            "accuracy": 0.5714285714285714,
+            "f1": 0.5261904761904762,
+            "mcc": 0.45041383547293773,
+            "kappa": 0.4285714285714286,
+            "auc": 0.8331439393939395,
+            "precision": 0.625,
+            "recallSensitivity": 0.5625,
+            "sensitivityByClass": [
+              0.25,
+              1.0,
+              0.3333333333333333,
+              0.6666666666666666
+            ],
+            "minRecallByClass": 0.25,
+            "specificityByClass": [
+              1.0,
+              0.8,
+              0.8181818181818182,
+              0.8181818181818182
+            ],
+            "specificity": 0.8590909090909091,
+            "balancedAccuracy": 0.5625,
             "classes": [
               "1",
               "2",
@@ -869,10 +1028,10 @@
             "positiveLabel": null,
             "confusionMatrix": [
               [
-                0,
+                1,
                 2,
                 1,
-                1
+                0
               ],
               [
                 0,
@@ -894,16 +1053,16 @@
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.5,
-              "balancedAccuracy": 0.5,
-              "f1": 0.4083333333333333,
-              "precision": 0.35,
-              "recallSensitivity": 0.5,
-              "auc": 0.8821969696969698,
-              "mcc": 0.6843224813349204,
-              "kappa": 0.668918918918919
+              "accuracy": 0.5714285714285714,
+              "balancedAccuracy": 0.5625,
+              "f1": 0.5261904761904762,
+              "precision": 0.625,
+              "recallSensitivity": 0.5625,
+              "auc": 0.8331439393939395,
+              "mcc": 0.7252069177364688,
+              "kappa": 0.7142857142857143
             },
-            "normalizedQuality": 0.5617214629105178
+            "normalizedQuality": 0.6400319523793963
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -930,19 +1089,33 @@
         {
           "model": "DeepLearningMLP",
           "available": true,
-          "validationScore": 0.4736681181837383,
-          "cvMeanScore": 0.3512016675592242,
-          "cvStdScore": 0.03964606668919689,
+          "validationScore": 0.5534900817072678,
+          "cvMeanScore": 0.335549124333373,
+          "cvStdScore": 0.019295942737896626,
           "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.5,
-            "f1": 0.40681818181818186,
-            "mcc": 0.37331775758855834,
-            "kappa": 0.33333333333333337,
-            "auc": 0.8630681818181818,
-            "precision": 0.3678571428571429,
-            "recallSensitivity": 0.5,
-            "balancedAccuracy": 0.5,
+            "accuracy": 0.5714285714285714,
+            "f1": 0.49007936507936506,
+            "mcc": 0.4718079479258773,
+            "kappa": 0.43624161073825496,
+            "auc": 0.8831439393939393,
+            "precision": 0.42500000000000004,
+            "recallSensitivity": 0.5833333333333333,
+            "sensitivityByClass": [
+              0.0,
+              1.0,
+              0.6666666666666666,
+              0.6666666666666666
+            ],
+            "minRecallByClass": 0.0,
+            "specificityByClass": [
+              1.0,
+              0.9,
+              0.8181818181818182,
+              0.7272727272727273
+            ],
+            "specificity": 0.8613636363636363,
+            "balancedAccuracy": 0.5833333333333333,
             "classes": [
               "1",
               "2",
@@ -953,9 +1126,9 @@
             "confusionMatrix": [
               [
                 0,
+                0,
                 2,
-                1,
-                1
+                2
               ],
               [
                 0,
@@ -966,8 +1139,8 @@
               [
                 0,
                 0,
-                1,
-                2
+                2,
+                1
               ],
               [
                 0,
@@ -977,16 +1150,16 @@
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.5,
-              "balancedAccuracy": 0.5,
-              "f1": 0.40681818181818186,
-              "precision": 0.3678571428571429,
-              "recallSensitivity": 0.5,
-              "auc": 0.8630681818181818,
-              "mcc": 0.6866588787942791,
-              "kappa": 0.6666666666666667
+              "accuracy": 0.5714285714285714,
+              "balancedAccuracy": 0.5833333333333333,
+              "f1": 0.49007936507936506,
+              "precision": 0.42500000000000004,
+              "recallSensitivity": 0.5833333333333333,
+              "auc": 0.8831439393939393,
+              "mcc": 0.7359039739629387,
+              "kappa": 0.7181208053691275
             },
-            "normalizedQuality": 0.5613836314943066
+            "normalizedQuality": 0.6237929152375761
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -1027,64 +1200,25 @@
     "history_of_heart_failure": {
       "targetColumn": "History of Heart Failure(Si ó no)(Target)",
       "targetLabel": "Antecedente de insuficiencia cardiaca",
-      "selectedModel": "CatBoost",
-      "runSelectedModel": "CatBoost",
-      "publishedThisRun": true,
-      "publicationReason": "highest_f1_eligible_candidate_published",
-      "currentQuality": {
-        "thresholdMet": true,
-        "f1": 0.6666666666666666,
-        "auc": 0.625,
-        "mcc": 0.47809144373375745,
-        "kappa": 0.47058823529411764,
-        "accuracy": 0.75
-      },
+      "selectedModel": null,
+      "runSelectedModel": null,
+      "publishedThisRun": false,
+      "publicationReason": "no_eligible_candidate_no_model_published",
+      "currentQuality": {},
       "candidateQuality": {
-        "thresholdMet": true,
-        "f1": 0.6666666666666666,
-        "auc": 0.625,
-        "mcc": 0.47809144373375745,
-        "kappa": 0.47058823529411764,
-        "accuracy": 0.75
+        "thresholdMet": false,
+        "recallSensitivity": null,
+        "precision": null,
+        "auc": null,
+        "mcc": null,
+        "balancedAccuracy": null,
+        "f1": null,
+        "kappa": null,
+        "accuracy": null
       },
-      "artifact": "ml\\outputs\\SavedModels\\history_of_heart_failure-catboost.joblib",
-      "thresholdMet": true,
-      "publishedValidationMetrics": {
-        "accuracy": 0.75,
-        "f1": 0.6666666666666666,
-        "mcc": 0.47809144373375745,
-        "kappa": 0.47058823529411764,
-        "auc": 0.625,
-        "precision": 0.6,
-        "recallSensitivity": 0.75,
-        "balancedAccuracy": 0.75,
-        "classes": [
-          "NO",
-          "SI"
-        ],
-        "positiveLabel": "SI",
-        "confusionMatrix": [
-          [
-            6,
-            2
-          ],
-          [
-            1,
-            3
-          ]
-        ],
-        "normalizedMetrics": {
-          "accuracy": 0.75,
-          "balancedAccuracy": 0.75,
-          "f1": 0.6666666666666666,
-          "precision": 0.6,
-          "recallSensitivity": 0.75,
-          "auc": 0.625,
-          "mcc": 0.7390457218668787,
-          "kappa": 0.7352941176470589
-        },
-        "normalizedQuality": 0.7020008132725755
-      },
+      "artifact": null,
+      "thresholdMet": false,
+      "publishedValidationMetrics": {},
       "split": {
         "train": 54,
         "validation": 12,
@@ -1095,65 +1229,36 @@
         "SI": 5
       },
       "testMetrics": {
-        "accuracy": 0.5833333333333334,
-        "f1": 0.0,
-        "mcc": 0.0,
-        "kappa": 0.0,
-        "auc": 0.48571428571428577,
-        "precision": 0.0,
-        "recallSensitivity": 0.0,
-        "balancedAccuracy": 0.5,
-        "classes": [
-          "NO",
-          "SI"
-        ],
-        "positiveLabel": "SI",
-        "confusionMatrix": [
-          [
-            7,
-            0
-          ],
-          [
-            5,
-            0
-          ]
-        ],
-        "normalizedMetrics": {
-          "accuracy": 0.5833333333333334,
-          "balancedAccuracy": 0.5,
-          "f1": 0.0,
-          "precision": 0.0,
-          "recallSensitivity": 0.0,
-          "auc": 0.48571428571428577,
-          "mcc": 0.5,
-          "kappa": 0.5
-        },
-        "normalizedQuality": 0.3211309523809524,
-        "normalizedQualityPercent": 32.11309523809524,
-        "predictionLatencyMs": 4.009649999943576,
-        "predictionLatencyStdMs": 0.5567274634776904,
-        "responseTimeMsPerRecord": 4.009649999943576,
-        "predictionsPerSecond": 249.39832654073845,
-        "predictionBatchLatencyMs": 3.6891375000323023,
-        "batchPredictionsPerSecond": 3252.7928275633335
+        "available": false,
+        "error": "No hubo modelo seleccionado."
       },
       "algorithmsTested": [
         {
           "model": "XGBoost",
           "available": true,
-          "validationScore": 0.33630952380952384,
-          "cvMeanScore": 0.3533464268161774,
-          "cvStdScore": 0.06083822977673526,
+          "validationScore": 0.45569338140602866,
+          "cvMeanScore": 0.4068416757381621,
+          "cvStdScore": 0.13970751882467847,
           "validationThresholdMet": false,
           "validationMetrics": {
             "accuracy": 0.5833333333333334,
-            "f1": 0.2857142857142857,
-            "mcc": 0.0,
-            "kappa": 0.0,
-            "auc": 0.625,
-            "precision": 0.3333333333333333,
-            "recallSensitivity": 0.25,
-            "balancedAccuracy": 0.5,
+            "f1": 0.5454545454545454,
+            "mcc": 0.23904572186687872,
+            "kappa": 0.21052631578947378,
+            "auc": 0.375,
+            "precision": 0.42857142857142855,
+            "recallSensitivity": 0.75,
+            "sensitivityByClass": [
+              0.5,
+              0.75
+            ],
+            "minRecallByClass": 0.5,
+            "specificityByClass": [
+              0.75,
+              0.5
+            ],
+            "specificity": 0.625,
+            "balancedAccuracy": 0.625,
             "classes": [
               "NO",
               "SI"
@@ -1161,25 +1266,25 @@
             "positiveLabel": "SI",
             "confusionMatrix": [
               [
-                6,
-                2
+                4,
+                4
               ],
               [
-                3,
-                1
+                1,
+                3
               ]
             ],
             "normalizedMetrics": {
               "accuracy": 0.5833333333333334,
-              "balancedAccuracy": 0.5,
-              "f1": 0.2857142857142857,
-              "precision": 0.3333333333333333,
-              "recallSensitivity": 0.25,
-              "auc": 0.625,
-              "mcc": 0.5,
-              "kappa": 0.5
+              "balancedAccuracy": 0.625,
+              "f1": 0.5454545454545454,
+              "precision": 0.42857142857142855,
+              "recallSensitivity": 0.75,
+              "auc": 0.375,
+              "mcc": 0.6195228609334393,
+              "kappa": 0.605263157894737
             },
-            "normalizedQuality": 0.44717261904761907
+            "normalizedQuality": 0.5665181657734355
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -1200,19 +1305,29 @@
         {
           "model": "LightGBM",
           "available": true,
-          "validationScore": 0.39514565387983425,
-          "cvMeanScore": 0.4028869136588666,
-          "cvStdScore": 0.13914009154702398,
+          "validationScore": 0.25359270323637967,
+          "cvMeanScore": 0.43074858180706244,
+          "cvStdScore": 0.10888862107618935,
           "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.6666666666666666,
-            "f1": 0.3333333333333333,
-            "mcc": 0.15811388300841897,
-            "kappa": 0.1428571428571429,
-            "auc": 0.375,
-            "precision": 0.5,
-            "recallSensitivity": 0.25,
-            "balancedAccuracy": 0.5625,
+            "accuracy": 0.4166666666666667,
+            "f1": 0.36363636363636365,
+            "mcc": -0.11952286093343936,
+            "kappa": -0.10526315789473673,
+            "auc": 0.4375,
+            "precision": 0.2857142857142857,
+            "recallSensitivity": 0.5,
+            "sensitivityByClass": [
+              0.375,
+              0.5
+            ],
+            "minRecallByClass": 0.375,
+            "specificityByClass": [
+              0.5,
+              0.375
+            ],
+            "specificity": 0.4375,
+            "balancedAccuracy": 0.4375,
             "classes": [
               "NO",
               "SI"
@@ -1220,32 +1335,32 @@
             "positiveLabel": "SI",
             "confusionMatrix": [
               [
-                7,
-                1
+                3,
+                5
               ],
               [
-                3,
-                1
+                2,
+                2
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.6666666666666666,
-              "balancedAccuracy": 0.5625,
-              "f1": 0.3333333333333333,
-              "precision": 0.5,
-              "recallSensitivity": 0.25,
-              "auc": 0.375,
-              "mcc": 0.5790569415042095,
-              "kappa": 0.5714285714285714
+              "accuracy": 0.4166666666666667,
+              "balancedAccuracy": 0.4375,
+              "f1": 0.36363636363636365,
+              "precision": 0.2857142857142857,
+              "recallSensitivity": 0.5,
+              "auc": 0.4375,
+              "mcc": 0.44023856953328033,
+              "kappa": 0.44736842105263164
             },
-            "normalizedQuality": 0.4797481891165976
+            "normalizedQuality": 0.41607803832540347
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
           "testCI95": {},
           "hyperparameters": {
             "boosting_type": "gbdt",
-            "class_weight": null,
+            "class_weight": "balanced",
             "colsample_bytree": 0.9,
             "importance_type": "split",
             "learning_rate": 0.05,
@@ -1270,19 +1385,29 @@
         {
           "model": "CatBoost",
           "available": true,
-          "validationScore": 0.6381352851875146,
-          "cvMeanScore": 0.4966328465756196,
-          "cvStdScore": 0.02484635610019794,
-          "validationThresholdMet": true,
+          "validationScore": 0.39312499999999995,
+          "cvMeanScore": 0.3957199670170312,
+          "cvStdScore": 0.08405194685597961,
+          "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.75,
-            "f1": 0.6666666666666666,
-            "mcc": 0.47809144373375745,
-            "kappa": 0.47058823529411764,
-            "auc": 0.625,
-            "precision": 0.6,
+            "accuracy": 0.5,
+            "f1": 0.5,
+            "mcc": 0.125,
+            "kappa": 0.09999999999999987,
+            "auc": 0.46875,
+            "precision": 0.375,
             "recallSensitivity": 0.75,
-            "balancedAccuracy": 0.75,
+            "sensitivityByClass": [
+              0.375,
+              0.75
+            ],
+            "minRecallByClass": 0.375,
+            "specificityByClass": [
+              0.75,
+              0.375
+            ],
+            "specificity": 0.5625,
+            "balancedAccuracy": 0.5625,
             "classes": [
               "NO",
               "SI"
@@ -1290,8 +1415,8 @@
             "positiveLabel": "SI",
             "confusionMatrix": [
               [
-                6,
-                2
+                3,
+                5
               ],
               [
                 1,
@@ -1299,76 +1424,20 @@
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.75,
-              "balancedAccuracy": 0.75,
-              "f1": 0.6666666666666666,
-              "precision": 0.6,
+              "accuracy": 0.5,
+              "balancedAccuracy": 0.5625,
+              "f1": 0.5,
+              "precision": 0.375,
               "recallSensitivity": 0.75,
-              "auc": 0.625,
-              "mcc": 0.7390457218668787,
-              "kappa": 0.7352941176470589
+              "auc": 0.46875,
+              "mcc": 0.5625,
+              "kappa": 0.5499999999999999
             },
-            "normalizedQuality": 0.7020008132725755
+            "normalizedQuality": 0.53359375
           },
-          "testEvaluationAvailable": true,
-          "testMetrics": {
-            "accuracy": 0.5833333333333334,
-            "f1": 0.0,
-            "mcc": 0.0,
-            "kappa": 0.0,
-            "auc": 0.48571428571428577,
-            "precision": 0.0,
-            "recallSensitivity": 0.0,
-            "balancedAccuracy": 0.5,
-            "classes": [
-              "NO",
-              "SI"
-            ],
-            "positiveLabel": "SI",
-            "confusionMatrix": [
-              [
-                7,
-                0
-              ],
-              [
-                5,
-                0
-              ]
-            ],
-            "normalizedMetrics": {
-              "accuracy": 0.5833333333333334,
-              "balancedAccuracy": 0.5,
-              "f1": 0.0,
-              "precision": 0.0,
-              "recallSensitivity": 0.0,
-              "auc": 0.48571428571428577,
-              "mcc": 0.5,
-              "kappa": 0.5
-            },
-            "normalizedQuality": 0.3211309523809524,
-            "normalizedQualityPercent": 32.11309523809524,
-            "predictionLatencyMs": 4.009649999943576,
-            "predictionLatencyStdMs": 0.5567274634776904,
-            "responseTimeMsPerRecord": 4.009649999943576,
-            "predictionsPerSecond": 249.39832654073845,
-            "predictionBatchLatencyMs": 3.6891375000323023,
-            "batchPredictionsPerSecond": 3252.7928275633335
-          },
-          "testCI95": {
-            "precisionCI95Low": 0.0,
-            "precisionCI95High": 0.0,
-            "accuracyCI95Low": 0.25,
-            "accuracyCI95High": 0.8333333333333334,
-            "recallSensitivityCI95Low": 0.0,
-            "recallSensitivityCI95High": 0.0,
-            "f1CI95Low": 0.0,
-            "f1CI95High": 0.0,
-            "aucCI95Low": 0.11060606060606062,
-            "aucCI95High": 0.8125,
-            "mccCI95Low": 0.0,
-            "mccCI95High": 0.0,
-            "bootstrapReplicates": 200.0
-          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
           "hyperparameters": {
             "iterations": 200,
             "depth": 6,
@@ -1377,24 +1446,34 @@
             "random_strength": 1.0,
             "cat_features": null
           },
-          "artifact": "ml\\outputs\\SavedModels\\Models_All\\history_of_heart_failure\\catboost.joblib"
+          "artifact": null
         },
         {
           "model": "RandomForest",
           "available": true,
-          "validationScore": 0.4833333333333332,
-          "cvMeanScore": 0.30797905959261956,
-          "cvStdScore": 0.05287581298375235,
+          "validationScore": 0.32062500000000005,
+          "cvMeanScore": 0.4265461832790409,
+          "cvStdScore": 0.07598322965201854,
           "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.6666666666666666,
-            "f1": 0.5,
-            "mcc": 0.25,
-            "kappa": 0.25,
-            "auc": 0.5,
-            "precision": 0.5,
+            "accuracy": 0.5,
+            "f1": 0.4,
+            "mcc": 0.0,
+            "kappa": 0.0,
+            "auc": 0.40625,
+            "precision": 0.3333333333333333,
             "recallSensitivity": 0.5,
-            "balancedAccuracy": 0.625,
+            "sensitivityByClass": [
+              0.5,
+              0.5
+            ],
+            "minRecallByClass": 0.5,
+            "specificityByClass": [
+              0.5,
+              0.5
+            ],
+            "specificity": 0.5,
+            "balancedAccuracy": 0.5,
             "classes": [
               "NO",
               "SI"
@@ -1402,8 +1481,8 @@
             "positiveLabel": "SI",
             "confusionMatrix": [
               [
-                6,
-                2
+                4,
+                4
               ],
               [
                 2,
@@ -1411,16 +1490,16 @@
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.6666666666666666,
-              "balancedAccuracy": 0.625,
-              "f1": 0.5,
-              "precision": 0.5,
+              "accuracy": 0.5,
+              "balancedAccuracy": 0.5,
+              "f1": 0.4,
+              "precision": 0.3333333333333333,
               "recallSensitivity": 0.5,
-              "auc": 0.5,
-              "mcc": 0.625,
-              "kappa": 0.625
+              "auc": 0.40625,
+              "mcc": 0.5,
+              "kappa": 0.5
             },
-            "normalizedQuality": 0.5677083333333333
+            "normalizedQuality": 0.4549479166666667
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -1451,18 +1530,28 @@
         {
           "model": "ExtraTrees",
           "available": true,
-          "validationScore": 0.333125,
-          "cvMeanScore": 0.3297968269867557,
-          "cvStdScore": 0.08560378777775565,
+          "validationScore": 0.33,
+          "cvMeanScore": 0.45085966519755877,
+          "cvStdScore": 0.050259397637746256,
           "validationThresholdMet": false,
           "validationMetrics": {
             "accuracy": 0.5,
             "f1": 0.4,
             "mcc": 0.0,
             "kappa": 0.0,
-            "auc": 0.53125,
+            "auc": 0.5,
             "precision": 0.3333333333333333,
             "recallSensitivity": 0.5,
+            "sensitivityByClass": [
+              0.5,
+              0.5
+            ],
+            "minRecallByClass": 0.5,
+            "specificityByClass": [
+              0.5,
+              0.5
+            ],
+            "specificity": 0.5,
             "balancedAccuracy": 0.5,
             "classes": [
               "NO",
@@ -1485,11 +1574,11 @@
               "f1": 0.4,
               "precision": 0.3333333333333333,
               "recallSensitivity": 0.5,
-              "auc": 0.53125,
+              "auc": 0.5,
               "mcc": 0.5,
               "kappa": 0.5
             },
-            "normalizedQuality": 0.4705729166666667
+            "normalizedQuality": 0.4666666666666667
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -1520,18 +1609,28 @@
         {
           "model": "LogisticRegression",
           "available": true,
-          "validationScore": 0.314375,
-          "cvMeanScore": 0.42106581285936856,
-          "cvStdScore": 0.04870799251698639,
+          "validationScore": 0.33,
+          "cvMeanScore": 0.5204568663731582,
+          "cvStdScore": 0.1233798853659252,
           "validationThresholdMet": false,
           "validationMetrics": {
             "accuracy": 0.5,
             "f1": 0.4,
             "mcc": 0.0,
             "kappa": 0.0,
-            "auc": 0.34375,
+            "auc": 0.5,
             "precision": 0.3333333333333333,
             "recallSensitivity": 0.5,
+            "sensitivityByClass": [
+              0.5,
+              0.5
+            ],
+            "minRecallByClass": 0.5,
+            "specificityByClass": [
+              0.5,
+              0.5
+            ],
+            "specificity": 0.5,
             "balancedAccuracy": 0.5,
             "classes": [
               "NO",
@@ -1554,11 +1653,11 @@
               "f1": 0.4,
               "precision": 0.3333333333333333,
               "recallSensitivity": 0.5,
-              "auc": 0.34375,
+              "auc": 0.5,
               "mcc": 0.5,
               "kappa": 0.5
             },
-            "normalizedQuality": 0.4471354166666667
+            "normalizedQuality": 0.4666666666666667
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -1584,18 +1683,28 @@
         {
           "model": "SVM",
           "available": true,
-          "validationScore": 0.333125,
-          "cvMeanScore": 0.349127803328164,
-          "cvStdScore": 0.02539952931696224,
+          "validationScore": 0.32375000000000004,
+          "cvMeanScore": 0.38144139108076924,
+          "cvStdScore": 0.10344945038697002,
           "validationThresholdMet": false,
           "validationMetrics": {
             "accuracy": 0.5,
             "f1": 0.4,
             "mcc": 0.0,
             "kappa": 0.0,
-            "auc": 0.53125,
+            "auc": 0.4375,
             "precision": 0.3333333333333333,
             "recallSensitivity": 0.5,
+            "sensitivityByClass": [
+              0.5,
+              0.5
+            ],
+            "minRecallByClass": 0.5,
+            "specificityByClass": [
+              0.5,
+              0.5
+            ],
+            "specificity": 0.5,
             "balancedAccuracy": 0.5,
             "classes": [
               "NO",
@@ -1618,11 +1727,11 @@
               "f1": 0.4,
               "precision": 0.3333333333333333,
               "recallSensitivity": 0.5,
-              "auc": 0.53125,
+              "auc": 0.4375,
               "mcc": 0.5,
               "kappa": 0.5
             },
-            "normalizedQuality": 0.4705729166666667
+            "normalizedQuality": 0.4588541666666667
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},
@@ -1649,19 +1758,29 @@
         {
           "model": "DeepLearningMLP",
           "available": true,
-          "validationScore": 0.1036336580776756,
-          "cvMeanScore": 0.3782862730182292,
-          "cvStdScore": 0.08014245821669674,
+          "validationScore": 0.25671770323637966,
+          "cvMeanScore": 0.41623385720786743,
+          "cvStdScore": 0.06378482422012453,
           "validationThresholdMet": false,
           "validationMetrics": {
-            "accuracy": 0.3333333333333333,
-            "f1": 0.2,
-            "mcc": -0.3535533905932738,
-            "kappa": -0.33333333333333326,
-            "auc": 0.375,
-            "precision": 0.16666666666666666,
-            "recallSensitivity": 0.25,
-            "balancedAccuracy": 0.3125,
+            "accuracy": 0.4166666666666667,
+            "f1": 0.36363636363636365,
+            "mcc": -0.11952286093343936,
+            "kappa": -0.10526315789473673,
+            "auc": 0.46875,
+            "precision": 0.2857142857142857,
+            "recallSensitivity": 0.5,
+            "sensitivityByClass": [
+              0.375,
+              0.5
+            ],
+            "minRecallByClass": 0.375,
+            "specificityByClass": [
+              0.5,
+              0.375
+            ],
+            "specificity": 0.4375,
+            "balancedAccuracy": 0.4375,
             "classes": [
               "NO",
               "SI"
@@ -1673,21 +1792,21 @@
                 5
               ],
               [
-                3,
-                1
+                2,
+                2
               ]
             ],
             "normalizedMetrics": {
-              "accuracy": 0.3333333333333333,
-              "balancedAccuracy": 0.3125,
-              "f1": 0.2,
-              "precision": 0.16666666666666666,
-              "recallSensitivity": 0.25,
-              "auc": 0.375,
-              "mcc": 0.32322330470336313,
-              "kappa": 0.33333333333333337
+              "accuracy": 0.4166666666666667,
+              "balancedAccuracy": 0.4375,
+              "f1": 0.36363636363636365,
+              "precision": 0.2857142857142857,
+              "recallSensitivity": 0.5,
+              "auc": 0.46875,
+              "mcc": 0.44023856953328033,
+              "kappa": 0.44736842105263164
             },
-            "normalizedQuality": 0.2867570797545871
+            "normalizedQuality": 0.41998428832540347
           },
           "testEvaluationAvailable": false,
           "testMetrics": {},

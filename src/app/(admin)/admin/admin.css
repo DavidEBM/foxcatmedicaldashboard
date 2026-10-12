@@ -1607,19 +1607,21 @@
 .admin-training-full-heatmap {
   width: 100%;
   overflow-x: auto;
+  padding: 2px 2px 6px;
   color: var(--admin-text-soft);
-  font-size: 9px;
+  font-size: 10px;
+  scrollbar-color: #b8c7c0 transparent;
 }
 
 .admin-training-policy-row,
 .admin-training-policy-header {
   display: grid;
-  grid-template-columns: minmax(120px, 1.45fr) repeat(5, minmax(86px, 1fr)) minmax(104px, .9fr);
-  gap: 4px;
+  grid-template-columns: minmax(155px, 1.55fr) repeat(10, minmax(96px, 1fr)) minmax(116px, .95fr);
+  gap: 5px;
   align-items: stretch;
-  min-width: 780px;
-  min-height: 44px;
-  margin-bottom: 4px;
+  min-width: 1320px;
+  min-height: 52px;
+  margin-bottom: 5px;
 }
 
 .admin-training-policy-row > *,
@@ -1628,9 +1630,15 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding: 5px;
-  border-radius: 5px;
+  padding: 7px 6px;
+  border: 1px solid rgba(120, 137, 128, .12);
+  border-radius: 8px;
   text-align: center;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+
+.admin-training-policy-row:not(.admin-training-policy-header):hover > * {
+  box-shadow: 0 4px 12px rgba(31, 56, 44, .08);
 }
 
 .admin-training-policy-row > strong,
@@ -1642,14 +1650,18 @@
   color: var(--admin-text);
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: rgba(245, 247, 245, .88);
+  font-size: 11px;
+  letter-spacing: .01em;
 }
 
 .admin-training-policy-header,
 .admin-training-full-heatmap-head {
-  min-height: 38px;
+  min-height: 48px;
   color: var(--admin-text-muted);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
+  letter-spacing: .045em;
   text-transform: uppercase;
 }
 
@@ -1663,18 +1675,21 @@
 .admin-training-policy-row small {
   display: block;
   color: inherit;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .admin-training-eligible {
-  background: #e1f2e5;
+  background: #dff4e5;
+  border-color: #8bc69e !important;
   color: #17633a;
   font-weight: 900;
 }
 
 .admin-training-ineligible {
-  background: #f9e7e7;
+  background: #fbe3e3;
+  border-color: #e0a0a0 !important;
   color: #a33838;
   font-weight: 900;
 }

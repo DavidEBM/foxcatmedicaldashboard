@@ -32,10 +32,16 @@ def _qualifies(metrics: object, thresholds: dict[str, float]) -> bool:
 
 
 def _thresholds(target: str) -> dict[str, float]:
-    values = {"accuracy": 0.70, "f1": 0.70, "mcc": 0.40, "kappa": 0.40, "auc": 0.70}
-    if target == "history_of_heart_failure":
-        values.update({"accuracy": 0.60, "f1": 0.60, "auc": 0.60})
-    return values
+    return {
+        "recallSensitivity": 0.70,
+        "minRecallByClass": 0.50,
+        "specificity": 0.70,
+        "precision": 0.0,
+        "auc": 0.70,
+        "mcc": 0.40,
+        "balancedAccuracy": 0.70,
+        "f1": 0.60,
+    }
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -57,6 +63,7 @@ def patient_features(patient: dict[str, Any]) -> dict[str, Any]:
         "Blood pressure": patient.get("bloodPressureSystolic"),
         "Oxygen Saturation": patient.get("oxygenSaturation"),
         "BMI,kg/m2 (IMC)": patient.get("bmi"),
+        "OCUPACION": patient.get("occupation") or patient.get("profession"),
         "Altura_MSNM": patient.get("locationElevationM"),
         "Location": patient.get("locationCity"),
         "status of smoking": patient.get("smokingStatus"),
@@ -78,16 +85,28 @@ def _safe(value: Any) -> Any:
     return value.item() if hasattr(value, "item") else value
 
 
-def _approved_models() -> tuple[dict[str, tuple[Path, dict[str, Any]]], dict[str, str]]:
+def _approved_models(
+    active_models: dict[str, Any] | None = None,
+) -> tuple[dict[str, tuple[Path, dict[str, Any]]], dict[str, str]]:
     manifest = _load_json(MODELS / "training-manifest.json")
     specs = _load_json(MODELS / "vercel-models.json")
     models = manifest.get("models", {})
+    manifest_source_mode = (manifest.get("dataSources") or {}).get("sourceMode")
     approved: dict[str, tuple[Path, dict[str, Any]]] = {}
     blocked: dict[str, str] = {}
 
     for target in TARGETS:
         report = models.get(target, {})
-        selected = report.get("selectedModel")
+        requested = (active_models or {}).get(target)
+        if (
+            isinstance(requested, dict)
+            and requested.get("sourceMode")
+            and requested.get("sourceMode") != manifest_source_mode
+        ):
+            requested = None
+        selected = (
+            requested.get("model") if isinstance(requested, dict) else requested
+        ) or report.get("selectedModel")
         metrics = report.get("publishedValidationMetrics")
         if not isinstance(metrics, dict):
             metrics = next(
@@ -114,7 +133,12 @@ def _approved_models() -> tuple[dict[str, tuple[Path, dict[str, Any]]], dict[str
 
 def predict(patient: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, str]]:
     row = patient_features(patient)
-    approved, blocked = _approved_models()
+    active_models = patient.get("activeModels")
+    approved, blocked = _approved_models(
+        active_models if isinstance(active_models, dict) else None,
+    )
+    manifest = _load_json(MODELS / "training-manifest.json")
+    source_mode = (manifest.get("dataSources") or {}).get("sourceMode")
     results: list[dict[str, Any]] = []
 
     for target, (path, spec) in approved.items():
@@ -160,6 +184,7 @@ def predict(patient: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, st
             "modelName": spec.get("selectedModel", "CatBoost"),
             "artifact": str(path.relative_to(ROOT.parent)),
             "source": "backend",
+            "sourceMode": source_mode,
         })
 
     return results, blocked

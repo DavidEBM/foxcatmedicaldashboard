@@ -1,0 +1,2 @@
+﻿target,targetLabel,trainRows,validationRows,testRows,trainPercent,validationPercent,testPercent,crossValidation,selectionRule
+copd_gold,COPD GOLD (1–4),255,55,55,69.86301369863014,15.068493150684931,15.068493150684931,"StratifiedKFold, hasta 5 folds, shuffle=True, random_state=42",CV + VALIDATION; TEST reservado para evaluación final

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 import warnings
 from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
+import pandas as pd
 
 from .algorithms import TRAINERS, get_trainers
 from .config import (
@@ -25,6 +27,7 @@ from .data_preparation import (
     target_dataset,
 )
 from .firebase_dataset import merge_with_firebase
+from .firebase_dataset import load_firebase_records
 from .export_iterations import export_training_excel
 from .model_publisher import (
     TargetResult,
@@ -32,6 +35,11 @@ from .model_publisher import (
     publish_best_model,
 )
 from .risk_projection import export_risk_projections
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -87,6 +95,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
 
+    parser.add_argument(
+        "--source-mode",
+        choices=("firebase", "firebase_dataset", "dataset"),
+        default=None,
+        help="Origen de datos que se registra en el manifest.",
+    )
 
     return parser.parse_args(argv)
 
@@ -296,6 +310,7 @@ def train_target(
         print(
             f"  -> {algorithm_name}"
         )
+        algorithm_start = time.perf_counter()
 
         try:
             candidate = trainer(
@@ -347,6 +362,10 @@ def train_target(
 
         _print_validation_result(
             candidate
+        )
+        print(
+            f"     Tiempo {algorithm_name}: "
+            f"{time.perf_counter() - algorithm_start:.2f} s"
         )
 
     return publish_best_model(
@@ -512,25 +531,57 @@ def main() -> int:
     print(
         f"Dataset: {source.as_posix()}"
     )
+    data_start = time.perf_counter()
 
-    raw = load_dataset(
-        source
+    source_mode = args.source_mode or (
+        "firebase_dataset" if args.firebase_dataset else "dataset"
+    )
+    load_start = time.perf_counter()
+    raw = (
+        pd.DataFrame()
+        if source_mode == "firebase"
+        else load_dataset(source)
+    )
+    print(
+        f"Tiempo lectura dataset local: "
+        f"{time.perf_counter() - load_start:.2f} s"
     )
 
+    merge_start = time.perf_counter()
     raw, data_sources = merge_with_firebase(
         raw,
         args.firebase_dataset,
+        source_mode=source_mode,
     )
+    data_sources["datasetPath"] = source.as_posix()
+    data_sources["datasetName"] = source.name
 
     if data_sources["firebaseIncluded"]:
         print(
-            "Fuentes fusionadas: "
+            "Datos encontrados: "
             f"local={data_sources['localRows']} | "
-            f"firebase={data_sources['firebaseRows']} | "
+            f"firebase_dataset_importado={data_sources['firebaseImportedRows']} | "
+            f"firebase_web={data_sources['firebaseWebRows']} | "
+            f"firebase_total={data_sources['firebaseRows']} | "
             f"deduplicadas={data_sources['duplicatesRemoved']} | "
             f"filas finales={data_sources['rowsAfterDeduplication']}"
         )
+    else:
+        print(
+            "Datos encontrados: "
+            f"local={data_sources['localRows']} | "
+            f"filas finales={data_sources['rowsAfterDeduplication']}"
+        )
+    print(
+        f"Tiempo combinación de fuentes: "
+        f"{time.perf_counter() - merge_start:.2f} s"
+    )
+    print(
+        f"Tiempo carga y combinación de datos: "
+        f"{time.perf_counter() - data_start:.2f} s"
+    )
 
+    prepare_start = time.perf_counter()
     (
         df,
         targets,
@@ -540,6 +591,10 @@ def main() -> int:
         raw,
         args.targets,
         args.features,
+    )
+    print(
+        f"Tiempo preparación clínica y targets: "
+        f"{time.perf_counter() - prepare_start:.2f} s"
     )
 
     # ------------------------------------------------------------------
@@ -767,6 +822,7 @@ def main() -> int:
     # ------------------------------------------------------------------
 
     try:
+        export_start = time.perf_counter()
         excel = export_training_excel(
             output_dir,
             split_totals,
@@ -776,7 +832,8 @@ def main() -> int:
         )
 
         print(
-            f"\nExcel: {excel}"
+            f"\nExcel: {excel} "
+            f"(tiempo exportación: {time.perf_counter() - export_start:.2f} s)"
         )
 
     except Exception as exc:
@@ -789,6 +846,7 @@ def main() -> int:
     # ------------------------------------------------------------------
 
     try:
+        risk_start = time.perf_counter()
         risk_xlsx = export_risk_projections(
             output_dir,
             df,
@@ -801,7 +859,8 @@ def main() -> int:
 
         if risk_xlsx:
             print(
-                f"Riesgos: {risk_xlsx}"
+                f"Riesgos: {risk_xlsx} "
+                f"(tiempo exportación: {time.perf_counter() - risk_start:.2f} s)"
             )
 
     except Exception as exc:
@@ -814,6 +873,7 @@ def main() -> int:
     # ------------------------------------------------------------------
 
     try:
+        manifest_start = time.perf_counter()
         manifest = export_manifest(
             output_dir,
             source,
@@ -828,7 +888,8 @@ def main() -> int:
         )
 
         print(
-            f"Manifest: {manifest}"
+            f"Manifest: {manifest} "
+            f"(tiempo exportación: {time.perf_counter() - manifest_start:.2f} s)"
         )
 
     except Exception as exc:

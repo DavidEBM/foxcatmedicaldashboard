@@ -1,3 +1,6 @@
+import { stat } from "node:fs/promises";
+import path from "node:path";
+
 import { NextResponse } from "next/server";
 
 import {
@@ -19,6 +22,9 @@ export const runtime = "nodejs";
 
 const algorithmIds = new Set<string>(ML_ALGORITHMS.map((item) => item.id));
 const targetIds = new Set<string>(ML_TARGETS.map((item) => item.id));
+const sourceModes = new Set(["firebase", "firebase_dataset", "dataset"]);
+const DATASET_EXTENSIONS = new Set([".csv", ".xlsx", ".xls", ".parquet"]);
+const DATASETS_DIRECTORY = path.resolve(process.cwd(), "ml", "datasets");
 
 function validSelection(
   values: unknown,
@@ -39,6 +45,34 @@ function validSelection(
   return result;
 }
 
+async function resolveDatasetPath(value: unknown): Promise<string> {
+  const submitted = typeof value === "string" && value.trim()
+    ? value.trim()
+    : "ml\\datasets\\dataset_final_armonizado.csv";
+  const normalized = submitted.replace(/\//g, "\\");
+  const prefix = "ml\\datasets\\";
+  if (!normalized.toLowerCase().startsWith(prefix) || normalized.length <= prefix.length) {
+    throw new Error("El dataset debe estar dentro de la carpeta ml/datasets.");
+  }
+
+  const fileName = normalized.slice(prefix.length);
+  if (fileName.includes("\\") || fileName === "." || fileName === "..") {
+    throw new Error("Solo se permiten archivos directamente dentro de ml/datasets.");
+  }
+  if (!DATASET_EXTENSIONS.has(path.extname(fileName).toLowerCase())) {
+    throw new Error("El formato del dataset local no está soportado.");
+  }
+
+  try {
+    const details = await stat(path.join(DATASETS_DIRECTORY, fileName));
+    if (!details.isFile()) throw new Error("La ruta no es un archivo.");
+  } catch {
+    throw new Error(`No existe el dataset local seleccionado: ${fileName}.`);
+  }
+
+  return path.join("ml", "datasets", fileName);
+}
+
 export async function POST(request: Request) {
   try {
     await requireAdmin(request);
@@ -53,11 +87,21 @@ export async function POST(request: Request) {
       targetIds,
       "Targets",
     ) as MlTargetId[];
-    const includeFirebasePatients = body.includeFirebasePatients !== false;
+    const sourceMode = String(
+      body.sourceMode
+      ?? (body.includeFirebasePatients === false ? "dataset" : "firebase_dataset"),
+    );
+    if (!sourceModes.has(sourceMode)) {
+      throw new Error("Origen de datos no permitido.");
+    }
+    const datasetPath = sourceMode === "firebase"
+      ? "ml\\datasets\\dataset_final_armonizado.csv"
+      : await resolveDatasetPath(body.datasetPath);
     const job = await startTrainingJob({
       algorithms,
       targets,
-      includeFirebasePatients,
+      sourceMode: sourceMode as "firebase" | "firebase_dataset" | "dataset",
+      datasetPath,
     });
 
     return NextResponse.json({ job }, { status: 202 });

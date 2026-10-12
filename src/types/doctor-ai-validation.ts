@@ -23,6 +23,8 @@ export type PredictionSource =
   | "local-estimate"
   | "demo";
 
+export type TrainingSourceMode = "firebase" | "firebase_dataset" | "dataset";
+
 export interface PredictionTimelinePoint {
   hours: number;
   label: string;
@@ -45,6 +47,7 @@ export interface AiPrediction {
   modelName: string;
   artifact: string;
   target: string;
+  sourceMode?: TrainingSourceMode;
 }
 
 export interface AiPredictionValidation {
@@ -66,6 +69,7 @@ export interface AiPredictionValidation {
     modelName: string;
     artifact: string;
     target: string;
+    sourceMode?: TrainingSourceMode;
   };
   predictionKey: string;
   predictionLabel: string;

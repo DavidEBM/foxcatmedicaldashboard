@@ -318,8 +318,8 @@ def _candidate_is_available(
 
 def _candidate_selection_key(
     candidate: dict[str, Any],
-) -> tuple[float, float, float, float, float]:
-    """Orden lexicográfico F1, AUC, MCC, Kappa y Accuracy."""
+) -> tuple[float, ...]:
+    """Orden clínico lexicográfico definido para modelos elegibles."""
     metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
     return selection_key(metrics)
 
@@ -327,7 +327,7 @@ def _candidate_selection_key(
 def _quality_key(
     metrics: dict[str, Any],
     threshold_met: bool,
-) -> tuple[float, float, float, float, float, float]:
+) -> tuple[float, ...]:
     """Clave informativa basada solo en elegibilidad y métricas obligatorias."""
     ranked = selection_key(metrics)
     return (
@@ -337,15 +337,24 @@ def _quality_key(
 
 
 def _quality_dict(
-    quality: tuple[float, float, float, float, float, float],
+    quality: tuple[float, ...],
 ) -> dict[str, Any]:
+    metric_names = (
+        "recallSensitivity",
+        "precision",
+        "auc",
+        "mcc",
+        "balancedAccuracy",
+        "f1",
+        "kappa",
+        "accuracy",
+    )
     return {
         "thresholdMet": bool(quality[0]),
-        "f1": quality[1],
-        "auc": quality[2],
-        "mcc": quality[3],
-        "kappa": quality[4],
-        "accuracy": quality[5],
+        **{
+            name: quality[index + 1]
+            for index, name in enumerate(metric_names)
+        },
     }
 
 
@@ -1472,6 +1481,7 @@ def export_manifest(
 
         "dataSources": (
             data_sources or {
+                "sourceMode": "dataset",
                 "firebaseIncluded": False,
                 "localRows": None,
                 "firebaseRows": 0,
@@ -1503,11 +1513,24 @@ def export_manifest(
                 "training pipeline/fold."
             ),
 
+            "deduplication": (
+                "Exact duplicate local rows are removed before source "
+                "merging and splitting; cross-source patient duplicates "
+                "are resolved conservatively."
+            ),
+
+            "imbalanceHandling": (
+                "Random oversampling balances TRAIN and each CV fold only; "
+                "VALIDATION and TEST retain their observed class distribution. "
+                "Tree/linear estimators also use native balanced class weights "
+                "where supported."
+            ),
+
             "selectionDoesNotUseTest": True,
 
-            "eligibility": "Per-target thresholds are recorded in minimumThresholdsByTarget; heart failure uses accuracy/f1/auc >= 0.60 and mcc/kappa >= 0.40.",
+            "eligibility": "Mandatory filters are macro sensitivity >= 0.70, minimum class sensitivity >= 0.50, specificity >= 0.70, MCC >= 0.40, balanced accuracy >= 0.70, ROC-AUC >= 0.70 and macro F1 >= 0.60. Precision, Kappa and Accuracy are informational with a 0.00 floor.",
 
-            "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
+            "selectionRanking": "Among eligible candidates: macro sensitivity, minimum class sensitivity, specificity, MCC, balanced accuracy, ROC-AUC, macro F1, precision, Kappa and Accuracy (descending); normalizedQuality and CV scores are informational only.",
 
             "selectionFallback": "If no candidate meets every required metric, no candidate is selected or published; an already-published model is retained only if its recorded validation metrics meet the current requirements.",
         },

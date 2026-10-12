@@ -17,6 +17,12 @@ export interface AdminModel {
   status?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
+  target?: string;
+  sourceMode?: "firebase" | "firebase_dataset" | "dataset";
+  eligible?: boolean;
+  validationMetrics?: Record<string, unknown>;
+  trainedAt?: unknown;
+  winner?: boolean;
   [key: string]: unknown;
 }
 
@@ -63,4 +69,17 @@ export async function toggleAdminModel(params: {
       updatedBy: adminUid,
     }
   );
+}
+
+export async function setActiveTrainingModel(params: {
+  modelId: string;
+  adminUid: string;
+  active: boolean;
+}): Promise<void> {
+  await updateDoc(doc(db, MODELS_COLLECTION, params.modelId), {
+    active: params.active,
+    status: params.active ? "active" : "inactive",
+    updatedAt: serverTimestamp(),
+    updatedBy: params.adminUid,
+  });
 }

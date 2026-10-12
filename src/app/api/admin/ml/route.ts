@@ -21,13 +21,16 @@ const OUTPUT_DIR = path.resolve(
   "outputs",
   "SavedModels",
 );
+const DATASETS_DIR = path.resolve(process.cwd(), "ml", "datasets");
+const DATASET_EXTENSIONS = new Set([".csv", ".xlsx", ".xls", ".parquet"]);
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
 
 async function collectImages(
   directory: string,
   imageVersion: string,
   relativeDirectory = "",
-): Promise<Array<{ path: string; name: string; url: string }>> {
+  sourceMode?: string,
+): Promise<Array<{ path: string; name: string; url: string; sourceMode?: string }>> {
   const entries = await readdir(directory, { withFileTypes: true });
   const images: Array<{ path: string; name: string; url: string }> = [];
 
@@ -36,7 +39,8 @@ async function collectImages(
     const absolutePath = path.join(directory, entry.name);
 
     if (entry.isDirectory()) {
-      images.push(...await collectImages(absolutePath, imageVersion, relativePath));
+      if (!relativeDirectory && entry.name === "history") continue;
+      images.push(...await collectImages(absolutePath, imageVersion, relativePath, sourceMode));
       continue;
     }
 
@@ -49,6 +53,7 @@ async function collectImages(
       path: normalizedPath,
       name: entry.name,
       url: `/api/ai-training-assets?path=${encodeURIComponent(normalizedPath)}&v=${encodeURIComponent(imageVersion)}`,
+      ...(sourceMode ? { sourceMode } : {}),
     });
   }
 
@@ -65,6 +70,35 @@ async function readManifest(): Promise<Record<string, unknown> | null> {
   } catch {
     return null;
   }
+
+}
+
+async function listTrainingHistory(): Promise<Array<Record<string, unknown> & { id: string }>> {
+  const historyDirectory = path.join(OUTPUT_DIR, "history");
+  const entries = await readdir(historyDirectory, { withFileTypes: true }).catch(() => []);
+  const history = await Promise.all(entries
+    .filter((entry) => entry.isDirectory())
+    .map(async (entry) => {
+      try {
+        const manifest = JSON.parse(
+          await readFile(path.join(historyDirectory, entry.name, "training-manifest.json"), "utf8"),
+        ) as Record<string, unknown>;
+        return { id: entry.name, ...manifest };
+      } catch {
+        return null;
+      }
+    }));
+  return history
+    .filter((item): item is Record<string, unknown> & { id: string } => item !== null)
+    .sort((left, right) => String(right.generatedAt ?? "").localeCompare(String(left.generatedAt ?? "")));
+}
+
+async function listDatasets(): Promise<Array<{ path: string; name: string }>> {
+  const entries = await readdir(DATASETS_DIR, { withFileTypes: true }).catch(() => []);
+  return entries
+    .filter((entry) => entry.isFile() && DATASET_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+    .map((entry) => ({ path: path.join("ml", "datasets", entry.name), name: entry.name }))
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export async function GET(request: Request) {
@@ -79,9 +113,21 @@ export async function GET(request: Request) {
     const remoteImages = remoteStorage
       ? await listRemoteImages(imageVersion).catch(() => [])
       : [];
-    const images = remoteStorage && remoteImages.length
+    let images = remoteStorage && remoteImages.length
       ? remoteImages
       : await collectImages(OUTPUT_DIR, imageVersion).catch(() => []);
+    if (!remoteStorage) {
+      const history = await listTrainingHistory();
+      const historyImages = await Promise.all(history.map((entry) => (
+        collectImages(
+          path.join(OUTPUT_DIR, "history", entry.id),
+          imageVersion,
+          path.join("history", entry.id),
+          String((entry.dataSources as { sourceMode?: string } | undefined)?.sourceMode ?? ""),
+        ).catch(() => [])
+      )));
+      images = [...images, ...historyImages.flat()];
+    }
 
     return NextResponse.json(
       {
@@ -89,6 +135,8 @@ export async function GET(request: Request) {
         targets: ML_TARGETS,
         manifest,
         images,
+        datasets: await listDatasets(),
+        trainingHistory: await listTrainingHistory(),
         latestRun: getLatestTrainingJob(),
       },
       { headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" } },

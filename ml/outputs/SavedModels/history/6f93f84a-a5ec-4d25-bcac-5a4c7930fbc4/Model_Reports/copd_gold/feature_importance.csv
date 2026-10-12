@@ -1,0 +1,31 @@
+﻿feature,importance,importanceStd,method,model,target,algorithm
+FEV1,0.46666666666666656,0.09428090415820632,permutation_importance,XGBoost,copd_gold,XGBoost
+CAT,0.06666666666666665,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+Respiratory Rate,0.04444444444444443,0.03142696805273544,permutation_importance,XGBoost,copd_gold,XGBoost
+"BMI,kg/m2 (IMC)",0.04444444444444443,0.03142696805273544,permutation_importance,XGBoost,copd_gold,XGBoost
+TALLA(altura ó Height/m),0.04444444444444443,0.03142696805273544,permutation_importance,XGBoost,copd_gold,XGBoost
+Oxygen Saturation,0.04444444444444443,0.06285393610547088,permutation_importance,XGBoost,copd_gold,XGBoost
+Temperature,0.022222222222222216,0.03142696805273544,permutation_importance,XGBoost,copd_gold,XGBoost
+Altura_MSNM,0.022222222222222216,0.03142696805273544,permutation_importance,XGBoost,copd_gold,XGBoost
+mMRC,0.022222222222222216,0.03142696805273544,permutation_importance,XGBoost,copd_gold,XGBoost
+HAD,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+Genero Sexo,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+MWT2,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+MWT1,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+MWT1Best,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+EDAD,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+AtrialFib,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+status of smoking,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+SGRQ,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+smoking,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+FVCPRED,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+FVC,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+FEV1PRED,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+Heart Rate,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+DISCAPACIDAD,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+Sputum,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+Blood pressure,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+PESO,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+OCUPACION,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+TIPODISCAPAC,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost
+Location,0.0,0.0,permutation_importance,XGBoost,copd_gold,XGBoost

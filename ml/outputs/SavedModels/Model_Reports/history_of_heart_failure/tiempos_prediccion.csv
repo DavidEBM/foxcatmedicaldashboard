@@ -1,2 +1,1 @@
 ﻿target,targetLabel,algorithm,latencyMeanMs,latencyStdMs,latencyPerRecordMs,predictionsPerSecond,batchLatencyMeanMs,batchPredictionsPerSecond
-history_of_heart_failure,Antecedente de insuficiencia cardiaca,CatBoost,4.009649999943576,0.5567274634776904,4.009649999943576,249.39832654073845,3.6891375000323023,3252.7928275633335

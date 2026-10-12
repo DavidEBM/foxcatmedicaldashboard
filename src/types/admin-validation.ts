@@ -1,4 +1,5 @@
 import type { AiValidationVerdict } from "@/types/doctor-ai-validation";
+import type { TrainingSourceMode } from "@/types/doctor-ai-validation";
 
 export type AdminPatientValidationStatus =
   | "validated"
@@ -45,6 +46,7 @@ export interface AdminValidationRecord {
   verdict: AiValidationVerdict;
   updatedAt?: unknown;
   updatedAtMillis: number;
+  sourceMode?: TrainingSourceMode;
 }
 
 export interface AdminValidationAnalytics {

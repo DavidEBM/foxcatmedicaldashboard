@@ -116,20 +116,22 @@ DEFAULT_OUTPUT_DIR: Final[str] = _env_str(
 # ---------------------------------------------------------------------------
 
 DEFAULT_THRESHOLDS: Final[dict[str, float]] = {
-    "accuracy": 0.70,
-    "f1": 0.70,
-    "mcc": 0.40,
-    "kappa": 0.40,
+    "recallSensitivity": 0.70,
+    "minRecallByClass": 0.50,
+    "specificity": 0.70,
+    "precision": 0.0,
     "auc": 0.70,
+    "mcc": 0.40,
+    "balancedAccuracy": 0.70,
+    "f1": 0.60,
+    "kappa": 0.0,
+    "accuracy": 0.0,
 }
 
 TARGET_THRESHOLD_OVERRIDES: Final[dict[str, dict[str, float]]] = {
-    # Insuficiencia cardiaca: se relajan los umbrales porcentuales;
-    # MCC y Kappa conservan su piso de correlacion/concordancia.
+    # Insuficiencia cardiaca: conserva los pisos clínicos globales.
     "history_of_heart_failure": {
-        "accuracy": 0.60,
         "f1": 0.60,
-        "auc": 0.60,
     },
 }
 
@@ -137,7 +139,7 @@ def thresholds_for_target(
     target_key: str,
     base_thresholds: dict[str, float] | None = None,
 ) -> dict[str, float]:
-    """Devuelve los cinco umbrales obligatorios, idénticos para todo target."""
+    """Devuelve los umbrales de elegibilidad para un target."""
     source = base_thresholds or DEFAULT_THRESHOLDS
     thresholds = {
         key: float(source.get(key, default))
@@ -357,4 +359,3 @@ def resolve_output_dir(
     resolved = Path(path).expanduser().resolve()
 
     return resolved
-

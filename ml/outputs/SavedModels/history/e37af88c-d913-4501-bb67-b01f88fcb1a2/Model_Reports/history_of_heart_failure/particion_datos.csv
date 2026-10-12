@@ -1,0 +1,2 @@
+﻿target,targetLabel,trainRows,validationRows,testRows,trainPercent,validationPercent,testPercent,crossValidation,selectionRule
+history_of_heart_failure,Antecedente de insuficiencia cardiaca,55,12,12,69.62025316455697,15.18987341772152,15.18987341772152,"StratifiedKFold, hasta 5 folds, shuffle=True, random_state=42",CV + VALIDATION; TEST reservado para evaluación final

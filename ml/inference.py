@@ -37,6 +37,7 @@ def patient_features(patient: dict) -> dict:
         "Blood pressure": patient.get("bloodPressureSystolic"),
         "Oxygen Saturation": patient.get("oxygenSaturation"),
         "BMI,kg/m2 (IMC)": patient.get("bmi"),
+        "OCUPACION": patient.get("occupation") or patient.get("profession"),
         "Altura_MSNM": patient.get("locationElevationM"),
         "Location": patient.get("locationCity"),
         "status of smoking": patient.get("smokingStatus"),
@@ -45,8 +46,11 @@ def patient_features(patient: dict) -> dict:
     }
 
 
-def approved_targets(models_dir: Path | None = None) -> tuple[dict[str, Path], dict[str, str]]:
-    """Devuelve artefactos seleccionados que cumplen los cinco umbrales."""
+def approved_targets(
+    models_dir: Path | None = None,
+    active_models: dict[str, Any] | None = None,
+) -> tuple[dict[str, Path], dict[str, str]]:
+    """Devuelve artefactos seleccionados que cumplen los requisitos clínicos."""
     models_dir = models_dir or MODELS
     manifest_path = models_dir / "training-manifest.json"
     try:
@@ -57,10 +61,20 @@ def approved_targets(models_dir: Path | None = None) -> tuple[dict[str, Path], d
     approved: dict[str, Path] = {}
     blocked: dict[str, str] = {}
     models = manifest.get("models", {})
+    manifest_source_mode = (manifest.get("dataSources") or {}).get("sourceMode")
 
     for target in TARGETS:
         report = models.get(target, {})
-        selected_model = report.get("selectedModel")
+        requested = (active_models or {}).get(target)
+        if (
+            isinstance(requested, dict)
+            and requested.get("sourceMode")
+            and requested.get("sourceMode") != manifest_source_mode
+        ):
+            requested = None
+        selected_model = (
+            requested.get("model") if isinstance(requested, dict) else requested
+        ) or report.get("selectedModel")
         selected_candidate = next(
             (
                 candidate
@@ -95,7 +109,17 @@ def approved_targets(models_dir: Path | None = None) -> tuple[dict[str, Path], d
 def predict(patient: dict) -> tuple[list[dict], dict[str, str]]:
     row = patient_features(patient)
     results = []
-    approved, blocked = approved_targets(runtime_models_dir() or MODELS)
+    models_dir = runtime_models_dir() or MODELS
+    active_models = patient.get("activeModels")
+    approved, blocked = approved_targets(
+        models_dir,
+        active_models if isinstance(active_models, dict) else None,
+    )
+    try:
+        manifest = json.loads((models_dir / "training-manifest.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        manifest = {}
+    source_mode = (manifest.get("dataSources") or {}).get("sourceMode")
     for target, path in approved.items():
         if not path.exists():
             continue
@@ -140,6 +164,7 @@ def predict(patient: dict) -> tuple[list[dict], dict[str, str]]:
             "modelName": artifact.get("selectedModel", artifact.get("model", "ML")),
             "artifact": str(path.relative_to(ROOT.parent)),
             "source": "backend",
+            "sourceMode": source_mode,
         })
     return results, blocked
 

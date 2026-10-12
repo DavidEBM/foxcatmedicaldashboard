@@ -1,11 +1,11 @@
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { db } from "@/services/firebase/config";
@@ -46,21 +46,28 @@ export async function createPatient(
   payload: Record<string, unknown>,
   doctorId: string
 ): Promise<string> {
-  const reference = await addDoc(
-    collection(
-      db,
-      PATIENTS_COLLECTION
-    ),
-    {
-      ...payload,
-      assignedDoctorIds: [doctorId],
-      assignedDoctors: [{ uid: doctorId }],
-      createdAt: serverTimestamp(),
-      createdBy: doctorId,
-    }
-  );
+  const patientReference = doc(collection(db, PATIENTS_COLLECTION));
+  const assignmentReference = doc(collection(db, "patientAssignments"));
+  const batch = writeBatch(db);
+  const createdAt = serverTimestamp();
 
-  return reference.id;
+  batch.set(patientReference, {
+    ...payload,
+    assignedDoctorIds: [doctorId],
+    assignedDoctors: [{ uid: doctorId }],
+    createdAt,
+    createdBy: doctorId,
+  });
+  batch.set(assignmentReference, {
+    patientId: patientReference.id,
+    doctorUid: doctorId,
+    assignedBy: doctorId,
+    assignedAt: createdAt,
+    status: "active",
+  });
+  await batch.commit();
+
+  return patientReference.id;
 }
 
 export async function updatePatient(

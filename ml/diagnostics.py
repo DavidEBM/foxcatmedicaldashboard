@@ -44,13 +44,14 @@ except Exception:
 
 
 METRIC_COLUMNS = [
-    "precision",
-    "accuracy",
     "recallSensitivity",
-    "f1",
+    "precision",
     "auc",
     "mcc",
+    "balancedAccuracy",
+    "f1",
     "kappa",
+    "accuracy",
 ]
 
 ROC_RANDOM_STATE = 42
@@ -1851,6 +1852,25 @@ def _candidate_name(candidate: Mapping[str, Any]) -> str:
     )
 
 
+def _best_candidate_per_model(
+    candidates: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    """Conserva el mejor resultado VALIDATION de cada algoritmo."""
+    best_by_model: dict[str, Mapping[str, Any]] = {}
+    for candidate in candidates:
+        model_name = _candidate_name(candidate)
+        key = model_name.casefold()
+        current = best_by_model.get(key)
+        if current is None:
+            best_by_model[key] = candidate
+            continue
+        current_metrics = current.get("validationMetrics") or current.get("validation") or {}
+        candidate_metrics = candidate.get("validationMetrics") or candidate.get("validation") or {}
+        if selection_key(candidate_metrics) > selection_key(current_metrics):
+            best_by_model[key] = candidate
+    return list(best_by_model.values())
+
+
 def _candidate_passes_threshold(
     candidate: Mapping[str, Any],
     thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
@@ -1923,14 +1943,22 @@ def _export_validation_model_comparisons(
     thresholds: Mapping[str, float] = DEFAULT_THRESHOLDS,
 ) -> None:
     """Compare every trained candidate using VALIDATION metrics only."""
-    requirements = (
-        ("accuracy", "Accuracy", thresholds["accuracy"]),
-        ("f1", "F1-Score", thresholds["f1"]),
-        ("mcc", "MCC", thresholds["mcc"]),
-        ("kappa", "Kappa", thresholds["kappa"]),
-        ("auc", "ROC-AUC", thresholds["auc"]),
+    requirements = tuple(
+        (key, label, float(thresholds.get(key, 0.0)))
+        for key, label in (
+            ("recallSensitivity", "Sensibilidad (Recall)"),
+            ("minRecallByClass", "Sensibilidad mínima por clase"),
+            ("specificity", "Especificidad"),
+            ("mcc", "MCC"),
+            ("balancedAccuracy", "Balanced Accuracy"),
+            ("auc", "ROC-AUC"),
+            ("f1", "F1-Score"),
+            ("precision", "Precisión (VPP)"),
+            ("kappa", "Kappa"),
+            ("accuracy", "Accuracy"),
+        )
     )
-    available = list(candidates)
+    available = _best_candidate_per_model(candidates)
     if not available:
         return
 
@@ -1964,11 +1992,11 @@ def _export_validation_model_comparisons(
     # alongside the winning candidate, with each metric's own threshold.
     fig, ax = plt.subplots(figsize=(12, max(4.8, len(available) * 0.52)))
     for row_index in range(matrix.shape[0]):
-        for column_index, (_key, _label, threshold) in enumerate(requirements):
+        for column_index, (metric_key, _label, threshold) in enumerate(requirements):
             value = matrix[row_index, column_index]
             color = _eligibility_heatmap_color(value, threshold)
             ax.add_patch(Rectangle((column_index, row_index), 1, 1, color=color, ec="white", lw=2))
-            shown = "—" if not np.isfinite(value) else (f"{value:.3f}" if column_index in (2, 3) else f"{value:.1%}")
+            shown = "—" if not np.isfinite(value) else (f"{value:.3f}" if metric_key in ("auc", "mcc", "kappa") else f"{value:.1%}")
             ax.text(column_index + 0.5, row_index + 0.5, shown, ha="center", va="center", fontsize=9, fontweight="bold")
 
     labels = [
@@ -1991,31 +2019,6 @@ def _export_validation_model_comparisons(
     fig.tight_layout()
     _save_figure(fig, base / "validacion_modelos_elegibilidad.png", dpi=190)
 
-    # Raw signed MCC comparison across all candidates, with the required gate.
-    mcc_values = matrix[:, 2]
-    order = np.argsort(np.nan_to_num(mcc_values, nan=-2.0))
-    ordered_values = mcc_values[order]
-    ordered_names = [model_names[index] for index in order]
-    colors = ["#328452" if np.isfinite(value) and value >= thresholds["mcc"] else "#d17a7a" for value in ordered_values]
-    fig, ax = plt.subplots(figsize=(11, max(4.5, len(available) * 0.45)))
-    bars = ax.barh(ordered_names, np.nan_to_num(ordered_values, nan=0), color=colors)
-    ax.axvline(thresholds["mcc"], color="#34313d", linestyle="--", linewidth=1.6, label=f"Umbral {thresholds['mcc']:.2f}")
-    ax.axvline(0, color="#777", linewidth=.8)
-    ax.set_xlim(-1.05, 1.05)
-    ax.set_xlabel("MCC real (−1 a 1)")
-    ax.set_title(f"MCC de todos los modelos · {target_label}\nComparativa de VALIDATION; incluye modelos no ganadores", fontweight="bold")
-    ax.grid(axis="x", alpha=.2)
-    ax.legend(loc="lower right")
-    for bar, value in zip(bars, ordered_values):
-        text = "Sin dato" if not np.isfinite(value) else f"{value:.3f}"
-        if not np.isfinite(value):
-            text_x, alignment = 0.02, "left"
-        elif value >= 0:
-            text_x, alignment = value + 0.025, "left"
-        else:
-            text_x, alignment = value - 0.025, "right"
-        ax.text(text_x, bar.get_y() + bar.get_height() / 2, text, va="center", ha=alignment, fontsize=8, fontweight="bold")
-    _save_figure(fig, base / "validacion_modelos_mcc.png", dpi=190)
     _export_validation_quality_metric_comparisons(
         available,
         base,

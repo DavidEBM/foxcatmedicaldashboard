@@ -13,6 +13,11 @@ def test_validation_comparison_exports_all_candidates_when_one_is_eligible(tmp_p
             "validationMetrics": {
                 "accuracy": 0.82,
                 "f1": 0.84,
+                "recallSensitivity": 0.82,
+                "minRecallByClass": 0.70,
+                "specificity": 0.82,
+                "precision": 0.82,
+                "balancedAccuracy": 0.82,
                 "mcc": 0.70,
                 "kappa": 0.68,
                 "auc": 0.91,
@@ -24,6 +29,11 @@ def test_validation_comparison_exports_all_candidates_when_one_is_eligible(tmp_p
             "validationMetrics": {
                 "accuracy": 0.76,
                 "f1": 0.66,
+                "recallSensitivity": 0.76,
+                "minRecallByClass": 0.60,
+                "specificity": 0.76,
+                "precision": 0.76,
+                "balancedAccuracy": 0.76,
                 "mcc": 0.52,
                 "kappa": 0.49,
                 "auc": 0.84,
@@ -34,9 +44,8 @@ def test_validation_comparison_exports_all_candidates_when_one_is_eligible(tmp_p
     _export_validation_model_comparisons(candidates, tmp_path, "COPD GOLD")
 
     eligibility_chart = tmp_path / "validacion_modelos_elegibilidad.png"
-    mcc_chart = tmp_path / "validacion_modelos_mcc.png"
     assert eligibility_chart.is_file() and eligibility_chart.stat().st_size > 0
-    assert mcc_chart.is_file() and mcc_chart.stat().st_size > 0
+    assert not (tmp_path / "validacion_modelos_mcc.png").exists()
 
     for metric in (
         "accuracy",

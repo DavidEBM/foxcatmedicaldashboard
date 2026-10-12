@@ -56,6 +56,7 @@ export interface Patient {
 
   locationCity: string;
   locationElevationM: number;
+  occupation: string;
   locationRiskLevel: number;
 
   ward: string;

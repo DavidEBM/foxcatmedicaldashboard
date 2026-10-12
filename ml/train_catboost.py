@@ -54,6 +54,7 @@ class CatBoostSklearnAdapter(BaseEstimator, ClassifierMixin):
             verbose=False,
             allow_writing_files=False,
             thread_count=-1,
+            auto_class_weights="Balanced",
             cat_features=self.cat_features,
         )
 

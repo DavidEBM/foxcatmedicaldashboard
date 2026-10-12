@@ -1,0 +1,2 @@
+﻿target,targetLabel,algorithm,latencyMeanMs,latencyStdMs,latencyPerRecordMs,predictionsPerSecond,batchLatencyMeanMs,batchPredictionsPerSecond
+copd_gold,COPD GOLD (1–4),XGBoost,5.886212500172405,0.49669468182586063,5.886212500172405,169.88853188203964,6.100749999973232,2458.714092540395

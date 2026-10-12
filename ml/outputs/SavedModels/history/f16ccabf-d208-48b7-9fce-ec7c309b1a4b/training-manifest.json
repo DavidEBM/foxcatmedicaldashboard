@@ -1,0 +1,1601 @@
+{
+  "generatedAt": "2026-10-12T15:13:17.286433+00:00",
+  "sourceDataset": "ml/datasets/DatasetArmonizadoFinal2.csv",
+  "dataSources": {
+    "sourceMode": "dataset",
+    "firebaseIncluded": false,
+    "localRows": 365,
+    "firebaseRows": 0,
+    "firebaseImportedRows": 0,
+    "firebaseWebRows": 0,
+    "rowsAfterDeduplication": 365,
+    "duplicatesRemoved": 91,
+    "localDuplicatesRemoved": 91,
+    "matchedExistingPatients": 0,
+    "targetConflicts": 0,
+    "datasetPath": "ml/datasets/DatasetArmonizadoFinal2.csv",
+    "datasetName": "DatasetArmonizadoFinal2.csv"
+  },
+  "randomState": 42,
+  "methodology": {
+    "selection": "StratifiedGroupKFold por paciente + validation holdout",
+    "finalFit": "TRAIN + VALIDATION",
+    "testUsage": "TEST reserved exclusively for final evaluation of the selected model",
+    "missingData": "Missing values are imputed inside each training pipeline/fold.",
+    "deduplication": "Exact duplicate local rows are removed before source merging and splitting; cross-source patient duplicates are resolved conservatively.",
+    "imbalanceHandling": "Random oversampling balances TRAIN and each CV fold only; VALIDATION and TEST retain their observed class distribution. Tree/linear estimators also use native balanced class weights where supported.",
+    "selectionDoesNotUseTest": true,
+    "eligibility": "Per-target thresholds are recorded in minimumThresholdsByTarget; heart failure uses accuracy/f1/auc >= 0.60 and mcc/kappa >= 0.40.",
+    "selectionRanking": "Among eligible candidates: F1, ROC-AUC, MCC, Kappa, Accuracy (descending); normalizedQuality and CV scores are informational only.",
+    "selectionFallback": "If no candidate meets every required metric, no candidate is selected or published; an already-published model is retained only if its recorded validation metrics meet the current requirements."
+  },
+  "splitTotals": {
+    "train": 310,
+    "validation": 67,
+    "test": 67
+  },
+  "targets": {
+    "copd_gold": "COPD GOLD(1 a 4) (Target)",
+    "history_of_heart_failure": "History of Heart Failure(Si ó no)(Target)"
+  },
+  "skippedTargets": {},
+  "featureColumnsByTarget": {
+    "copd_gold": [
+      "EDAD",
+      "Genero Sexo",
+      "PackHistory",
+      "MWT1",
+      "MWT2",
+      "MWT1Best",
+      "FEV1",
+      "FEV1PRED",
+      "FVC",
+      "FVCPRED",
+      "CAT",
+      "HAD",
+      "SGRQ",
+      "smoking",
+      "status of smoking",
+      "mMRC",
+      "Temperature",
+      "Respiratory Rate",
+      "Heart Rate",
+      "Blood pressure",
+      "Oxygen Saturation",
+      "Sputum",
+      "AtrialFib",
+      "BMI,kg/m2 (IMC)",
+      "PESO",
+      "TALLA(altura ó Height/m)",
+      "DISCAPACIDAD",
+      "TIPODISCAPAC",
+      "OCUPACION",
+      "Altura_MSNM",
+      "Location"
+    ],
+    "history_of_heart_failure": [
+      "EDAD",
+      "Genero Sexo",
+      "PackHistory",
+      "smoking",
+      "status of smoking",
+      "AtrialFib",
+      "BMI,kg/m2 (IMC)",
+      "CAT",
+      "HAD",
+      "SGRQ",
+      "mMRC",
+      "Temperature",
+      "Respiratory Rate",
+      "Heart Rate",
+      "Blood pressure",
+      "Oxygen Saturation",
+      "Sputum",
+      "PESO",
+      "TALLA(altura ó Height/m)",
+      "DISCAPACIDAD",
+      "TIPODISCAPAC",
+      "OCUPACION",
+      "Altura_MSNM",
+      "Location",
+      "RIESGO CARDIOVASCULAR"
+    ]
+  },
+  "minimumThresholds": {
+    "accuracy": 0.7,
+    "f1": 0.7,
+    "mcc": 0.4,
+    "kappa": 0.4,
+    "auc": 0.7
+  },
+  "minimumThresholdsByTarget": {
+    "copd_gold": {
+      "accuracy": 0.7,
+      "f1": 0.7,
+      "mcc": 0.4,
+      "kappa": 0.4,
+      "auc": 0.7
+    },
+    "history_of_heart_failure": {
+      "accuracy": 0.6,
+      "f1": 0.6,
+      "mcc": 0.4,
+      "kappa": 0.4,
+      "auc": 0.6
+    }
+  },
+  "models": {
+    "copd_gold": {
+      "targetColumn": "COPD GOLD(1 a 4) (Target)",
+      "targetLabel": "COPD GOLD (1–4)",
+      "selectedModel": "XGBoost",
+      "runSelectedModel": null,
+      "publishedThisRun": false,
+      "publicationReason": "no_eligible_candidate_existing_eligible_model_retained",
+      "currentQuality": {
+        "thresholdMet": true,
+        "f1": 0.780952380952381,
+        "auc": 0.8064393939393939,
+        "mcc": 0.7380528425447574,
+        "kappa": 0.7123287671232876,
+        "accuracy": 0.7857142857142857
+      },
+      "candidateQuality": {
+        "thresholdMet": false,
+        "f1": null,
+        "auc": null,
+        "mcc": null,
+        "kappa": null,
+        "accuracy": null
+      },
+      "artifact": "ml\\outputs\\SavedModels\\copd_gold-xgboost.joblib",
+      "thresholdMet": true,
+      "publishedValidationMetrics": {
+        "accuracy": 0.7857142857142857,
+        "f1": 0.780952380952381,
+        "mcc": 0.7380528425447574,
+        "kappa": 0.7123287671232876,
+        "auc": 0.8064393939393939,
+        "precision": 0.8541666666666666,
+        "recallSensitivity": 0.7916666666666666,
+        "balancedAccuracy": 0.7916666666666666,
+        "classes": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "positiveLabel": null,
+        "confusionMatrix": [
+          [
+            2,
+            2,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.7857142857142857,
+          "balancedAccuracy": 0.7916666666666666,
+          "f1": 0.780952380952381,
+          "precision": 0.8541666666666666,
+          "recallSensitivity": 0.7916666666666666,
+          "auc": 0.8064393939393939,
+          "mcc": 0.8690264212723787,
+          "kappa": 0.8561643835616438
+        },
+        "normalizedQuality": 0.8169746081800104
+      },
+      "split": {
+        "train": 255,
+        "validation": 55,
+        "test": 55
+      },
+      "testClassDistribution": {
+        "1": 44,
+        "2": 6,
+        "4": 3,
+        "3": 2
+      },
+      "testMetrics": {
+        "accuracy": 0.7333333333333333,
+        "f1": 0.5833333333333334,
+        "mcc": 0.6593231434410297,
+        "kappa": 0.625,
+        "auc": 0.8037606837606838,
+        "precision": 0.5785714285714286,
+        "recallSensitivity": 0.65,
+        "balancedAccuracy": 0.65,
+        "classes": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "positiveLabel": null,
+        "confusionMatrix": [
+          [
+            5,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            0
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.7333333333333333,
+          "balancedAccuracy": 0.65,
+          "f1": 0.5833333333333334,
+          "precision": 0.5785714285714286,
+          "recallSensitivity": 0.65,
+          "auc": 0.8037606837606838,
+          "mcc": 0.8296615717205149,
+          "kappa": 0.8125
+        },
+        "normalizedQuality": 0.7051450438399117,
+        "normalizedQualityPercent": 70.51450438399117,
+        "predictionLatencyMs": 5.886212500172405,
+        "predictionLatencyStdMs": 0.49669468182586063,
+        "responseTimeMsPerRecord": 5.886212500172405,
+        "predictionsPerSecond": 169.88853188203964,
+        "predictionBatchLatencyMs": 6.100749999973232,
+        "batchPredictionsPerSecond": 2458.714092540395
+      },
+      "algorithmsTested": [
+        {
+          "model": "XGBoost",
+          "available": true,
+          "validationScore": 0.7101127104891001,
+          "cvMeanScore": 0.751423930260164,
+          "cvStdScore": 0.04128942001312984,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8909090909090909,
+            "f1": 0.5554597701149425,
+            "mcc": 0.696153069657674,
+            "kappa": 0.6950092421441774,
+            "auc": 0.9663428848371265,
+            "precision": 0.5416666666666667,
+            "recallSensitivity": 0.5776515151515151,
+            "balancedAccuracy": 0.5776515151515151,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                43,
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                5,
+                1,
+                0
+              ],
+              [
+                0,
+                1,
+                0,
+                2
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8909090909090909,
+              "balancedAccuracy": 0.5776515151515151,
+              "f1": 0.5554597701149425,
+              "precision": 0.5416666666666667,
+              "recallSensitivity": 0.5776515151515151,
+              "auc": 0.9663428848371265,
+              "mcc": 0.848076534828837,
+              "kappa": 0.8475046210720887
+            },
+            "normalizedQuality": 0.7256578248414729
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "n_estimators": 120,
+            "max_depth": 6,
+            "learning_rate": 0.05,
+            "subsample": 0.9,
+            "colsample_bytree": 0.9,
+            "min_child_weight": 2.0,
+            "reg_lambda": 1.0,
+            "random_state": 42,
+            "n_jobs": -1
+          },
+          "artifact": null
+        },
+        {
+          "model": "LightGBM",
+          "available": true,
+          "validationScore": 0.7459682707405377,
+          "cvMeanScore": 0.7525461270687738,
+          "cvStdScore": 0.05969214520844435,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8909090909090909,
+            "f1": 0.6400193798449613,
+            "mcc": 0.7101382770445466,
+            "kappa": 0.7058823529411764,
+            "auc": 0.963188760312627,
+            "precision": 0.6333333333333334,
+            "recallSensitivity": 0.6553030303030304,
+            "balancedAccuracy": 0.6553030303030304,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                42,
+                0,
+                2,
+                0
+              ],
+              [
+                0,
+                5,
+                1,
+                0
+              ],
+              [
+                0,
+                1,
+                1,
+                1
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8909090909090909,
+              "balancedAccuracy": 0.6553030303030304,
+              "f1": 0.6400193798449613,
+              "precision": 0.6333333333333334,
+              "recallSensitivity": 0.6553030303030304,
+              "auc": 0.963188760312627,
+              "mcc": 0.8550691385222733,
+              "kappa": 0.8529411764705882
+            },
+            "normalizedQuality": 0.7682583674998669
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "boosting_type": "gbdt",
+            "class_weight": "balanced",
+            "colsample_bytree": 0.9,
+            "importance_type": "split",
+            "learning_rate": 0.05,
+            "max_depth": -1,
+            "min_child_samples": 15,
+            "min_child_weight": 0.001,
+            "min_split_gain": 0.0,
+            "n_estimators": 200,
+            "n_jobs": -1,
+            "num_leaves": 31,
+            "objective": null,
+            "random_state": 42,
+            "reg_alpha": 0.0,
+            "reg_lambda": 1.0,
+            "subsample": 0.9,
+            "subsample_for_bin": 200000,
+            "subsample_freq": 1,
+            "verbosity": -1
+          },
+          "artifact": null
+        },
+        {
+          "model": "CatBoost",
+          "available": true,
+          "validationScore": 0.777862321824531,
+          "cvMeanScore": 0.7551956022147109,
+          "cvStdScore": 0.03632089895883184,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.9090909090909091,
+            "f1": 0.6584717607973422,
+            "mcc": 0.7587864565833965,
+            "kappa": 0.7538048343777977,
+            "auc": 0.9806715480876227,
+            "precision": 0.6458333333333334,
+            "recallSensitivity": 0.696969696969697,
+            "balancedAccuracy": 0.696969696969697,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                42,
+                2,
+                0,
+                0
+              ],
+              [
+                0,
+                6,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.9090909090909091,
+              "balancedAccuracy": 0.696969696969697,
+              "f1": 0.6584717607973422,
+              "precision": 0.6458333333333334,
+              "recallSensitivity": 0.696969696969697,
+              "auc": 0.9806715480876227,
+              "mcc": 0.8793932282916983,
+              "kappa": 0.8769024171888988
+            },
+            "normalizedQuality": 0.7930378238411497
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "iterations": 200,
+            "depth": 6,
+            "learning_rate": 0.05,
+            "l2_leaf_reg": 3.0,
+            "random_strength": 1.0,
+            "cat_features": null
+          },
+          "artifact": null
+        },
+        {
+          "model": "RandomForest",
+          "available": true,
+          "validationScore": 0.6997433101783715,
+          "cvMeanScore": 0.73634463050191,
+          "cvStdScore": 0.02828730672452011,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8727272727272727,
+            "f1": 0.5411764705882353,
+            "mcc": 0.6753346748664125,
+            "kappa": 0.6666666666666667,
+            "auc": 0.94071451194399,
+            "precision": 0.49999999999999994,
+            "recallSensitivity": 0.6079545454545454,
+            "balancedAccuracy": 0.6079545454545454,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                41,
+                2,
+                1,
+                0
+              ],
+              [
+                0,
+                6,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0,
+                2
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8727272727272727,
+              "balancedAccuracy": 0.6079545454545454,
+              "f1": 0.5411764705882353,
+              "precision": 0.49999999999999994,
+              "recallSensitivity": 0.6079545454545454,
+              "auc": 0.94071451194399,
+              "mcc": 0.8376673374332062,
+              "kappa": 0.8333333333333334
+            },
+            "normalizedQuality": 0.717691002116891
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "bootstrap": true,
+            "ccp_alpha": 0.0,
+            "class_weight": "balanced",
+            "criterion": "gini",
+            "max_depth": null,
+            "max_features": "sqrt",
+            "max_leaf_nodes": null,
+            "max_samples": null,
+            "min_impurity_decrease": 0.0,
+            "min_samples_leaf": 2,
+            "min_samples_split": 2,
+            "min_weight_fraction_leaf": 0.0,
+            "monotonic_cst": null,
+            "n_estimators": 200,
+            "n_jobs": -1,
+            "oob_score": false,
+            "random_state": 42,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "ExtraTrees",
+          "available": true,
+          "validationScore": 0.7555853386618265,
+          "cvMeanScore": 0.7600746314597447,
+          "cvStdScore": 0.02827892028279694,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8909090909090909,
+            "f1": 0.6387955182072829,
+            "mcc": 0.7227431590971299,
+            "kappa": 0.7150259067357513,
+            "auc": 0.9572148120604382,
+            "precision": 0.6041666666666667,
+            "recallSensitivity": 0.6912878787878788,
+            "balancedAccuracy": 0.6912878787878788,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                41,
+                1,
+                1,
+                1
+              ],
+              [
+                0,
+                6,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                1,
+                1
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8909090909090909,
+              "balancedAccuracy": 0.6912878787878788,
+              "f1": 0.6387955182072829,
+              "precision": 0.6041666666666667,
+              "recallSensitivity": 0.6912878787878788,
+              "auc": 0.9572148120604382,
+              "mcc": 0.861371579548565,
+              "kappa": 0.8575129533678756
+            },
+            "normalizedQuality": 0.7740682972919596
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "bootstrap": false,
+            "ccp_alpha": 0.0,
+            "class_weight": "balanced",
+            "criterion": "gini",
+            "max_depth": null,
+            "max_features": "sqrt",
+            "max_leaf_nodes": null,
+            "max_samples": null,
+            "min_impurity_decrease": 0.0,
+            "min_samples_leaf": 2,
+            "min_samples_split": 2,
+            "min_weight_fraction_leaf": 0.0,
+            "monotonic_cst": null,
+            "n_estimators": 200,
+            "n_jobs": -1,
+            "oob_score": false,
+            "random_state": 42,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "LogisticRegression",
+          "available": true,
+          "validationScore": 0.6676951951324887,
+          "cvMeanScore": 0.6528497191338333,
+          "cvStdScore": 0.0369443071884765,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8545454545454545,
+            "f1": 0.504912734324499,
+            "mcc": 0.630093174020718,
+            "kappa": 0.6216680997420463,
+            "auc": 0.9478179053650752,
+            "precision": 0.4785714285714286,
+            "recallSensitivity": 0.5662878787878788,
+            "balancedAccuracy": 0.5662878787878788,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                41,
+                2,
+                0,
+                1
+              ],
+              [
+                0,
+                5,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                3
+              ],
+              [
+                0,
+                0,
+                1,
+                1
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8545454545454545,
+              "balancedAccuracy": 0.5662878787878788,
+              "f1": 0.504912734324499,
+              "precision": 0.4785714285714286,
+              "recallSensitivity": 0.5662878787878788,
+              "auc": 0.9478179053650752,
+              "mcc": 0.8150465870103589,
+              "kappa": 0.8108340498710231
+            },
+            "normalizedQuality": 0.6930379896579496
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "C": 1.0,
+            "class_weight": "balanced",
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 3000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "SVM",
+          "available": true,
+          "validationScore": 0.5878965675574999,
+          "cvMeanScore": 0.6190319286067232,
+          "cvStdScore": 0.04559419106852131,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8181818181818182,
+            "f1": 0.40476190476190477,
+            "mcc": 0.5496662255979491,
+            "kappa": 0.5397489539748954,
+            "auc": 0.9277433391161645,
+            "precision": 0.3888888888888889,
+            "recallSensitivity": 0.4356060606060606,
+            "balancedAccuracy": 0.4356060606060606,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                40,
+                3,
+                1,
+                0
+              ],
+              [
+                0,
+                5,
+                1,
+                0
+              ],
+              [
+                0,
+                1,
+                0,
+                2
+              ],
+              [
+                0,
+                0,
+                2,
+                0
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8181818181818182,
+              "balancedAccuracy": 0.4356060606060606,
+              "f1": 0.40476190476190477,
+              "precision": 0.3888888888888889,
+              "recallSensitivity": 0.4356060606060606,
+              "auc": 0.9277433391161645,
+              "mcc": 0.7748331127989745,
+              "kappa": 0.7698744769874477
+            },
+            "normalizedQuality": 0.6194369577434149
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "C": 1.0,
+            "break_ties": false,
+            "cache_size": 512,
+            "class_weight": "balanced",
+            "coef0": 0.0,
+            "decision_function_shape": "ovr",
+            "degree": 3,
+            "gamma": "scale",
+            "kernel": "rbf",
+            "max_iter": -1,
+            "probability": true,
+            "random_state": 42,
+            "shrinking": true,
+            "tol": 0.001,
+            "verbose": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "DeepLearningMLP",
+          "available": true,
+          "validationScore": 0.5708611541368925,
+          "cvMeanScore": 0.6697745609670349,
+          "cvStdScore": 0.04724426259612028,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.8181818181818182,
+            "f1": 0.4050387596899225,
+            "mcc": 0.5129172785307438,
+            "kappa": 0.5102404274265362,
+            "auc": 0.9281914024470996,
+            "precision": 0.4107142857142857,
+            "recallSensitivity": 0.3996212121212121,
+            "balancedAccuracy": 0.3996212121212121,
+            "classes": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "positiveLabel": null,
+            "confusionMatrix": [
+              [
+                41,
+                2,
+                1,
+                0
+              ],
+              [
+                1,
+                4,
+                1,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                3
+              ],
+              [
+                0,
+                0,
+                2,
+                0
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.8181818181818182,
+              "balancedAccuracy": 0.3996212121212121,
+              "f1": 0.4050387596899225,
+              "precision": 0.4107142857142857,
+              "recallSensitivity": 0.3996212121212121,
+              "auc": 0.9281914024470996,
+              "mcc": 0.7564586392653718,
+              "kappa": 0.7551202137132681
+            },
+            "normalizedQuality": 0.6091184429067737
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "activation": "relu",
+            "alpha": 0.0001,
+            "batch_size": "auto",
+            "beta_1": 0.9,
+            "beta_2": 0.999,
+            "early_stopping": false,
+            "epsilon": 1e-08,
+            "hidden_layer_sizes": [
+              128,
+              64,
+              32
+            ],
+            "learning_rate": "adaptive",
+            "learning_rate_init": 0.001,
+            "max_fun": 15000,
+            "max_iter": 300,
+            "momentum": 0.9,
+            "n_iter_no_change": 10,
+            "nesterovs_momentum": true,
+            "power_t": 0.5,
+            "random_state": 42,
+            "shuffle": true,
+            "solver": "adam",
+            "tol": 0.0001,
+            "validation_fraction": 0.1,
+            "verbose": false,
+            "warm_start": false
+          },
+          "artifact": null
+        }
+      ]
+    },
+    "history_of_heart_failure": {
+      "targetColumn": "History of Heart Failure(Si ó no)(Target)",
+      "targetLabel": "Antecedente de insuficiencia cardiaca",
+      "selectedModel": "CatBoost",
+      "runSelectedModel": null,
+      "publishedThisRun": false,
+      "publicationReason": "no_eligible_candidate_existing_eligible_model_retained",
+      "currentQuality": {
+        "thresholdMet": true,
+        "f1": 0.6666666666666666,
+        "auc": 0.625,
+        "mcc": 0.47809144373375745,
+        "kappa": 0.47058823529411764,
+        "accuracy": 0.75
+      },
+      "candidateQuality": {
+        "thresholdMet": false,
+        "f1": null,
+        "auc": null,
+        "mcc": null,
+        "kappa": null,
+        "accuracy": null
+      },
+      "artifact": "ml\\outputs\\SavedModels\\history_of_heart_failure-catboost.joblib",
+      "thresholdMet": true,
+      "publishedValidationMetrics": {
+        "accuracy": 0.75,
+        "f1": 0.6666666666666666,
+        "mcc": 0.47809144373375745,
+        "kappa": 0.47058823529411764,
+        "auc": 0.625,
+        "precision": 0.6,
+        "recallSensitivity": 0.75,
+        "balancedAccuracy": 0.75,
+        "classes": [
+          "NO",
+          "SI"
+        ],
+        "positiveLabel": "SI",
+        "confusionMatrix": [
+          [
+            6,
+            2
+          ],
+          [
+            1,
+            3
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.75,
+          "balancedAccuracy": 0.75,
+          "f1": 0.6666666666666666,
+          "precision": 0.6,
+          "recallSensitivity": 0.75,
+          "auc": 0.625,
+          "mcc": 0.7390457218668787,
+          "kappa": 0.7352941176470589
+        },
+        "normalizedQuality": 0.7020008132725755
+      },
+      "split": {
+        "train": 55,
+        "validation": 12,
+        "test": 12
+      },
+      "testClassDistribution": {
+        "NO": 8,
+        "SI": 4
+      },
+      "testMetrics": {
+        "accuracy": 0.5833333333333334,
+        "f1": 0.0,
+        "mcc": 0.0,
+        "kappa": 0.0,
+        "auc": 0.48571428571428577,
+        "precision": 0.0,
+        "recallSensitivity": 0.0,
+        "balancedAccuracy": 0.5,
+        "classes": [
+          "NO",
+          "SI"
+        ],
+        "positiveLabel": "SI",
+        "confusionMatrix": [
+          [
+            7,
+            0
+          ],
+          [
+            5,
+            0
+          ]
+        ],
+        "normalizedMetrics": {
+          "accuracy": 0.5833333333333334,
+          "balancedAccuracy": 0.5,
+          "f1": 0.0,
+          "precision": 0.0,
+          "recallSensitivity": 0.0,
+          "auc": 0.48571428571428577,
+          "mcc": 0.5,
+          "kappa": 0.5
+        },
+        "normalizedQuality": 0.3211309523809524,
+        "normalizedQualityPercent": 32.11309523809524,
+        "predictionLatencyMs": 3.5360500000933826,
+        "predictionLatencyStdMs": 0.06795054879329693,
+        "responseTimeMsPerRecord": 3.5360500000933826,
+        "predictionsPerSecond": 282.8014309677723,
+        "predictionBatchLatencyMs": 4.206587500220849,
+        "batchPredictionsPerSecond": 2852.6685821630936
+      },
+      "algorithmsTested": [
+        {
+          "model": "XGBoost",
+          "available": true,
+          "validationScore": 0.4843222525348998,
+          "cvMeanScore": 0.32337077363041145,
+          "cvStdScore": 0.1281363157139764,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.5833333333333334,
+            "f1": 0.6153846153846154,
+            "mcc": 0.23904572186687872,
+            "kappa": 0.21052631578947378,
+            "auc": 0.5428571428571429,
+            "precision": 0.5,
+            "recallSensitivity": 0.8,
+            "balancedAccuracy": 0.6142857142857143,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                3,
+                4
+              ],
+              [
+                1,
+                4
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.5833333333333334,
+              "balancedAccuracy": 0.6142857142857143,
+              "f1": 0.6153846153846154,
+              "precision": 0.5,
+              "recallSensitivity": 0.8,
+              "auc": 0.5428571428571429,
+              "mcc": 0.6195228609334393,
+              "kappa": 0.605263157894737
+            },
+            "normalizedQuality": 0.6100808530861228
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "n_estimators": 120,
+            "max_depth": 6,
+            "learning_rate": 0.05,
+            "subsample": 0.9,
+            "colsample_bytree": 0.9,
+            "min_child_weight": 2.0,
+            "reg_lambda": 1.0,
+            "random_state": 42,
+            "n_jobs": -1
+          },
+          "artifact": null
+        },
+        {
+          "model": "LightGBM",
+          "available": true,
+          "validationScore": 0.47860796682061413,
+          "cvMeanScore": 0.33531350554643363,
+          "cvStdScore": 0.040213476970486016,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.5833333333333334,
+            "f1": 0.6153846153846154,
+            "mcc": 0.23904572186687872,
+            "kappa": 0.21052631578947378,
+            "auc": 0.48571428571428577,
+            "precision": 0.5,
+            "recallSensitivity": 0.8,
+            "balancedAccuracy": 0.6142857142857143,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                3,
+                4
+              ],
+              [
+                1,
+                4
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.5833333333333334,
+              "balancedAccuracy": 0.6142857142857143,
+              "f1": 0.6153846153846154,
+              "precision": 0.5,
+              "recallSensitivity": 0.8,
+              "auc": 0.48571428571428577,
+              "mcc": 0.6195228609334393,
+              "kappa": 0.605263157894737
+            },
+            "normalizedQuality": 0.6029379959432657
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "boosting_type": "gbdt",
+            "class_weight": "balanced",
+            "colsample_bytree": 0.9,
+            "importance_type": "split",
+            "learning_rate": 0.05,
+            "max_depth": -1,
+            "min_child_samples": 15,
+            "min_child_weight": 0.001,
+            "min_split_gain": 0.0,
+            "n_estimators": 200,
+            "n_jobs": -1,
+            "num_leaves": 31,
+            "objective": null,
+            "random_state": 42,
+            "reg_alpha": 0.0,
+            "reg_lambda": 1.0,
+            "subsample": 0.9,
+            "subsample_for_bin": 200000,
+            "subsample_freq": 1,
+            "verbosity": -1
+          },
+          "artifact": null
+        },
+        {
+          "model": "CatBoost",
+          "available": true,
+          "validationScore": 0.577940797940798,
+          "cvMeanScore": 0.26654721581399743,
+          "cvStdScore": 0.11798499150385804,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.6666666666666666,
+            "f1": 0.6666666666666666,
+            "mcc": 0.37142857142857144,
+            "kappa": 0.3513513513513513,
+            "auc": 0.6571428571428571,
+            "precision": 0.5714285714285714,
+            "recallSensitivity": 0.8,
+            "balancedAccuracy": 0.6857142857142857,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                4,
+                3
+              ],
+              [
+                1,
+                4
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.6666666666666666,
+              "balancedAccuracy": 0.6857142857142857,
+              "f1": 0.6666666666666666,
+              "precision": 0.5714285714285714,
+              "recallSensitivity": 0.8,
+              "auc": 0.6571428571428571,
+              "mcc": 0.6857142857142857,
+              "kappa": 0.6756756756756757
+            },
+            "normalizedQuality": 0.6761261261261262
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "iterations": 200,
+            "depth": 6,
+            "learning_rate": 0.05,
+            "l2_leaf_reg": 3.0,
+            "random_strength": 1.0,
+            "cat_features": null
+          },
+          "artifact": null
+        },
+        {
+          "model": "RandomForest",
+          "available": true,
+          "validationScore": 0.4871793953920427,
+          "cvMeanScore": 0.214186811350389,
+          "cvStdScore": 0.1785789726832695,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.5833333333333334,
+            "f1": 0.6153846153846154,
+            "mcc": 0.23904572186687872,
+            "kappa": 0.21052631578947378,
+            "auc": 0.5714285714285715,
+            "precision": 0.5,
+            "recallSensitivity": 0.8,
+            "balancedAccuracy": 0.6142857142857143,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                3,
+                4
+              ],
+              [
+                1,
+                4
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.5833333333333334,
+              "balancedAccuracy": 0.6142857142857143,
+              "f1": 0.6153846153846154,
+              "precision": 0.5,
+              "recallSensitivity": 0.8,
+              "auc": 0.5714285714285715,
+              "mcc": 0.6195228609334393,
+              "kappa": 0.605263157894737
+            },
+            "normalizedQuality": 0.6136522816575514
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "bootstrap": true,
+            "ccp_alpha": 0.0,
+            "class_weight": "balanced",
+            "criterion": "gini",
+            "max_depth": null,
+            "max_features": "sqrt",
+            "max_leaf_nodes": null,
+            "max_samples": null,
+            "min_impurity_decrease": 0.0,
+            "min_samples_leaf": 2,
+            "min_samples_split": 2,
+            "min_weight_fraction_leaf": 0.0,
+            "monotonic_cst": null,
+            "n_estimators": 200,
+            "n_jobs": -1,
+            "oob_score": false,
+            "random_state": 42,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "ExtraTrees",
+          "available": true,
+          "validationScore": 0.5722265122265123,
+          "cvMeanScore": 0.15437225409804917,
+          "cvStdScore": 0.10326321872602336,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.6666666666666666,
+            "f1": 0.6666666666666666,
+            "mcc": 0.37142857142857144,
+            "kappa": 0.3513513513513513,
+            "auc": 0.6000000000000001,
+            "precision": 0.5714285714285714,
+            "recallSensitivity": 0.8,
+            "balancedAccuracy": 0.6857142857142857,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                4,
+                3
+              ],
+              [
+                1,
+                4
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.6666666666666666,
+              "balancedAccuracy": 0.6857142857142857,
+              "f1": 0.6666666666666666,
+              "precision": 0.5714285714285714,
+              "recallSensitivity": 0.8,
+              "auc": 0.6000000000000001,
+              "mcc": 0.6857142857142857,
+              "kappa": 0.6756756756756757
+            },
+            "normalizedQuality": 0.6689832689832691
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "bootstrap": false,
+            "ccp_alpha": 0.0,
+            "class_weight": "balanced",
+            "criterion": "gini",
+            "max_depth": null,
+            "max_features": "sqrt",
+            "max_leaf_nodes": null,
+            "max_samples": null,
+            "min_impurity_decrease": 0.0,
+            "min_samples_leaf": 2,
+            "min_samples_split": 2,
+            "min_weight_fraction_leaf": 0.0,
+            "monotonic_cst": null,
+            "n_estimators": 200,
+            "n_jobs": -1,
+            "oob_score": false,
+            "random_state": 42,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "LogisticRegression",
+          "available": true,
+          "validationScore": 0.5447619047619048,
+          "cvMeanScore": 0.20346350825934437,
+          "cvStdScore": 0.1048008339185717,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.6666666666666666,
+            "f1": 0.6,
+            "mcc": 0.3142857142857143,
+            "kappa": 0.3142857142857143,
+            "auc": 0.6571428571428571,
+            "precision": 0.6,
+            "recallSensitivity": 0.6,
+            "balancedAccuracy": 0.6571428571428571,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                5,
+                2
+              ],
+              [
+                2,
+                3
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.6666666666666666,
+              "balancedAccuracy": 0.6571428571428571,
+              "f1": 0.6,
+              "precision": 0.6,
+              "recallSensitivity": 0.6,
+              "auc": 0.6571428571428571,
+              "mcc": 0.6571428571428571,
+              "kappa": 0.6571428571428571
+            },
+            "normalizedQuality": 0.6369047619047619
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "C": 1.0,
+            "class_weight": "balanced",
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 3000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "SVM",
+          "available": true,
+          "validationScore": 0.4843222525348998,
+          "cvMeanScore": 0.24272285543844307,
+          "cvStdScore": 0.10748029112705841,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.5833333333333334,
+            "f1": 0.6153846153846154,
+            "mcc": 0.23904572186687872,
+            "kappa": 0.21052631578947378,
+            "auc": 0.5428571428571429,
+            "precision": 0.5,
+            "recallSensitivity": 0.8,
+            "balancedAccuracy": 0.6142857142857143,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                3,
+                4
+              ],
+              [
+                1,
+                4
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.5833333333333334,
+              "balancedAccuracy": 0.6142857142857143,
+              "f1": 0.6153846153846154,
+              "precision": 0.5,
+              "recallSensitivity": 0.8,
+              "auc": 0.5428571428571429,
+              "mcc": 0.6195228609334393,
+              "kappa": 0.605263157894737
+            },
+            "normalizedQuality": 0.6100808530861228
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "C": 1.0,
+            "break_ties": false,
+            "cache_size": 512,
+            "class_weight": "balanced",
+            "coef0": 0.0,
+            "decision_function_shape": "ovr",
+            "degree": 3,
+            "gamma": "scale",
+            "kernel": "rbf",
+            "max_iter": -1,
+            "probability": true,
+            "random_state": 42,
+            "shrinking": true,
+            "tol": 0.001,
+            "verbose": false
+          },
+          "artifact": null
+        },
+        {
+          "model": "DeepLearningMLP",
+          "available": true,
+          "validationScore": 0.3626254826254826,
+          "cvMeanScore": 0.23660309620249417,
+          "cvStdScore": 0.05603108657594189,
+          "validationThresholdMet": false,
+          "validationMetrics": {
+            "accuracy": 0.5,
+            "f1": 0.5,
+            "mcc": 0.02857142857142857,
+            "kappa": 0.027027027027026973,
+            "auc": 0.5142857142857143,
+            "precision": 0.42857142857142855,
+            "recallSensitivity": 0.6,
+            "balancedAccuracy": 0.5142857142857142,
+            "classes": [
+              "NO",
+              "SI"
+            ],
+            "positiveLabel": "SI",
+            "confusionMatrix": [
+              [
+                3,
+                4
+              ],
+              [
+                2,
+                3
+              ]
+            ],
+            "normalizedMetrics": {
+              "accuracy": 0.5,
+              "balancedAccuracy": 0.5142857142857142,
+              "f1": 0.5,
+              "precision": 0.42857142857142855,
+              "recallSensitivity": 0.6,
+              "auc": 0.5142857142857143,
+              "mcc": 0.5142857142857142,
+              "kappa": 0.5135135135135135
+            },
+            "normalizedQuality": 0.5106177606177607
+          },
+          "testEvaluationAvailable": false,
+          "testMetrics": {},
+          "testCI95": {},
+          "hyperparameters": {
+            "activation": "relu",
+            "alpha": 0.0001,
+            "batch_size": "auto",
+            "beta_1": 0.9,
+            "beta_2": 0.999,
+            "early_stopping": false,
+            "epsilon": 1e-08,
+            "hidden_layer_sizes": [
+              128,
+              64,
+              32
+            ],
+            "learning_rate": "adaptive",
+            "learning_rate_init": 0.001,
+            "max_fun": 15000,
+            "max_iter": 300,
+            "momentum": 0.9,
+            "n_iter_no_change": 10,
+            "nesterovs_momentum": true,
+            "power_t": 0.5,
+            "random_state": 42,
+            "shuffle": true,
+            "solver": "adam",
+            "tol": 0.0001,
+            "validation_fraction": 0.1,
+            "verbose": false,
+            "warm_start": false
+          },
+          "artifact": null
+        }
+      ]
+    }
+  }
+}

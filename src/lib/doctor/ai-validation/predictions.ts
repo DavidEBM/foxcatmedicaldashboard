@@ -88,6 +88,7 @@ interface RawPrediction {
   modelName?: string;
   artifact?: string;
   target?: string;
+  sourceMode?: "firebase" | "firebase_dataset" | "dataset";
 }
 
 export function normalizePrediction(
@@ -177,6 +178,8 @@ export function normalizePrediction(
 
     target:
       prediction.target ?? key,
+
+    sourceMode: prediction.sourceMode,
   };
 }
 

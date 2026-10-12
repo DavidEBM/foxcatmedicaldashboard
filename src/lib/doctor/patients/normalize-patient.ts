@@ -68,6 +68,7 @@ export function normalizePatient(
 		bnp: number(data, "bnp"),
 		locationCity: text(data, "locationCity", "city", "location"),
 		locationElevationM: number(data, "locationElevationM", "altitude"),
+		occupation: text(data, "occupation", "profession", "profesion", "profesión"),
 		locationRiskLevel: number(data, "locationRiskLevel", "riskLevel"),
 		ward: text(data, "ward", "service"),
 		room: text(data, "room", "roomBed"),

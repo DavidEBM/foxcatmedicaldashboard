@@ -28,6 +28,48 @@ from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardSc
 from .config import CV_FOLDS, DEFAULT_THRESHOLDS, RANDOM_STATE
 
 
+def balance_training_data(
+    X: Any,
+    y: Any,
+    *,
+    random_state: int = RANDOM_STATE,
+) -> tuple[Any, np.ndarray, dict[str, Any]]:
+    """Sobremuestrea aleatoriamente TRAIN hasta igualar las clases.
+
+    Solo debe ejecutarse sobre TRAIN o sobre el TRAIN de un fold. VALIDATION y
+    TEST permanecen con su distribución observada para medir generalización.
+    """
+    y_array = np.asarray(y)
+    labels, counts = np.unique(y_array, return_counts=True)
+    if len(labels) < 2 or len(set(counts.tolist())) == 1:
+        return X, y_array, {
+            "method": "random_oversampling",
+            "applied": False,
+            "classCountsBefore": {str(label): int(count) for label, count in zip(labels, counts)},
+        }
+
+    rng = np.random.default_rng(random_state)
+    target_count = int(counts.max())
+    indices = np.concatenate([
+        rng.choice(np.flatnonzero(y_array == label), size=target_count, replace=True)
+        for label in labels
+    ])
+    rng.shuffle(indices)
+    if hasattr(X, "iloc"):
+        balanced_x = X.iloc[indices].reset_index(drop=True)
+    else:
+        balanced_x = np.asarray(X)[indices]
+    balanced_y = y_array[indices]
+    return balanced_x, balanced_y, {
+        "method": "random_oversampling",
+        "applied": True,
+        "classCountsBefore": {str(label): int(count) for label, count in zip(labels, counts)},
+        "classCountsAfter": {str(label): target_count for label in labels},
+        "rowsBefore": int(len(y_array)),
+        "rowsAfter": int(len(balanced_y)),
+    }
+
+
 # ============================================================================
 # IMPUTADORES SEGUROS
 # ============================================================================
@@ -998,6 +1040,28 @@ def evaluate(
     except Exception:
         confusion = []
 
+    sensitivity_by_class: list[float] = []
+    specificity_by_class: list[float] = []
+    if confusion:
+        matrix_array = np.asarray(confusion, dtype=float)
+        total = float(matrix_array.sum())
+        for index in range(matrix_array.shape[0]):
+            true_positive = matrix_array[index, index]
+            false_negative = matrix_array[index, :].sum() - true_positive
+            false_positive = matrix_array[:, index].sum() - true_positive
+            true_negative = total - true_positive - false_negative - false_positive
+            sensitivity_by_class.append(
+                float(true_positive / (true_positive + false_negative))
+                if true_positive + false_negative > 0 else 0.0
+            )
+            specificity_by_class.append(
+                float(true_negative / (true_negative + false_positive))
+                if true_negative + false_positive > 0 else 0.0
+            )
+
+    min_recall_by_class = min(sensitivity_by_class, default=0.0)
+    specificity = float(np.mean(specificity_by_class)) if specificity_by_class else 0.0
+
     result = {
         "accuracy": accuracy,
         "f1": f1,
@@ -1006,6 +1070,10 @@ def evaluate(
         "auc": auc,
         "precision": precision,
         "recallSensitivity": recall,
+        "sensitivityByClass": sensitivity_by_class,
+        "minRecallByClass": min_recall_by_class,
+        "specificityByClass": specificity_by_class,
+        "specificity": specificity,
         "balancedAccuracy": balanced_accuracy,
 
         "classes": [
@@ -1231,11 +1299,13 @@ def qualifies(
     """
 
     threshold_mapping = {
-        "accuracy": "accuracy",
-        "f1": "f1",
+        "recallSensitivity": "recallSensitivity",
+        "minRecallByClass": "minRecallByClass",
+        "specificity": "specificity",
         "mcc": "mcc",
-        "kappa": "kappa",
+        "balancedAccuracy": "balancedAccuracy",
         "auc": "auc",
+        "f1": "f1",
     }
 
     for (
@@ -1275,10 +1345,21 @@ def qualifies(
     return True
 
 
-def selection_key(metrics: dict[str, Any]) -> tuple[float, float, float, float, float]:
+def selection_key(metrics: dict[str, Any]) -> tuple[float, ...]:
     """Ranking lexicográfico de candidatos elegibles; CV/quality no intervienen."""
     values: list[float] = []
-    for metric_name in ("f1", "auc", "mcc", "kappa", "accuracy"):
+    for metric_name in (
+        "recallSensitivity",
+        "minRecallByClass",
+        "specificity",
+        "mcc",
+        "balancedAccuracy",
+        "auc",
+        "f1",
+        "precision",
+        "kappa",
+        "accuracy",
+    ):
         raw_value = metrics.get(metric_name)
         try:
             value = float(raw_value)
@@ -1469,6 +1550,12 @@ def cross_validate(
         y_fold_validation = y_array[
             validation_indices
         ]
+
+        X_fold_train, y_fold_train, _ = balance_training_data(
+            X_fold_train,
+            y_fold_train,
+            random_state=RANDOM_STATE + fold_number,
+        )
 
         fold_classes = len(
             np.unique(

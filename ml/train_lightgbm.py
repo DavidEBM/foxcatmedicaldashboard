@@ -30,6 +30,7 @@ def create_model(n_classes: int = 2) -> LGBMClassifier:
         verbosity=-1,
         n_jobs=-1,
         random_state=RANDOM_STATE,
+        class_weight="balanced",
     )
 
 

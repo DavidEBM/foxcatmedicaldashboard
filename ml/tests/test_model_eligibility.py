@@ -27,6 +27,11 @@ class FixedClassifier:
 
 def eligible_metrics(**overrides: float) -> dict[str, float]:
     metrics = {
+        "recallSensitivity": 0.75,
+        "minRecallByClass": 0.60,
+        "specificity": 0.75,
+        "precision": 0.75,
+        "balancedAccuracy": 0.75,
         "accuracy": 0.75,
         "f1": 0.75,
         "mcc": 0.45,
@@ -50,36 +55,25 @@ def candidate(name: str, metrics: dict[str, float], **extra: object) -> dict[str
 
 
 def test_required_thresholds_are_target_specific() -> None:
-    expected = {"accuracy": 0.70, "f1": 0.70, "mcc": 0.40, "kappa": 0.40, "auc": 0.70}
+    expected = dict(DEFAULT_THRESHOLDS)
     assert DEFAULT_THRESHOLDS == expected
     assert thresholds_for_target("copd_gold", {**expected, "modelQuality": 0.99}) == expected
-    assert thresholds_for_target("history_of_heart_failure", {}) == {
-        "accuracy": 0.60,
-        "f1": 0.60,
-        "mcc": 0.40,
-        "kappa": 0.40,
-        "auc": 0.60,
-    }
+    assert thresholds_for_target("history_of_heart_failure", {}) == expected
 
 
 def test_all_five_thresholds_are_required_including_boundary_values() -> None:
-    assert qualifies(
-        {"accuracy": 0.70, "f1": 0.70, "mcc": 0.40, "kappa": 0.40, "auc": 0.70},
-        DEFAULT_THRESHOLDS,
-    )
+    assert qualifies(eligible_metrics(), DEFAULT_THRESHOLDS)
     for metric, failing_value in (
-        ("accuracy", 0.699),
-        ("f1", 0.699),
+        ("recallSensitivity", 0.699),
+        ("minRecallByClass", 0.499),
+        ("specificity", 0.699),
+        ("f1", 0.599),
         ("mcc", 0.399),
-        ("kappa", 0.399),
         ("auc", 0.699),
     ):
         assert not qualifies(eligible_metrics(**{metric: failing_value}), DEFAULT_THRESHOLDS)
     heart_thresholds = thresholds_for_target("history_of_heart_failure")
-    assert qualifies(
-        {"accuracy": 0.60, "f1": 0.60, "mcc": 0.40, "kappa": 0.40, "auc": 0.60},
-        heart_thresholds,
-    )
+    assert qualifies(eligible_metrics(), heart_thresholds)
     assert not qualifies(
         {"accuracy": 0.60, "f1": 0.599, "mcc": 0.40, "kappa": 0.40, "auc": 0.60},
         heart_thresholds,
@@ -91,15 +85,20 @@ def test_missing_and_non_finite_required_metrics_are_ineligible() -> None:
     del missing_auc["auc"]
     assert not qualifies(missing_auc, DEFAULT_THRESHOLDS)
     assert not qualifies(eligible_metrics(auc=float("nan")), DEFAULT_THRESHOLDS)
+    missing_informative = eligible_metrics()
+    del missing_informative["precision"]
+    del missing_informative["kappa"]
+    del missing_informative["accuracy"]
+    assert qualifies(missing_informative, DEFAULT_THRESHOLDS)
 
 
-def test_selection_is_f1_first_then_auc_mcc_kappa_accuracy() -> None:
+def test_selection_is_recall_then_precision_auc_mcc_balanced_f1_kappa_accuracy() -> None:
     candidates = [
-        candidate("F1Champion", eligible_metrics(f1=0.91, auc=0.70), validationScore=-999),
-        candidate("AucChampion", eligible_metrics(f1=0.90, auc=0.90), normalizedQuality=999),
-        candidate("MccChampion", eligible_metrics(f1=0.90, auc=0.90, mcc=0.80)),
-        candidate("KappaChampion", eligible_metrics(f1=0.90, auc=0.90, mcc=0.80, kappa=0.80)),
-        candidate("AccuracyChampion", eligible_metrics(f1=0.90, auc=0.90, mcc=0.80, kappa=0.80, accuracy=0.95)),
+        candidate("RecallChampion", eligible_metrics(recallSensitivity=0.91)),
+        candidate("PrecisionChampion", eligible_metrics(recallSensitivity=0.90, precision=0.90)),
+        candidate("AucChampion", eligible_metrics(recallSensitivity=0.90, precision=0.90, auc=0.90)),
+        candidate("MccChampion", eligible_metrics(recallSensitivity=0.90, precision=0.90, auc=0.90, mcc=0.80)),
+        candidate("AccuracyChampion", eligible_metrics(recallSensitivity=0.90, precision=0.90, auc=0.90, mcc=0.80, balancedAccuracy=0.80, f1=0.80, kappa=0.80, accuracy=0.95)),
     ]
     selected, eligible = _select_candidate(candidates, DEFAULT_THRESHOLDS)
     assert eligible
@@ -112,7 +111,7 @@ def test_selection_is_f1_first_then_auc_mcc_kappa_accuracy() -> None:
 
 
 def test_no_eligible_model_means_no_selected_candidate() -> None:
-    only_candidate = candidate("HighQualityButFails", eligible_metrics(f1=0.69), thresholdMet=True)
+    only_candidate = candidate("HighQualityButFails", eligible_metrics(f1=0.59), thresholdMet=True)
     selected, eligible = _select_candidate([only_candidate], DEFAULT_THRESHOLDS)
     assert selected is None
     assert not eligible
@@ -121,7 +120,7 @@ def test_no_eligible_model_means_no_selected_candidate() -> None:
 def test_no_eligible_candidate_is_not_published(tmp_path) -> None:
     X = pd.DataFrame({"feature": [0.0, 1.0, 2.0, 3.0]})
     y = pd.Series([1, 2, 3, 4])
-    invalid = candidate("FailsF1", eligible_metrics(f1=0.69))
+    invalid = candidate("FailsF1", eligible_metrics(f1=0.59))
 
     result = publish_best_model(
         X_train=X.iloc[:2],
@@ -156,12 +155,12 @@ def test_inference_uses_selected_model_only_when_required_metrics_pass(
     manifest_path.write_text(
         '{"models":{"copd_gold":{"selectedModel":"Random Forest","thresholdMet":false,'
         '"algorithmsTested":[{"model":"Random Forest","validationMetrics":'
-        '{"accuracy":0.8,"f1":0.69,"mcc":0.5,"kappa":0.5,"auc":0.8,"normalizedQuality":1.0}}],'
-        '"publishedValidationMetrics":{"accuracy":0.8,"f1":0.8,"mcc":0.5,"kappa":0.5,"auc":0.8,"normalizedQuality":0.01}},'
+        '{"accuracy":0.8,"f1":0.69,"recallSensitivity":0.8,"minRecallByClass":0.6,"specificity":0.8,"precision":0.8,"balancedAccuracy":0.8,"mcc":0.5,"kappa":0.5,"auc":0.8,"normalizedQuality":1.0}}],'
+        '"publishedValidationMetrics":{"accuracy":0.8,"f1":0.8,"recallSensitivity":0.8,"minRecallByClass":0.6,"specificity":0.8,"precision":0.8,"balancedAccuracy":0.8,"mcc":0.5,"kappa":0.5,"auc":0.8,"normalizedQuality":0.01}},'
         '"history_of_heart_failure":{"selectedModel":"Logistic Regression","thresholdMet":true,'
         '"algorithmsTested":[{"model":"Logistic Regression","validationMetrics":'
-        '{"accuracy":0.8,"f1":0.8,"mcc":0.5,"kappa":0.5,"auc":0.8,"normalizedQuality":1.0}}],'
-        '"publishedValidationMetrics":{"accuracy":0.8,"f1":0.8,"mcc":0.5,"kappa":0.5,"auc":0.69,"normalizedQuality":1.0}}}}',
+        '{"accuracy":0.8,"f1":0.8,"recallSensitivity":0.8,"minRecallByClass":0.6,"specificity":0.8,"precision":0.8,"balancedAccuracy":0.8,"mcc":0.5,"kappa":0.5,"auc":0.8,"normalizedQuality":1.0}}],'
+        '"publishedValidationMetrics":{"accuracy":0.8,"f1":0.8,"recallSensitivity":0.8,"minRecallByClass":0.6,"specificity":0.8,"precision":0.8,"balancedAccuracy":0.8,"mcc":0.5,"kappa":0.5,"auc":0.69,"normalizedQuality":1.0}}}}',
         encoding="utf-8",
     )
     monkeypatch.setattr(inference, "MODELS", models_dir)

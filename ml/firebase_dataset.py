@@ -376,6 +376,14 @@ def _firebase_row(
     row["ID"] = external_id or firestore_id
     row["dataset_origen"] = origin
     row["_source_record"] = "firebase"
+    import_metadata = record.get("importMetadata")
+    row["_firebase_imported"] = (
+        isinstance(import_metadata, Mapping)
+        and any(
+            value is not None and str(value).strip()
+            for value in import_metadata.values()
+        )
+    )
     row["_patient_fingerprint"] = _fingerprint(row) or ""
     row["_patient_key"] = _patient_key(
         row,
@@ -436,10 +444,29 @@ def _coalesce_target_columns(frame: pd.DataFrame) -> pd.DataFrame:
 def merge_with_firebase(
     local: pd.DataFrame,
     firebase_path: str | Path | None,
+    source_mode: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Fusiona el dataset histórico con Firebase y elimina duplicados."""
-    local_frame = annotate_patient_keys(local)
+    local_before_dedup = len(local)
+    local_frame = local.drop_duplicates(keep="first").reset_index(drop=True)
+    local_duplicates_removed = local_before_dedup - len(local_frame)
+    local_frame = annotate_patient_keys(local_frame)
     local_frame["_source_record"] = "local"
+    if firebase_path is None and source_mode == "dataset":
+        return local_frame.reset_index(drop=True), {
+            "sourceMode": "dataset",
+            "firebaseIncluded": False,
+            "localRows": int(len(local_frame)),
+            "firebaseRows": 0,
+            "firebaseImportedRows": 0,
+            "firebaseWebRows": 0,
+            "rowsAfterDeduplication": int(len(local_frame)),
+            "duplicatesRemoved": int(local_duplicates_removed),
+            "localDuplicatesRemoved": int(local_duplicates_removed),
+            "matchedExistingPatients": 0,
+            "targetConflicts": 0,
+        }
+
     firebase = (
         load_firebase_records(firebase_path)
         if firebase_path is not None
@@ -601,12 +628,22 @@ def merge_with_firebase(
         .reset_index(drop=True)
     )
 
+    resolved_source_mode = source_mode or (
+        "firebase_dataset" if firebase_path is not None else "dataset"
+    )
+    firebase_imported_rows = int(firebase.get("_firebase_imported", pd.Series(dtype=bool)).sum()) if not firebase.empty else 0
+    firebase_web_rows = max(0, int(len(firebase)) - firebase_imported_rows)
+
     return deduplicated, {
+        "sourceMode": resolved_source_mode,
         "firebaseIncluded": firebase_path is not None,
         "localRows": int(len(local_frame)),
         "firebaseRows": int(len(firebase)),
+        "firebaseImportedRows": firebase_imported_rows,
+        "firebaseWebRows": firebase_web_rows,
         "rowsAfterDeduplication": int(len(deduplicated)),
         "duplicatesRemoved": int(len(combined) - len(deduplicated)),
+        "localDuplicatesRemoved": int(local_duplicates_removed),
         "matchedExistingPatients": matched_existing,
         "targetConflicts": int(target_conflicts),
     }

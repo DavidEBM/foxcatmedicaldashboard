@@ -293,9 +293,12 @@ def train_algorithm(
     train_start = time.perf_counter()
 
     try:
+        X_train_balanced, y_train_balanced, balance_info = (
+            model_common.balance_training_data(X_train, y_train)
+        )
         pipeline.fit(
-            X_train,
-            y_train,
+            X_train_balanced,
+            y_train_balanced,
         )
 
     except Exception as exc:
@@ -432,6 +435,7 @@ def train_algorithm(
         "cvStd": cv_std,
         "validation": validation_metrics,
         "validationMetrics": validation_metrics,
+        "imbalanceHandling": balance_info,
         "thresholdMet": bool(threshold_met),
         "normalizedQuality": float(
             quality,

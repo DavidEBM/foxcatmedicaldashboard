@@ -14,6 +14,20 @@ interface TrainingImage {
   path: string;
   name: string;
   url: string;
+  sourceMode?: keyof typeof SOURCE_MODE_LABELS;
+}
+
+interface TrainingDataset {
+  path: string;
+  name: string;
+}
+
+interface TrainingHistoryEntry {
+  id: string;
+  generatedAt?: string;
+  sourceDataset?: string;
+  dataSources?: TrainingManifest["dataSources"];
+  models?: Record<string, ModelReport>;
 }
 
 interface ModelReport {
@@ -41,6 +55,9 @@ interface TrainingManifest {
   models?: Record<string, ModelReport>;
   skippedTargets?: Record<string, { reason?: string; status?: string }>;
   dataSources?: {
+    sourceMode?: "firebase" | "firebase_dataset" | "dataset";
+    datasetName?: string;
+    datasetPath?: string;
     firebaseIncluded?: boolean;
     localRows?: number;
     firebaseRows?: number;
@@ -57,6 +74,7 @@ interface TrainingJob {
   algorithms: string[];
   targets: string[];
   includeFirebasePatients: boolean;
+  sourceMode: "firebase" | "firebase_dataset" | "dataset";
   startedAt: string;
   finishedAt?: string;
   logs: string;
@@ -68,6 +86,8 @@ interface TrainingStatusResponse {
   targets: string[];
   manifest: TrainingManifest | null;
   images: TrainingImage[];
+  datasets: TrainingDataset[];
+  trainingHistory: TrainingHistoryEntry[];
   latestRun: TrainingJob | null;
 }
 
@@ -86,20 +106,23 @@ function validationMetric(report: ModelReport | undefined, key: string): string 
 }
 
 const ELIGIBILITY_THRESHOLDS = {
-  accuracy: 0.70,
-  f1: 0.70,
-  mcc: 0.40,
-  kappa: 0.40,
+  recallSensitivity: 0.70,
+  minRecallByClass: 0.50,
+  specificity: 0.70,
+  precision: 0.0,
   auc: 0.70,
+  mcc: 0.40,
+  balancedAccuracy: 0.70,
+  f1: 0.60,
+  kappa: 0.0,
+  accuracy: 0.0,
 } as const;
 
 type EligibilityThresholds = { [key in keyof typeof ELIGIBILITY_THRESHOLDS]: number };
 
 const TARGET_THRESHOLD_OVERRIDES: Record<string, Partial<EligibilityThresholds>> = {
   history_of_heart_failure: {
-    accuracy: 0.60,
     f1: 0.60,
-    auc: 0.60,
   },
 };
 
@@ -111,19 +134,27 @@ function thresholdsForTarget(target: string): EligibilityThresholds {
 }
 
 const SELECTION_METRICS = [
-  { key: "accuracy", label: "Accuracy", threshold: ELIGIBILITY_THRESHOLDS.accuracy },
-  { key: "f1", label: "F1-Score", threshold: ELIGIBILITY_THRESHOLDS.f1 },
-  { key: "mcc", label: "MCC", threshold: ELIGIBILITY_THRESHOLDS.mcc },
-  { key: "kappa", label: "Kappa", threshold: ELIGIBILITY_THRESHOLDS.kappa },
-  { key: "auc", label: "ROC-AUC", threshold: ELIGIBILITY_THRESHOLDS.auc },
+  { key: "recallSensitivity", label: "Sensibilidad (macro)", threshold: ELIGIBILITY_THRESHOLDS.recallSensitivity, role: "filter" },
+  { key: "minRecallByClass", label: "Sensibilidad mínima por clase", threshold: ELIGIBILITY_THRESHOLDS.minRecallByClass, role: "filter" },
+  { key: "specificity", label: "Especificidad", threshold: ELIGIBILITY_THRESHOLDS.specificity, role: "filter" },
+  { key: "mcc", label: "MCC", threshold: ELIGIBILITY_THRESHOLDS.mcc, role: "filter" },
+  { key: "balancedAccuracy", label: "Balanced Accuracy", threshold: ELIGIBILITY_THRESHOLDS.balancedAccuracy, role: "filter" },
+  { key: "auc", label: "ROC-AUC", threshold: ELIGIBILITY_THRESHOLDS.auc, role: "filter" },
+  { key: "f1", label: "F1-Score (macro)", threshold: ELIGIBILITY_THRESHOLDS.f1, role: "filter" },
+  { key: "precision", label: "Precisión (VPP)", threshold: ELIGIBILITY_THRESHOLDS.precision, role: "informative" },
+  { key: "kappa", label: "Kappa", threshold: ELIGIBILITY_THRESHOLDS.kappa, role: "informative" },
+  { key: "accuracy", label: "Accuracy", threshold: ELIGIBILITY_THRESHOLDS.accuracy, role: "informative" },
 ] as const;
 
 const COMPARISON_METRICS = [
   ...SELECTION_METRICS.map(({ key, label }) => ({ key, label })),
-  { key: "balancedAccuracy", label: "Balanced Acc." },
-  { key: "precision", label: "Precisión" },
-  { key: "recallSensitivity", label: "Sensibilidad" },
 ] as const;
+
+const SOURCE_MODE_LABELS = {
+  firebase: "Solo Firebase",
+  firebase_dataset: "Firebase + dataset",
+  dataset: "Solo dataset",
+} as const;
 
 function rawCandidateMetric(candidate: ModelCandidate, key: string): number | null {
   const numeric = Number(candidate.validationMetrics?.[key]);
@@ -148,7 +179,7 @@ function isCandidateEligible(
   thresholds: EligibilityThresholds = ELIGIBILITY_THRESHOLDS,
 ): boolean {
   if (candidate.available === false) return false;
-  return SELECTION_METRICS.every(({ key }) => {
+  return SELECTION_METRICS.filter(({ role }) => role === "filter").every(({ key }) => {
     const value = rawCandidateMetric(candidate, key);
     return value !== null && value >= thresholds[key];
   });
@@ -170,7 +201,7 @@ function isPublishedModelEligible(report: ModelReport, target = ""): boolean {
 
 function candidateSelectionRank(candidate: ModelCandidate): number[] {
   return [
-    ...["f1", "auc", "mcc", "kappa", "accuracy"].map((key) =>
+    ...["recallSensitivity", "minRecallByClass", "specificity", "mcc", "balancedAccuracy", "auc", "f1", "precision", "kappa", "accuracy"].map((key) =>
       rawCandidateMetric(candidate, key) ?? Number.NEGATIVE_INFINITY,
     ),
   ];
@@ -187,6 +218,20 @@ function compareCandidatesBySelection(
     return leftRank[index] > rightRank[index] ? -1 : 1;
   }
   return 0;
+}
+
+function bestCandidatePerModel(candidates: ModelCandidate[]): ModelCandidate[] {
+  const bestByModel = new Map<string, ModelCandidate>();
+
+  for (const candidate of candidates) {
+    const modelName = candidate.model.trim().toLowerCase();
+    const current = bestByModel.get(modelName);
+    if (!current || compareCandidatesBySelection(candidate, current) < 0) {
+      bestByModel.set(modelName, candidate);
+    }
+  }
+
+  return [...bestByModel.values()];
 }
 
 function targetLabel(target: string): string {
@@ -259,9 +304,14 @@ function validationHeatmapColor(value: number, threshold: number): string {
   const interpolate = (start: number[], end: number[], amount: number) =>
     `rgb(${start.map((channel, index) => Math.round(channel + (end[index] - channel) * amount)).join(",")})`;
   if (clamp >= threshold) {
-    return interpolate([224, 244, 231], [18, 92, 50], (clamp - threshold) / (1 - threshold));
+    const passingStrength = threshold >= 1
+      ? 1
+      : (clamp - threshold) / (1 - threshold);
+    return interpolate([224, 244, 231], [18, 92, 50], Math.max(0, Math.min(1, passingStrength)));
   }
-  const failureStrength = Math.max(0, Math.min(1, 1 - Math.max(0, clamp) / threshold));
+  const failureStrength = threshold <= 0
+    ? 0
+    : Math.max(0, Math.min(1, 1 - Math.max(0, clamp) / threshold));
   return interpolate([255, 239, 239], [190, 62, 62], failureStrength);
 }
 
@@ -327,7 +377,7 @@ function eligibilityChartSvg(
     return `<text x="${margin}" y="${y + 29}" class="label">${escapeXml(truncateLabel(modelLabel, 30))}</text>${cells}
       <text x="${statusX + statusWidth / 2}" y="${y + 29}" fill="${eligible ? "#17633a" : "#a33838"}" font-family="Arial,sans-serif" font-size="12" font-weight="700">${eligible ? "ELEGIBLE" : "NO ELEGIBLE"}</text>`;
   }).join("");
-  return `${chartBase(width, height, "Gráfica 1 · Cumplimiento de requisitos", `${label} · verde = umbral cumplido, rojo = no cumplido; se exigen los cinco.`)}
+  return `${chartBase(width, height, "Heatmap · Cumplimiento de requisitos", `${label} · verde = umbral cumplido, rojo = no cumplido; requisitos clínicos obligatorios.`)}
     <text x="${margin}" y="${headerY + 24}" class="header">Modelo</text>${headers}
     <text x="${width - margin - statusWidth + statusWidth / 2}" y="${headerY + 24}" text-anchor="middle" class="header">Elegibilidad</text>${rows}
     <text x="${margin}" y="${height - 24}" class="note">Elegible solo cuando Accuracy ≥ 0.70, F1 ≥ 0.70, MCC ≥ 0.40, Kappa ≥ 0.40 y ROC-AUC ≥ 0.70.</text></svg>`;
@@ -419,7 +469,8 @@ export default function AdminTraining() {
     "copd_gold",
     "history_of_heart_failure",
   ]);
-  const [includeFirebasePatients, setIncludeFirebasePatients] = useState(true);
+  const [sourceMode, setSourceMode] = useState<keyof typeof SOURCE_MODE_LABELS>("firebase_dataset");
+  const [datasetPath, setDatasetPath] = useState("ml\\datasets\\dataset_final_armonizado.csv");
   const [runId, setRunId] = useState<string | null>(null);
   const [job, setJob] = useState<TrainingJob | null>(null);
   const [loading, setLoading] = useState(false);
@@ -427,12 +478,14 @@ export default function AdminTraining() {
   const [starting, setStarting] = useState(false);
   const [downloadingTarget, setDownloadingTarget] = useState<string | null>(null);
   const [comparisonTarget, setComparisonTarget] = useState("__all__");
+  const [sourceFilter, setSourceFilter] = useState<keyof typeof SOURCE_MODE_LABELS | "__all__">("__all__");
+  const [selectedUsableModel, setSelectedUsableModel] = useState("");
   const [error, setError] = useState("");
 
-  const getToken = useCallback(async () => {
+  const getToken = useCallback(async (forceRefresh = false) => {
     const user = auth.currentUser;
     if (!user) throw new Error("La sesión administrativa no está disponible.");
-    return user.getIdToken();
+    return user.getIdToken(forceRefresh);
   }, []);
 
   // Referencia persistente para cancelar operaciones asíncronas
@@ -551,7 +604,8 @@ export default function AdminTraining() {
         body: JSON.stringify({
           algorithms: selectedAlgorithms,
           targets: selectedTargets,
-          includeFirebasePatients,
+          sourceMode,
+          datasetPath,
         }),
       });
       const payload = await response.json() as { job?: TrainingJob; error?: string };
@@ -601,9 +655,48 @@ export default function AdminTraining() {
   }
 
   const reports = useMemo(
-    () => Object.entries(status?.manifest?.models ?? {}),
-    [status?.manifest?.models],
+    () => {
+      const manifests = [
+        ...(status?.manifest ? [status.manifest] : []),
+        ...(status?.trainingHistory ?? []),
+      ].filter((item) => (
+        sourceFilter === "__all__" || item.dataSources?.sourceMode === sourceFilter
+      ));
+      const merged = new Map<string, ModelReport>();
+      for (const manifest of manifests) {
+        for (const [target, report] of Object.entries(manifest.models ?? {})) {
+          const current = merged.get(target);
+          if (!current) {
+            merged.set(target, { ...report, algorithmsTested: [...(report.algorithmsTested ?? [])] });
+            continue;
+          }
+          merged.set(target, {
+            ...current,
+            selectedModel: current.selectedModel ?? report.selectedModel,
+            publishedValidationMetrics: current.publishedValidationMetrics ?? report.publishedValidationMetrics,
+            algorithmsTested: [
+              ...(current.algorithmsTested ?? []),
+              ...(report.algorithmsTested ?? []),
+            ],
+          });
+        }
+      }
+      return [...merged.entries()];
+    },
+    [sourceFilter, status?.manifest, status?.trainingHistory],
   );
+
+  const usableModels = useMemo(() => {
+    const candidates = reports.flatMap(([target, report]) => (
+      (report.algorithmsTested ?? [])
+        .filter((candidate) => isCandidateEligible(
+          candidate,
+          thresholdsForTarget(target),
+        ) && candidate.model === report.selectedModel)
+        .map((candidate) => `${target}::${candidate.model}`)
+    ));
+    return candidates;
+  }, [reports]);
 
   const comparableReports = useMemo(
     () => reports.filter(([target, report]) => (
@@ -614,6 +707,22 @@ export default function AdminTraining() {
     )),
     [comparisonTarget, reports],
   );
+
+  const filteredImages = useMemo(() => {
+    const currentSource = status?.manifest?.dataSources?.sourceMode;
+    const sourceImages = sourceFilter === "__all__"
+      ? (status?.images ?? [])
+      : (status?.images ?? []).filter((image) => image.sourceMode
+        ? image.sourceMode === sourceFilter
+        : currentSource === sourceFilter);
+    if (comparisonTarget === "__all__") return sourceImages;
+    const targetTokens = [comparisonTarget, targetLabel(comparisonTarget)]
+      .map((value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "_"));
+    return sourceImages.filter((image) => {
+      const normalizedPath = image.path.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+      return targetTokens.some((token) => token && normalizedPath.includes(token));
+    });
+  }, [comparisonTarget, sourceFilter, status?.images, status?.manifest?.dataSources?.sourceMode]);
 
   const latestJob = job ?? status?.latestRun;
   const running = latestJob?.status === "queued" || latestJob?.status === "running";
@@ -658,18 +767,41 @@ export default function AdminTraining() {
             <span>TEST únicamente para la evaluación final</span>
       </div>
 
-      <label className="admin-training-source-option">
-        <input
-          type="checkbox"
-          checked={includeFirebasePatients}
-          onChange={(event) => setIncludeFirebasePatients(event.target.checked)}
-          disabled={running}
-        />
-        <span>
-          <strong>Incluir pacientes de Firebase</strong>
-          <small>Se fusionan y deduplican antes de crear TRAIN, VALIDATION y TEST.</small>
-        </span>
-      </label>
+      <div className="admin-training-source-option">
+        <label>
+          <strong>Origen del entrenamiento</strong>
+          <select
+            value={sourceMode}
+            onChange={(event) => setSourceMode(event.target.value as keyof typeof SOURCE_MODE_LABELS)}
+            disabled={running}
+          >
+            {Object.entries(SOURCE_MODE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <small>
+          {sourceMode === "dataset"
+            ? "El entrenamiento usa exclusivamente el archivo local seleccionado; no consulta Firebase."
+            : sourceMode === "firebase_dataset"
+              ? "Combina el archivo local seleccionado con Firebase y conserva ambos registros para auditoría."
+              : "Usa únicamente pacientes de Firebase."}
+        </small>
+      </div>
+
+      {sourceMode !== "firebase" && (
+        <div className="admin-training-source-option">
+          <label>
+            <strong>Dataset local</strong>
+            <select value={datasetPath} onChange={(event) => setDatasetPath(event.target.value)} disabled={running}>
+              {(status?.datasets ?? []).map((dataset) => (
+                <option key={dataset.path} value={dataset.path}>{dataset.name}</option>
+              ))}
+            </select>
+          </label>
+          <small>Archivo registrado en el manifiesto y asociado a la corrida archivada.</small>
+        </div>
+      )}
 
       <div className="admin-training-selection">
         <div className="panel admin-training-panel">
@@ -746,13 +878,47 @@ export default function AdminTraining() {
                 : loading ? "Cargando manifiesto..." : "Todavía no hay un manifiesto disponible."}
             </p>
           </div>
+          <label className="admin-training-filter">
+            <span>Filtrar resultados por origen</span>
+            <select
+              value={sourceFilter}
+              onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)}
+            >
+              <option value="__all__">Todos los orígenes</option>
+              {Object.entries(SOURCE_MODE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {reports.length ? (
           <div className="admin-training-results-grid">
+            <div className="admin-training-usable-model">
+              <label>
+                <strong>Modelo utilizable (solo ganadores elegibles)</strong>
+                <select
+                  value={selectedUsableModel}
+                  onChange={(event) => setSelectedUsableModel(event.target.value)}
+                  disabled={!usableModels.length}
+                >
+                  <option value="">Seleccionar ganador</option>
+                  {usableModels.map((model) => (
+                    <option key={model} value={model}>{model.replace("::", " · ")}</option>
+                  ))}
+                </select>
+              </label>
+              <small>
+                Origen vigente: {SOURCE_MODE_LABELS[status?.manifest?.dataSources?.sourceMode ?? "dataset"]}.
+                La inferencia solo utiliza modelos publicados con los requisitos clínicos cumplidos.
+              </small>
+            </div>
             {reports.map(([target, report]) => (
               <article className="admin-training-result-card" key={target}>
                 <span>{target}</span>
+                <small>
+                  Origen: {SOURCE_MODE_LABELS[status?.manifest?.dataSources?.sourceMode ?? "dataset"]}
+                </small>
                 <strong>{report.selectedModel || "Sin modelo publicado"}</strong>
                 <small className="admin-training-result-validation">
                   SelecciÃ³n VALIDATION publicada: Accuracy {validationMetric(report, "accuracy")} Â· F1 {validationMetric(report, "f1")} Â· AUC {validationMetric(report, "auc")}
@@ -769,7 +935,7 @@ export default function AdminTraining() {
                 )}
                 {report.publicationReason?.startsWith("no_eligible_candidate") && (
                   <small className="admin-training-result-note">
-                    Ningún modelo cumplió los cinco requisitos en esta corrida; no se eligió un ganador nuevo.
+                    Ningún modelo cumplió los requisitos clínicos en esta corrida; no se eligió un ganador nuevo.
                     {report.selectedModel ? ` Se conserva el modelo publicado elegible: ${report.selectedModel}.` : " No hay modelo publicado para este objetivo."}
                   </small>
                 )}
@@ -794,10 +960,10 @@ export default function AdminTraining() {
             <span className="admin-eyebrow">COMPARATIVA VS</span>
             <h3 id="admin-training-comparisons-title">Rendimiento de todos los modelos por objetivo</h3>
             <p className="admin-training-comparison-note">
-              Se comparan todos los targets con métricas reportadas, aunque ningún modelo alcance los umbrales. GOLD usa Accuracy/F1/AUC ≥ 0.70; Insuficiencia Cardiaca usa Accuracy/F1/AUC ≥ 0.60. MCC y Kappa permanecen ≥ 0.40.
+              Se comparan todos los targets y corridas conservadas con métricas reportadas, aunque ningún modelo alcance los requisitos clínicos.
             </p>
             <p className="admin-training-comparison-note">
-              Entre modelos elegibles se prioriza F1-Score y luego ROC-AUC, MCC, Kappa y Accuracy. La calidad normalizada es solo informativa; su gráfico histórico está en Imágenes de diagnóstico.
+              La prioridad es Sensibilidad, Precisión, ROC-AUC, MCC, Balanced Accuracy, F1-Score, Kappa y Accuracy. La calidad normalizada es solo informativa.
             </p>
             <p className="admin-training-comparison-note">
               Cada comparativa incluye todos los algoritmos que reportaron métricas, hayan ganado o no; los elegibles aparecen primero y el mejor elegible se marca como ganador.
@@ -819,8 +985,8 @@ export default function AdminTraining() {
             {comparableReports.map(([target, sourceReport]) => {
               const targetThresholds = thresholdsForTarget(target);
               const selectionMetrics = SELECTION_METRICS.map((item) => ({ ...item, threshold: targetThresholds[item.key] }));
-              const candidates = [...(sourceReport.algorithmsTested || [])]
-                .filter((candidate) => candidate.available !== false && hasComparisonMetrics(candidate))
+              const candidates = bestCandidatePerModel([...(sourceReport.algorithmsTested || [])]
+                .filter((candidate) => candidate.available !== false && hasComparisonMetrics(candidate)))
                 .sort((left, right) => Number(isCandidateEligible(right, targetThresholds)) - Number(isCandidateEligible(left, targetThresholds)) || compareCandidatesBySelection(left, right));
               const eligibleCandidates = candidates.filter((candidate) => isCandidateEligible(candidate, targetThresholds));
               const winner = eligibleCandidates[0] ?? candidates[0];
@@ -859,79 +1025,20 @@ export default function AdminTraining() {
                     <div className="admin-training-policy-heatmap" role="table" aria-label={`Cumplimiento de umbrales por modelo para ${targetLabel(target)}`}>
                       <div className="admin-training-policy-row admin-training-policy-header" role="row">
                         <span role="columnheader">Modelo</span>
-                        {selectionMetrics.map((item) => <span role="columnheader" key={item.key}>{item.label}<small>≥ {item.threshold.toFixed(2)}</small></span>)}
+                        {selectionMetrics.map((item) => <span role="columnheader" key={item.key}>{item.label}<small>{item.role === "filter" ? `Filtro · ≥ ${item.threshold.toFixed(2)}` : "Informativa"}</small></span>)}
                         <span role="columnheader">Elegibilidad</span>
                       </div>
-                      {candidates.map((candidate) => (
-                        <div className="admin-training-policy-row" role="row" key={`${target}-eligibility-${candidate.model}`}>
+                      {candidates.map((candidate, candidateIndex) => (
+                        <div className="admin-training-policy-row" role="row" key={`${target}-eligibility-${candidate.model}-${candidateIndex}`}>
                           <strong role="rowheader">{candidate.model}{candidate.model === winner.model ? " · GANADOR" : ""}</strong>
                           {selectionMetrics.map((item) => {
                             const value = rawCandidateMetric(candidate, item.key);
                             const passed = isMetricPassing(value, item.threshold);
                             const shadeValue = item.key === "mcc" || item.key === "kappa" ? (value ?? -1) : (metricPercent(value) ?? 0);
-                            return <span role="cell" className={passed ? "is-passing" : "is-failing"} key={`${candidate.model}-${item.key}`} style={{ background: validationHeatmapColor(shadeValue, item.threshold) }} title={`${item.label}: ${metricLabel(candidate, item.key)} · umbral ${item.threshold.toFixed(2)} · ${passed ? "cumple" : "no cumple"}`}>{metricLabel(candidate, item.key)}<small>{value === null ? "Sin dato" : passed ? "Cumple" : "No cumple"}</small></span>;
+                            const cellPasses = item.role === "informative" || passed;
+                            return <span role="cell" className={cellPasses ? "is-passing" : "is-failing"} key={`${candidate.model}-${item.key}`} style={{ background: item.role === "informative" ? informativeHeatmapColor(value, item.key) : validationHeatmapColor(shadeValue, item.threshold) }} title={`${item.label}: ${metricLabel(candidate, item.key)} · ${item.role === "filter" ? `umbral ${item.threshold.toFixed(2)} · ${passed ? "cumple" : "no cumple"}` : "informativa"}`}>{metricLabel(candidate, item.key)}<small>{value === null ? "Sin dato" : item.role === "filter" ? (passed ? "Cumple" : "No cumple") : "Informativa"}</small></span>;
                           })}
                           <span role="cell" className={isCandidateEligible(candidate, targetThresholds) ? "admin-training-eligible" : "admin-training-ineligible"}>{isCandidateEligible(candidate, targetThresholds) ? "ELEGIBLE" : "NO ELEGIBLE"}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="admin-training-chart-block">
-                    <div className="admin-training-chart-title">
-                      <strong>Gráfica 2 · Matthews Correlation Coefficient (MCC)</strong>
-                      <div><span>Validación · MCC real (−1 a 1) · umbral 0.40</span><button type="button" className="btn btn-secondary admin-training-download" onClick={() => void handleDownloadComparison(target, 2, candidates)} disabled={downloadingTarget !== null}>{downloadingTarget === `${target}:2` ? "Generando..." : "Descargar gráfica 2"}</button></div>
-                    </div>
-                    <div
-                      className="admin-training-mcc-comparison"
-                      role="list"
-                      aria-label={`Comparativa MCC de los modelos para ${targetLabel(target)}`}
-                    >
-                      {candidates.map((candidate) => {
-                        const mcc = rawCandidateMetric(candidate, "mcc");
-                        const clampedMcc = Math.max(-1, Math.min(1, mcc ?? 0));
-                        const barWidth = Math.abs(clampedMcc) * 50;
-                        const barLeft = clampedMcc >= 0 ? 50 : 50 - barWidth;
-                        return (
-                          <div className="admin-training-mcc-row" role="listitem" key={`${target}-mcc-${candidate.model}`}>
-                            <span className="admin-training-bar-label">{candidate.model}</span>
-                            <div className="admin-training-mcc-track">
-                              <span className="admin-training-mcc-zero" />
-                              <span className={`admin-training-mcc-bar ${isMetricPassing(mcc, targetThresholds.mcc) ? "is-passing" : "is-failing"}`} style={{ left: `${barLeft}%`, width: `${barWidth}%` }} />
-                            </div>
-                            <strong>{mcc === null ? "—" : mcc.toFixed(3)}</strong>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="admin-training-chart-block">
-                    <div className="admin-training-chart-title">
-                      <strong>Gráfica 3 · Heatmap de todas las métricas</strong>
-                      <div><span>Incluye métricas fuera del ámbito de selección</span><button type="button" className="btn btn-secondary admin-training-download" onClick={() => void handleDownloadComparison(target, 3, candidates)} disabled={downloadingTarget !== null}>{downloadingTarget === `${target}:3` ? "Generando..." : "Descargar gráfica 3"}</button></div>
-                    </div>
-                    <div className="admin-training-full-heatmap" role="table" aria-label={`Heatmap de todas las métricas para ${targetLabel(target)}`}>
-                      <div className="admin-training-full-heatmap-row admin-training-full-heatmap-head" role="row">
-                        <span role="columnheader">Modelo</span>
-                        {COMPARISON_METRICS.map((item) => <span role="columnheader" key={item.key}>{item.label}</span>)}
-                      </div>
-                      {candidates.map((candidate) => (
-                        <div className="admin-training-full-heatmap-row" role="row" key={`heatmap-${target}-${candidate.model}`}>
-                          <strong role="rowheader">{candidate.model}</strong>
-                          {COMPARISON_METRICS.map((item) => {
-                            const value = rawCandidateMetric(candidate, item.key);
-                            return (
-                              <span
-                                role="cell"
-                                key={`${candidate.model}-${item.key}`}
-                                title={`${candidate.model} · ${item.label}: ${metricLabel(candidate, item.key)}`}
-                                style={{ background: informativeHeatmapColor(value, item.key) }}
-                              >
-                                {metricLabel(candidate, item.key)}
-                              </span>
-                            );
-                          })}
                         </div>
                       ))}
                     </div>
@@ -955,7 +1062,7 @@ export default function AdminTraining() {
             })}
           </div>
         ) : (
-            <p className="panel-subtitle">No hay objetivos con modelos elegibles en la corrida actual. Se requieren los cinco umbrales; ningún modelo por debajo de ellos se selecciona ni se publica. La calidad normalizada histórica se conserva en Imágenes de diagnóstico.</p>
+            <p className="panel-subtitle">No hay objetivos con modelos elegibles en la corrida actual. Ningún modelo por debajo de los requisitos clínicos se selecciona ni se publica. La calidad normalizada histórica se conserva en Imágenes de diagnóstico.</p>
         )}
       </section>
 
@@ -966,11 +1073,27 @@ export default function AdminTraining() {
           <span>Firebase: {status.manifest.dataSources.firebaseRows ?? 0}</span>
           <span>Duplicados retirados: {status.manifest.dataSources.duplicatesRemoved ?? 0}</span>
           <span>Pacientes coincidentes: {status.manifest.dataSources.matchedExistingPatients ?? 0}</span>
+          <span>Archivo: {status.manifest.dataSources.datasetName ?? status.manifest.dataSources.datasetPath ?? "—"}</span>
           {!!status.manifest.dataSources.targetConflicts && (
             <span className="is-warning">
               Conflictos de target: {status.manifest.dataSources.targetConflicts}
             </span>
           )}
+        </div>
+      )}
+
+      {!!status?.trainingHistory?.length && (
+        <div className="admin-training-data-summary">
+          <strong>Historial de auditoría</strong>
+          {status.trainingHistory.slice(0, 5).map((entry) => (
+            <span key={entry.id}>
+              {entry.generatedAt ? new Date(entry.generatedAt).toLocaleString() : entry.id}
+              {" · "}
+              {entry.dataSources?.datasetName ?? entry.sourceDataset ?? "dataset no indicado"}
+              {" · "}
+              {SOURCE_MODE_LABELS[entry.dataSources?.sourceMode ?? "dataset"]}
+            </span>
+          ))}
         </div>
       )}
 
@@ -980,7 +1103,7 @@ export default function AdminTraining() {
             <h3 className="panel-title">Imágenes de diagnóstico</h3>
             <p className="panel-subtitle">Matrices de confusión, ROC, importancia de variables y calidad normalizada informativa (sin participación en selección).</p>
           </div>
-          <span className="admin-patients-count">{status?.images?.length ?? 0} archivos</span>
+          <span className="admin-patients-count">{filteredImages.length} archivos</span>
           <button
             type="button"
             className="btn btn-secondary admin-training-refresh-images"
@@ -996,9 +1119,9 @@ export default function AdminTraining() {
           </button>
         </div>
 
-        {status?.images && status.images.length > 0 ? (
+        {filteredImages.length > 0 ? (
           <div className="admin-training-gallery">
-            {status.images.map((image) => (
+            {filteredImages.map((image) => (
               <figure className="admin-training-image-card" key={image.path}>
                 <img src={image.url} alt={`Resultado ${image.name}`} loading="lazy" />
                 <figcaption>{image.path}</figcaption>

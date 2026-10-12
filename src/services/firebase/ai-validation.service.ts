@@ -32,10 +32,12 @@ import type {
   AiValidationVerdict,
   SaveAiPredictionValidationInput,
 } from "@/types/doctor-ai-validation";
+import type { TrainingSourceMode } from "@/types/doctor-ai-validation";
 
 interface ValidationSubscriptionOptions<T> {
   onData: (value: T) => void;
   onError?: (error: Error) => void;
+  sourceMode?: TrainingSourceMode;
 }
 
 export type PatientValidationVerdicts = Record<
@@ -210,12 +212,17 @@ export function subscribeToAdminValidationAnalytics(
   return onSnapshot(
     validationsQuery,
     (snapshot) => {
-      const latestByPatient = getLatestValidations(snapshot.docs);
+      const filteredDocs = options.sourceMode
+        ? snapshot.docs.filter((document) => (
+          document.data().predictionValues?.sourceMode === options.sourceMode
+        ))
+        : snapshot.docs;
+      const latestByPatient = getLatestValidations(filteredDocs);
       const patientSummaries: Record<string, AdminPatientValidationSummary> = {};
       const predictionSummaries: Record<string, AdminPredictionValidationSummary> = {};
       const latestByReview = new Map<string, AdminValidationRecord>();
 
-      snapshot.docs.forEach((document) => {
+      filteredDocs.forEach((document) => {
         const data = document.data();
         const patientId = String(data.patientId ?? "").trim();
         const doctorUid = String(data.doctorUid ?? data.assignedBy ?? "").trim();
@@ -233,6 +240,7 @@ export function subscribeToAdminValidationAnalytics(
           verdict: data.status === "validado" ? "valid" : "incorrect",
           updatedAt,
           updatedAtMillis,
+          sourceMode: data.predictionValues?.sourceMode,
         };
         const recordKey = `${patientId}::${doctorUid}::${predictionKey}`;
         const previous = latestByReview.get(recordKey);
@@ -430,6 +438,7 @@ export async function saveAiPredictionValidation(
     modelName: String(input.prediction.modelName ?? ""),
     artifact: String(input.prediction.artifact ?? ""),
     target: String(input.prediction.target ?? ""),
+    ...(input.prediction.sourceMode ? { sourceMode: input.prediction.sourceMode } : {}),
   };
 
   const assignedAt = serverTimestamp();

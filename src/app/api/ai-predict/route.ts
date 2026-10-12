@@ -2,10 +2,22 @@ import { spawn } from "node:child_process";
 import { NextResponse } from "next/server";
 
 import { resolvePythonCommand } from "@/lib/server/python-runtime";
+import { getAdminFirestore } from "@/services/firebase/admin-server-auth";
 
 export const runtime = "nodejs";
 
-async function proxyToVercelPython(request: Request, patient: unknown): Promise<Response> {
+async function activeModels(): Promise<Record<string, { model: string; sourceMode?: string }>> {
+  const snapshot = await getAdminFirestore().collection("aiModels").where("active", "==", true).get();
+  return Object.fromEntries(snapshot.docs
+    .map((item) => {
+      const data = item.data();
+      const model = data.modelName ?? data.name;
+      return [data.target, { model, sourceMode: data.sourceMode }];
+    })
+    .filter(([target, value]) => typeof target === "string" && typeof value === "object" && typeof (value as { model?: unknown }).model === "string"));
+}
+
+async function proxyToVercelPython(request: Request, patient: unknown, selectedModels: Record<string, { model: string; sourceMode?: string }>): Promise<Response> {
   const target = new URL("/api/ai-predict-vercel", request.url);
   const headers = new Headers({ "content-type": "application/json" });
 
@@ -17,7 +29,7 @@ async function proxyToVercelPython(request: Request, patient: unknown): Promise<
   const response = await fetch(target, {
     method: "POST",
     headers,
-    body: JSON.stringify(patient),
+    body: JSON.stringify({ ...(patient as Record<string, unknown>), activeModels: selectedModels }),
     cache: "no-store",
   });
 
@@ -42,7 +54,7 @@ export async function POST(request: Request) {
   // project's configured Python interpreter.
   if (process.env.VERCEL === "1") {
     try {
-      return await proxyToVercelPython(request, patient);
+      return await proxyToVercelPython(request, patient, await activeModels());
     } catch (cause) {
       return NextResponse.json(
         { error: cause instanceof Error ? cause.message : "No se pudo contactar el motor IA." },
@@ -67,6 +79,7 @@ export async function POST(request: Request) {
     );
   }
 
+  const selectedModels = await activeModels();
   return new Promise<Response>((resolve) => {
     let output = "";
     let error = "";
@@ -99,6 +112,6 @@ export async function POST(request: Request) {
 
       resolve(NextResponse.json(payload));
     });
-    child.stdin.end(JSON.stringify(patient));
+    child.stdin.end(JSON.stringify({ ...(patient as Record<string, unknown>), activeModels: selectedModels }));
   });
 }

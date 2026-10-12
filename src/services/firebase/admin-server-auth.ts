@@ -160,25 +160,39 @@ export async function requireAdmin(request: Request): Promise<{ uid: string }> {
     throw new AdminApiError("La sesión administrativa no es válida.", 401);
   }
 
-  try {
-    const snapshot = await getFirestore(getAdminApp())
-      .collection("users")
-      .doc(decodedToken.uid)
-      .get();
-    const data = snapshot.data();
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const snapshot = await getFirestore(getAdminApp())
+        .collection("users")
+        .doc(decodedToken.uid)
+        .get();
+      const data = snapshot.data();
 
-    if (data?.role !== "admin" || data?.status !== "active") {
-      throw new AdminApiError("La cuenta no tiene permisos de administrador.", 403);
+      if (data?.role !== "admin" || data?.status !== "active") {
+        throw new AdminApiError("La cuenta no tiene permisos de administrador.", 403);
+      }
+
+      return { uid: decodedToken.uid };
+    } catch (error) {
+      if (error instanceof AdminApiError) throw error;
+      lastError = error;
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+      }
     }
-  } catch (error) {
-    if (error instanceof AdminApiError) throw error;
-    throw new AdminApiError(
-      "No se pudo verificar el perfil administrativo.",
-      503,
-    );
   }
 
-  return { uid: decodedToken.uid };
+  const details = lastError instanceof Error ? lastError.message : String(lastError);
+  console.error("[admin-auth] No se pudo leer el perfil administrativo", {
+    uid: decodedToken.uid,
+    error: details,
+    code: (lastError as { code?: unknown } | null)?.code,
+  });
+  throw new AdminApiError(
+    "No se pudo verificar el perfil administrativo. Intenta nuevamente.",
+    503,
+  );
 }
 
 export function getAdminFirestore() {

@@ -26,6 +26,13 @@ import { EXPECTED_PREDICTIONS_PER_PATIENT } from "@/lib/doctor/ai-validation/con
 type ValidationView = "patients" | "comparison";
 type PatientFilter = "all" | AdminPatientValidationStatus;
 type DoctorScope = "general" | "doctor" | "group";
+type SourceMode = "firebase" | "firebase_dataset" | "dataset";
+
+const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
+  firebase: "Solo Firebase",
+  firebase_dataset: "Firebase + dataset",
+  dataset: "Solo dataset",
+};
 
 interface PredictionType {
   key: string;
@@ -352,10 +359,24 @@ export default function AdminValidations() {
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [selectedGroupDoctorIds, setSelectedGroupDoctorIds] = useState<string[]>([]);
   const [selectedRiskTarget, setSelectedRiskTarget] = useState("__all__");
+  const [sourceMode, setSourceMode] = useState<SourceMode | "__all__">("__all__");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/ai-training-manifest?v=${Date.now()}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<{ dataSources?: { sourceMode?: SourceMode } }> : null)
+      .then((manifest) => {
+        if (!cancelled && manifest?.dataSources?.sourceMode) {
+          setSourceMode(manifest.dataSources.sourceMode);
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [reloadToken]);
 
   const loadPatients = useCallback(async () => {
     try {
@@ -379,6 +400,7 @@ export default function AdminValidations() {
         setError(cause.message || "No se pudieron cargar las validaciones.");
         setLoading(false);
       },
+      sourceMode: sourceMode === "__all__" ? undefined : sourceMode,
     });
 
     const unsubscribeModels = subscribeToAdminModels(
@@ -396,7 +418,7 @@ export default function AdminValidations() {
       unsubscribeModels();
       unsubscribeDoctors();
     };
-  }, [loadPatients, reloadToken]);
+  }, [loadPatients, reloadToken, sourceMode]);
 
   const predictionTypes = useMemo(() => {
     const types = new Map<string, PredictionType>();
@@ -581,6 +603,15 @@ export default function AdminValidations() {
 
       <section className="admin-validation-chart-controls" aria-label="Filtros para diagramas de validación">
         <label>
+          <span>Origen de la IA entrenada</span>
+          <select value={sourceMode} onChange={(event) => setSourceMode(event.target.value as SourceMode | "__all__")}>
+            <option value="__all__">Todos los orígenes</option>
+            {Object.entries(SOURCE_MODE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
           <span>Ámbito de médicos</span>
           <select value={doctorScope} onChange={(event) => setDoctorScope(event.target.value as DoctorScope)}>
             <option value="general">General · todos los médicos</option>
@@ -616,7 +647,7 @@ export default function AdminValidations() {
         )}
         <div className="admin-validation-chart-scope" aria-live="polite">
           <span>Filtro aplicado</span>
-          <strong>{doctorScopeLabel}</strong>
+          <strong>{doctorScopeLabel} · {sourceMode === "__all__" ? "Todos los orígenes" : SOURCE_MODE_LABELS[sourceMode]}</strong>
         </div>
       </section>
 
