@@ -14,6 +14,7 @@ Dashboard médico construido con Next.js, React, Firebase y un pipeline de apren
 - [Pipeline de aprendizaje automático](#pipeline-de-aprendizaje-automático)
 - [Targets y algoritmos](#targets-y-algoritmos)
 - [Umbrales y publicación](#umbrales-y-publicación)
+- [Resultados verificados de la version actual](#resultados-verificados-de-la-version-actual)
 - [Reportes y gráficas](#reportes-y-gráficas)
 - [Sección investigativa: predicción de GOLD 1–4](#sección-investigativa-predicción-de-gold-14)
 - [Interpretación de métricas y gráficas](#interpretación-de-métricas-y-gráficas)
@@ -223,6 +224,21 @@ En **Pacientes a mi cargo**, un médico con ese permiso ve el botón **Validaci�
 
 La validación manual continúa disponible en el detalle de predicciones. El dashboard muestra el **modelo activo** utilizado por la respuesta de IA. Los registros se almacenan en Firestore mediante `saveAiPredictionValidation`, y el panel administrativo permite filtrar pacientes por estado de validación y por médico validador. La validación automática no reemplaza la revisión clínica ni crea un GOLD cuando el paciente no tiene un valor registrado por un médico.
 
+La validación clínica individual se guarda en la colección `ValidacionPredicciones`. Solo puede crearla un médico autenticado, asignado al paciente y con `doctorUid`/`assignedBy` iguales a su UID. El registro conserva el paciente, la predicción, el target, el valor predicho, el valor clínico disponible, la confianza, el modelo, el artefacto, la línea temporal, el veredicto (`validado` o `no_validado`) y las marcas de tiempo del servidor. Las reglas de Firestore permiten que el médico consulte sus propios registros y que el administrador los audite; no permiten actualizarlos ni eliminarlos. Una corrección genera un nuevo registro para conservar la trazabilidad.
+
+#### Caso mínimo de validación documentado
+
+El flujo que debe poder auditarse con un caso individual es:
+
+1. Un médico activo crea o recibe una ficha clínica y queda como médico asignado.
+2. El sistema solicita la predicción de `copd_gold` para esa ficha.
+3. El mismo médico compara el GOLD predicho con el GOLD clínico registrado y guarda un único veredicto.
+4. Firestore crea un documento en `ValidacionPredicciones` con el UID del médico, el ID del paciente y la evidencia de la predicción.
+
+Para la evidencia clínica reportada de esta versión, el alcance es **1 médico, 1 registro clínico generado por ese médico y 1 revisión de la predicción**. Esto demuestra el circuito de captura, asignación, predicción y validación individual; no equivale a una validación externa de 457 pacientes ni permite estimar por sí solo sensibilidad, especificidad o generalización clínica.
+
+En la corrida de entrenamiento documentada más abajo, el manifiesto registra **1 registro creado desde la web** (`firebaseWebRows=1`), además de 456 registros importados. Ese contador describe el origen de los datos de entrenamiento; no debe confundirse con el número de validaciones clínicas guardadas. La identidad nominal del médico y los datos personales del paciente no se incluyen en el README: se auditan dentro de Firebase mediante `doctorUid`, `createdBy`, `assignedBy` y `patientId`.
+
 ### Área de administradores
 
 El panel permite:
@@ -248,13 +264,19 @@ En los registros de Firebase, `importMetadata` identifica los pacientes importad
 
 La altura sobre el nivel del mar y la profesión sí están contempladas como variables predictoras cuando el modelo entrenado contiene esas columnas. Para GOLD, el conjunto de features incluye `Altura_MSNM` y `OCUPACION`; la primera llega desde `locationElevationM` y la segunda desde `occupation` (con `profession` como alias en inferencia). La misma transformación se aplica en inferencia local y Vercel, por lo que la altitud y la exposición ocupacional pueden influir en la predicción y sus métricas de riesgo cuando existen datos de entrenamiento suficientes y el valor del paciente está registrado. No se debe interpretar esto como causalidad clínica individual: el modelo estima asociaciones del conjunto de entrenamiento y requiere validación médica.
 
-En la validación reportada por el practicante médico se obtuvo un **54% de acierto sobre 457 pacientes registrados**. El practicante ubicó un paciente adicional que fue predicho positivamente para GOLD; después se realizó un nuevo entrenamiento incorporando ese paciente y mejoraron las métricas de las IAs. Este resultado debe conservarse como evidencia del proceso de validación y reentrenamiento, no como una garantía de rendimiento clínico futuro.
+En la validación externa reportada por el practicante médico se obtuvo un **54% de acierto sobre 457 pacientes registrados**. El practicante identificó un registro adicional que fue predicho positivamente para GOLD; después se realizó un nuevo entrenamiento incorporando ese registro y mejoraron las métricas de las IAs. Este resultado es evidencia del proceso de validación y reentrenamiento, no una garantía de rendimiento clínico futuro ni una métrica equivalente a la partición `TEST` del pipeline.
 
 En **Administración → Modelos de IA**, cada entrenamiento exitoso registra sus ganadores elegibles en `aiModels`, incluyendo target, algoritmo, origen y métricas de `VALIDATION`. El administrador puede filtrar por `Solo Firebase`, `Firebase + dataset` o `Solo dataset` y activar un ganador por target y origen. La selección activa se incorpora al manifest que consume el dashboard médico y se envía al motor de inferencia; si el artefacto alternativo no está publicado en el paquete de ejecución, el motor lo informa como bloqueado en lugar de usar silenciosamente otro modelo.
 
 El log de cada ejecución muestra el tiempo de captura de Firebase, la cantidad de pacientes importados desde dataset, creados desde la web y el total, además del tiempo de cada algoritmo, preparación de datos y exportación de reportes. La lectura de Firebase es una sola consulta; normalmente el tiempo dominante es la validación cruzada y el entrenamiento de los algoritmos seleccionados. Para ejecuciones exploratorias más rápidas se pueden seleccionar menos algoritmos y reducir `CV_FOLDS` (por ejemplo, de `3` a `2`); para resultados comparativos finales se recomienda conservar los ocho algoritmos y tres folds.
 
 En el modo `dataset`, la aplicación no consulta Firebase: entrena exclusivamente con el archivo local seleccionado desde `ml/datasets/`. En `firebase_dataset` sí combina ambos orígenes y conserva el registro del archivo utilizado, los conteos de cada fuente, duplicados y conflictos. Cada corrida anterior se archiva bajo `ml/outputs/SavedModels/history/<run-id>/` para auditoría; los modelos viejos no se borran.
+
+### Salida externa de la inferencia
+
+La ruta `POST /api/ai-predict` recibe la ficha clínica del paciente y responde con un objeto que contiene `predictions` y `blockedModels`. En desarrollo ejecuta `ml/inference.py`; en Vercel utiliza `api/ai-predict-vercel.py`. La ruta toma los modelos activos de `aiModels`, comprueba que su `sourceMode` coincida con el manifiesto vigente y solo devuelve predicciones de artefactos que existen y cumplen los umbrales de `VALIDATION`.
+
+En la implementación actual, la inferencia ML publicada cubre `copd_gold` y `history_of_heart_failure`. `bodex`, `escala_disnea`, `epocconfirmado` y `clasifisui` están disponibles para entrenamiento y reportes, pero no aparecen como targets backend de esta ruta. Si un target no tiene modelo elegible, el artefacto no está publicado o la selección activa no coincide con el manifiesto, se informa en `blockedModels` y no se sustituye silenciosamente por otro modelo.
 
 ### API administrativa ML
 
@@ -362,15 +384,19 @@ Cada entrenador devuelve un pipeline compatible con el flujo común, sus hiperpa
 
 ## Umbrales y publicación
 
-Un candidato es elegible cuando alcanza simultáneamente:
+Un candidato es elegible cuando, sobre `VALIDATION`, alcanza simultáneamente todos los filtros clínicos obligatorios:
 
-```text
-accuracy >= 0.70
-f1       >= 0.70
-mcc      >= 0.40
-kappa    >= 0.40
-auc      >= 0.70
-```
+| Métrica obligatoria | Umbral | Aplicación |
+|---|---:|---|
+| Sensibilidad / recall macro | `0.70` | Macro en multiclase; clase positiva en binario |
+| Sensibilidad mínima por clase | `0.50` | Ninguna clase puede quedar por debajo |
+| Especificidad | `0.70` | Promedio one-vs-rest por clase |
+| MCC | `0.40` | Matthews Correlation Coefficient |
+| Balanced Accuracy | `0.70` | Promedio del recall por clase |
+| ROC-AUC | `0.70` | OVR en multiclase o binario |
+| F1 macro | `0.60` | F1 de la clase positiva en binario |
+
+Precisión, Kappa y Accuracy se registran y participan en el desempate, pero tienen piso informativo `0.00`; por tanto, **Accuracy no es un filtro mínimo de publicación**. La selección entre candidatos elegibles sigue este orden: sensibilidad macro, sensibilidad mínima por clase, especificidad, MCC, Balanced Accuracy, ROC-AUC, F1, precisión, Kappa y Accuracy. La calidad normalizada y los puntajes de CV no cambian la elegibilidad.
 
 El estado se interpreta así:
 
@@ -378,8 +404,38 @@ El estado se interpreta así:
 - **Requiere revisión**: al menos una métrica no alcanzó el mínimo, o no hay evidencia suficiente para publicarlo.
 - **Publicado**: el artefacto fue seleccionado y quedó disponible para inferencia.
 - **Conservado**: no hubo un nuevo candidato elegible (o falló el ajuste final) y se mantuvo un artefacto anterior que sí cumple los requisitos clínicos actuales.
+- **Bloqueado / sin modelo**: ningún candidato fue elegible o falta el artefacto requerido; la API devuelve el motivo en `blockedModels`.
 
 Nunca se debe interpretar un modelo de diagnóstico con `thresholdMet=false` como un modelo aprobado para entorno real.
+
+## Resultados verificados de la corrida actual
+
+Los siguientes valores corresponden al `training-manifest.json` incluido en `ml/outputs/SavedModels/`, generado el **12 de octubre de 2026 a las 15:44 UTC**. Son resultados de una corrida concreta, no una promesa permanente: cambiar los datos, algoritmos, folds o semilla puede cambiar el resultado.
+
+### Datos y entrenamiento
+
+| Elemento | Resultado |
+|---|---:|
+| Modo de origen | `firebase_dataset` |
+| Dataset local | 365 filas |
+| Firebase | 457 filas: 456 importadas y 1 creada desde la web |
+| Filas después de deduplicar | 457 |
+| Duplicados eliminados | 365; 91 duplicados locales |
+| Pacientes coincidentes entre fuentes | 365 |
+| Conflictos de target detectados | 2 |
+| Semilla | `42` |
+| División nominal | 70% TRAIN / 15% VALIDATION / 15% TEST |
+
+La partición efectiva se registra por target: `copd_gold` tuvo 67/14/15 filas en TRAIN/VALIDATION/TEST y `history_of_heart_failure` tuvo 54/12/12. La selección y los umbrales usan `VALIDATION`; `TEST` se mantiene aislado y solo se evalúa después de seleccionar el candidato.
+
+### Modelos y métricas
+
+| Target | Modelos evaluados | Resultado de publicación | VALIDATION del candidato publicado | TEST aislado |
+|---|---:|---|---|---|
+| `copd_gold` | 8; 4 elegibles | CatBoost publicado | Accuracy 0.857; F1 0.851; sensibilidad 0.854; sensibilidad mínima por clase 0.667; especificidad 0.952; Balanced Accuracy 0.854; AUC 0.954; MCC 0.820 | Accuracy 0.667; F1 0.619; sensibilidad 0.608; sensibilidad mínima por clase 0.333; Balanced Accuracy 0.608; AUC 0.928; MCC 0.546 |
+| `history_of_heart_failure` | 8; 0 elegibles | Sin modelo publicado; target bloqueado | No hay candidato que cumpla todos los filtros | No disponible porque no hubo modelo seleccionado |
+
+El CatBoost de GOLD se publica porque cumple los filtros de `VALIDATION`, aunque su desempeño en `TEST` es menor y no cumple todos esos filtros. Esa diferencia es esperable en una muestra pequeña y debe reportarse; no se debe presentar el resultado de `VALIDATION` como rendimiento clínico externo.
 
 ## Reportes y gráficas
 
@@ -402,7 +458,7 @@ ml/outputs/SavedModels/
 - `particion_datos.csv`: tamaño de TRAIN, VALIDATION y TEST.
 - `tiempos_prediccion.csv`: latencia y capacidad de inferencia.
 - `training-manifest.json`: fuente de datos, selección, umbrales, modelos y estado de publicación.
-- `training-manifest.json` incluye `minimumThresholdsByTarget` para distinguir la política de 75% de GOLD y 70% del resto.
+- `training-manifest.json` incluye `minimumThresholdsByTarget` para dejar explícitos los umbrales aplicados a cada target; en la corrida actual ambos targets usan la misma política.
 - `training_metrics_report.xlsx`: consolidado tabular para revisión.
 
 ### Imágenes principales
